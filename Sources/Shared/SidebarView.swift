@@ -9,7 +9,9 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            #if os(iOS)
             topToolbarRow
+            #endif
 
             PillTabBar(
                 items: [
@@ -21,6 +23,9 @@ struct SidebarView: View {
                 track: true
             )
             .padding(.horizontal, 12)
+            #if os(macOS)
+            .padding(.top, 12)
+            #endif
             .padding(.bottom, 12)
 
             switch viewModel.sidebarMode {

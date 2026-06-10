@@ -33,6 +33,10 @@ final class WindowController: NSWindowController {
         window.contentViewController = splitVC
         window.delegate = self
 
+        // NSToolbar — automatic Liquid Glass on macOS 26
+        let toolbar = MainWindowToolbar.create(viewModel: viewModel, windowController: self)
+        window.toolbar = toolbar
+
         // Wire key events through MainWindow
         window.onKeyPress = { [weak self] event in
             guard let self else { return false }

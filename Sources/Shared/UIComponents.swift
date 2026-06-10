@@ -33,7 +33,9 @@ struct PillTabBar<T: Hashable>: View {
                     track: track,
                     onTap: { selection = items[i].value }
                 )
-                .frame(maxWidth: track ? .infinity : nil)
+                // Selected item takes the remaining width so its label fits;
+                // unselected items collapse to their icon.
+                .frame(maxWidth: track && items[i].value == selection ? .infinity : nil)
             }
         }
         .padding(track ? 3 : 0)
@@ -54,16 +56,10 @@ private struct PillTabItem<T: Hashable>: View {
         Button(action: onTap) {
             Group {
                 if isSelected {
-                    // Selected: icon (if any) + label
-                    HStack(spacing: 5) {
-                        if let icon = item.icon {
-                            Image(systemName: icon)
-                                .font(.system(size: 11))
-                        }
-                        Text(item.label)
-                            .font(.system(size: 12, weight: .semibold))
-                            .lineLimit(1)
-                    }
+                    // Selected: label only
+                    Text(item.label)
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
                 } else if let icon = item.icon {
                     // Unselected with icon: icon only — no wrapping
                     Image(systemName: icon)
@@ -76,9 +72,9 @@ private struct PillTabItem<T: Hashable>: View {
                 }
             }
             .foregroundColor(isSelected ? .primary : (isHovered ? .primary.opacity(0.75) : .secondary))
-            .padding(.horizontal, track ? 12 : 9)
+            .padding(.horizontal, track ? (isSelected ? 12 : 8) : 9)
             .padding(.vertical, track ? 6 : 5)
-            .frame(maxWidth: track ? .infinity : nil)
+            .frame(maxWidth: track && isSelected ? .infinity : nil)
             .background(
                 isSelected
                     ? (track ? Color.cardSurface : Color.primary.opacity(0.10))
@@ -92,7 +88,7 @@ private struct PillTabItem<T: Hashable>: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
-        .fixedSize(horizontal: !track, vertical: true)
+        .fixedSize(horizontal: !track || !isSelected, vertical: true)
         .onHover { h in withAnimation(.easeOut(duration: 0.1)) { isHovered = h } }
     }
 }

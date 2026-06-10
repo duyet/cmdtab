@@ -17,7 +17,9 @@ public final class MainWindow: NSWindow {
         self.backgroundColor = .clear
         self.isOpaque = false
         self.hasShadow = true
-        self.isMovableByWindowBackground = true
+        // Drag only via the title bar area — body drags would fight text
+        // selection and slider/drag interactions in the content.
+        self.isMovableByWindowBackground = false
     }
 
     public override var canBecomeKey: Bool {

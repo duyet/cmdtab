@@ -19,6 +19,13 @@ No SPM, no Xcode project. Everything is raw `xcrun swiftc` via shell scripts.
 
 Always run `./test.sh` and `./test_launch.sh` after changes. Use `/cmdtab-verify` for the full loop.
 
+## Platform & API Guidelines
+
+- Aim to build all functionality using SwiftUI.
+- Design UI in a way that is idiomatic for the macOS platform and follows Apple Human Interface Guidelines.
+- Use the most modern macOS APIs. There is no backward compatibility constraint — the app can target the latest macOS version with the newest APIs.
+- Use the most modern Swift language features and conventions. Use Swift concurrency (async/await, actors) and Swift macros where applicable.
+
 ## Key Architecture
 
 - **MVVM**: `MainViewModel` (`@MainActor`) is the single source of truth. All state flows through it.

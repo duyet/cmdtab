@@ -43,7 +43,9 @@ public final class PasteboardMonitor {
         ) { [weak self] _ in
             self?.checkPasteboard()
         }
-        checkPasteboard()
+        // Seed lastCopiedText so the current clipboard content doesn't
+        // trigger a spurious banner on first launch.
+        lastCopiedText = UIPasteboard.general.string ?? ""
         #endif
     }
 

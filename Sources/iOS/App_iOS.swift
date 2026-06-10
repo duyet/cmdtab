@@ -52,7 +52,6 @@ class SceneDelegate: UIResponder, UISceneDelegate {
 
         let rootView = MainView(viewModel: vm)
         let hostingController = UIHostingController(rootView: rootView)
-        hostingController.sizingOptions = [.intrinsicContentSize]
 
         let window = UIWindow(windowScene: windowScene)
         window.rootViewController = hostingController

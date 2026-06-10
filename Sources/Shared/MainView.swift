@@ -26,7 +26,7 @@ public struct MainView: View {
                 SidebarView(viewModel: viewModel)
                     .frame(width: 300)
                     .transition(.move(edge: .leading))
-                    .ignoresSafeArea(edges: .vertical)
+                    .ignoresSafeArea(edges: .top)
             }
         }
         .animation(.easeInOut(duration: 0.25), value: viewModel.isSidebarVisible)

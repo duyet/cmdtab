@@ -109,9 +109,12 @@ public struct SettingsView: View {
                         Text(viewModel.isLocalModelSupported ? "Available" : "Not Available")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.primary)
-                        Text(LocalModelClient.shared.availability.unavailableReason ?? "On-device model ready for local inference.")
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                        Text(
+                            LocalModelClient.shared.availability.unavailableReason
+                                ?? "On-device model ready for local inference."
+                        )
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
                     }
                 }
                 .padding(12)

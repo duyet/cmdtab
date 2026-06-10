@@ -2,7 +2,7 @@ import Foundation
 
 /// A single conversation turn. Foundation-only (no SwiftUI) so the model layer and
 /// the inference adapters that consume it remain unit-testable in the headless runner.
-public struct ChatMessage: Codable, Identifiable, Equatable {
+public struct ChatMessage: Codable, Identifiable, Equatable, Sendable {
     public var id: UUID
     public var role: String  // "user" or "assistant"
     public var content: String
@@ -21,7 +21,7 @@ public struct ChatMessage: Codable, Identifiable, Equatable {
 }
 
 /// A volatile, in-memory conversation. Never persisted to disk (see AGENTS.md §1.1).
-public struct Conversation: Codable, Identifiable, Equatable {
+public struct Conversation: Codable, Identifiable, Equatable, Sendable {
     public var id: UUID
     public var title: String
     public var messages: [ChatMessage]
@@ -46,7 +46,7 @@ public struct Conversation: Codable, Identifiable, Equatable {
 }
 
 /// A reusable system-prompt template applied to clipboard Quick Actions.
-public struct Preset: Codable, Identifiable {
+public struct Preset: Codable, Identifiable, Sendable {
     public var id: UUID
     public var name: String  // max 14 chars for card display
     public var sfSymbol: String  // SF Symbols name for the Quick Action card icon

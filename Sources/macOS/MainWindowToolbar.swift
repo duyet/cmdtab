@@ -27,9 +27,10 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
 
     // MARK: - NSToolbarDelegate
 
-    func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier,
-                 willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem?
-    {
+    func toolbar(
+        _ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier,
+        willBeInsertedIntoToolbar flag: Bool
+    ) -> NSToolbarItem? {
         switch itemIdentifier {
         case Self.sidebarToggleID:
             return makeSidebarToggle()
@@ -57,8 +58,9 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
         item.label = "Toggle Sidebar"
         item.paletteLabel = "Toggle Sidebar"
         item.toolTip = "Toggle Sidebar (⌘B)"
-        item.image = NSImage(systemSymbolName: "sidebar.left",
-                             accessibilityDescription: "Toggle Sidebar")
+        item.image = NSImage(
+            systemSymbolName: "sidebar.left",
+            accessibilityDescription: "Toggle Sidebar")
         item.target = self
         item.action = #selector(toggleSidebar)
         item.isBordered = true
@@ -70,8 +72,9 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
         item.label = "New Chat"
         item.paletteLabel = "New Chat"
         item.toolTip = "New Chat (⌘T)"
-        item.image = NSImage(systemSymbolName: "square.and.pencil",
-                             accessibilityDescription: "New Chat")
+        item.image = NSImage(
+            systemSymbolName: "square.and.pencil",
+            accessibilityDescription: "New Chat")
         item.target = self
         item.action = #selector(newChat)
         item.isBordered = true

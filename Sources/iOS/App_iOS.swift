@@ -46,7 +46,7 @@ class SceneDelegate: UIResponder, UISceneDelegate {
 
         // Retrieve the shared ViewModel from AppDelegate
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate,
-              let vm = appDelegate.viewModel
+            let vm = appDelegate.viewModel
         else { return }
         self.viewModel = vm
 

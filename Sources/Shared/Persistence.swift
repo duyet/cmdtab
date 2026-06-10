@@ -1,4 +1,5 @@
 import Foundation
+
 #if canImport(SwiftData)
 import SwiftData
 #endif
@@ -75,7 +76,8 @@ extension PersistedConversation {
             id: conversation.id,
             title: conversation.title,
             timestamp: conversation.timestamp,
-            presetId: conversation.presetId
+            presetId: conversation.presetId,
+            compactedSummary: conversation.compactedSummary
         )
         self.messages = conversation.messages.map { PersistedMessage(from: $0) }
         // Assign back-links after creating messages
@@ -91,7 +93,8 @@ extension PersistedConversation {
             title: title,
             messages: messages.map { $0.toVolatile() },
             timestamp: timestamp,
-            presetId: presetId
+            presetId: presetId,
+            compactedSummary: compactedSummary
         )
     }
 }

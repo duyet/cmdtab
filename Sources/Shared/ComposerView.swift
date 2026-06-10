@@ -392,9 +392,9 @@ private struct InlinePresetChip: View {
                 Image(systemName: icon)
                     .font(.system(size: 10))
                     #if os(macOS)
-                    .foregroundColor(isHovered ? Color.accentCoral : .secondary)
+                .foregroundColor(isHovered ? Color.accentCoral : .secondary)
                     #else
-                    .foregroundColor(.secondary)
+                .foregroundColor(.secondary)
                     #endif
                 Text(title)
                     .font(.system(size: 11, weight: .medium))
@@ -513,5 +513,10 @@ private struct MenuTriggerHover: ViewModifier {
                 }
                 #endif
             }
+            #if os(macOS)
+        .onDisappear {
+            if isHovered { NSCursor.pop() }
+        }
+            #endif
     }
 }

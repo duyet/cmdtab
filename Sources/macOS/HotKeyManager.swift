@@ -1,8 +1,11 @@
 import Carbon
 import Foundation
+import os
 
-public final class HotKeyManager {
+@MainActor
+public final class HotKeyManager: @unchecked Sendable {
     public static let shared = HotKeyManager()
+    private static let logger = Logger(subsystem: "app.cmdtab", category: "HotKey")
 
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?
@@ -44,7 +47,7 @@ public final class HotKeyManager {
         )
 
         if installStatus != noErr {
-            print("Warning: Failed to install Carbon event handler. Status: \(installStatus)")
+            Self.logger.error("Failed to install Carbon event handler. Status: \(installStatus)")
         }
 
         // "Cmtb" in hex is 0x436d7462
@@ -61,7 +64,7 @@ public final class HotKeyManager {
         )
 
         if registerStatus != noErr {
-            print("Warning: Failed to register global Carbon hotkey. Status: \(registerStatus)")
+            Self.logger.error("Failed to register global Carbon hotkey. Status: \(registerStatus)")
         }
     }
 }

@@ -54,7 +54,7 @@ struct DetailContentView: View {
 
     private var hasMessages: Bool {
         if let activeId = viewModel.selectedConversationId,
-           let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
+            let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
         {
             return !activeConv.messages.isEmpty
         }
@@ -67,7 +67,7 @@ struct DetailContentView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if let activeId = viewModel.selectedConversationId,
-                       let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
+                        let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
                     {
                         ForEach(activeConv.messages) { message in
                             MessageRow(message: message, viewModel: viewModel)
@@ -89,8 +89,8 @@ struct DetailContentView: View {
 
     private func scrollToLast(_ proxy: ScrollViewProxy) {
         if let activeId = viewModel.selectedConversationId,
-           let activeConv = viewModel.conversations.first(where: { $0.id == activeId }),
-           let lastMsg = activeConv.messages.last
+            let activeConv = viewModel.conversations.first(where: { $0.id == activeId }),
+            let lastMsg = activeConv.messages.last
         {
             withAnimation {
                 proxy.scrollTo(lastMsg.id, anchor: .bottom)

@@ -151,15 +151,14 @@ enum DeviceLayout {
     /// Sidebar width: narrower on compact devices (iPhone SE), wider on Plus/Max.
     static var sidebarWidth: CGFloat {
         let screen = screenBounds.width
-        if screen < 375 { return 260 }   // iPhone SE / compact
-        if screen < 414 { return 280 }   // Standard iPhone
-        return 300                        // Plus / Max / Pro Max
+        if screen < 375 { return 260 }  // iPhone SE / compact
+        if screen < 414 { return 280 }  // Standard iPhone
+        return 300  // Plus / Max / Pro Max
     }
 
     /// Whether the device has a home indicator (no physical home button).
     static var hasHomeIndicator: Bool {
-        let bottom = screenBounds.height -
-            (activeWindowScene?.windows.first?.safeAreaInsets.bottom ?? 0)
+        let bottom = screenBounds.height - (activeWindowScene?.windows.first?.safeAreaInsets.bottom ?? 0)
         return bottom > 0
     }
 

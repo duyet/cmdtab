@@ -83,12 +83,12 @@ public struct MainView: View {
 
             SettingsView(viewModel: viewModel)
                 #if os(macOS)
-                .frame(maxWidth: 640)
-                .padding(.horizontal, 32)
-                .padding(.vertical, 24)
+            .frame(maxWidth: 640)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 24)
                 #else
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
                 #endif
         }
         .transaction { $0.animation = nil }
@@ -96,7 +96,7 @@ public struct MainView: View {
 
     private var hasMessages: Bool {
         if let activeId = viewModel.selectedConversationId,
-           let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
+            let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
         {
             return !activeConv.messages.isEmpty
         }
@@ -109,7 +109,7 @@ public struct MainView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if let activeId = viewModel.selectedConversationId,
-                       let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
+                        let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
                     {
                         ForEach(activeConv.messages) { message in
                             MessageRow(message: message, viewModel: viewModel)
@@ -120,6 +120,7 @@ public struct MainView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
             }
+            .scrollDismissesKeyboard(.interactively)
             .onStreamingChange(of: viewModel.isStreaming) { _ in
                 scrollToLast(proxy)
             }
@@ -131,8 +132,8 @@ public struct MainView: View {
 
     private func scrollToLast(_ proxy: ScrollViewProxy) {
         if let activeId = viewModel.selectedConversationId,
-           let activeConv = viewModel.conversations.first(where: { $0.id == activeId }),
-           let lastMsg = activeConv.messages.last
+            let activeConv = viewModel.conversations.first(where: { $0.id == activeId }),
+            let lastMsg = activeConv.messages.last
         {
             withAnimation {
                 proxy.scrollTo(lastMsg.id, anchor: .bottom)

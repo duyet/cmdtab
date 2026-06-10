@@ -12,7 +12,8 @@ final class WindowController: NSWindowController {
         // Default size — compact utility window
         let windowWidth: CGFloat = 800
         let windowHeight: CGFloat = 560
-        let screenFrame = NSScreen.main?.visibleFrame
+        let screenFrame =
+            NSScreen.main?.visibleFrame
             ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let rect = NSRect(
             x: screenFrame.origin.x + (screenFrame.width - windowWidth) / 2,
@@ -61,7 +62,7 @@ final class WindowController: NSWindowController {
 
         // 2. ⌘B / ⌘\ → Toggle sidebar
         if event.modifierFlags.contains(.command),
-           event.charactersIgnoringModifiers == "b" || event.charactersIgnoringModifiers == "\\"
+            event.charactersIgnoringModifiers == "b" || event.charactersIgnoringModifiers == "\\"
         {
             if !vm.isSettingsOpen {
                 vm.isSidebarVisible.toggle()
@@ -71,7 +72,7 @@ final class WindowController: NSWindowController {
 
         // 3. ⌘T / ⌘N → New conversation
         if event.modifierFlags.contains(.command),
-           event.charactersIgnoringModifiers == "t" || event.charactersIgnoringModifiers == "n"
+            event.charactersIgnoringModifiers == "t" || event.charactersIgnoringModifiers == "n"
         {
             if !vm.isSettingsOpen {
                 vm.startNewConversation(title: "New Chat")
@@ -84,10 +85,10 @@ final class WindowController: NSWindowController {
         let hasOption = event.modifierFlags.contains(.option)
         if (hasCommand || hasOption) && !event.modifierFlags.contains(.control) {
             if let chars = event.charactersIgnoringModifiers,
-               chars.count == 1,
-               let firstChar = chars.first,
-               let num = Int(String(firstChar)),
-               num >= 1 && num <= 9
+                chars.count == 1,
+                let firstChar = chars.first,
+                let num = Int(String(firstChar)),
+                num >= 1 && num <= 9
             {
                 if vm.isClipboardBannerVisible && !vm.detectedClipboardText.isEmpty {
                     vm.runPresetWithClipboard(index: num - 1)
@@ -134,7 +135,7 @@ final class WindowController: NSWindowController {
             let editingText =
                 window?.firstResponder is NSTextView || window?.firstResponder is NSTextField
             if !editingText && !vm.isSettingsOpen && vm.isSidebarVisible,
-               let selectedId = vm.selectedConversationId
+                let selectedId = vm.selectedConversationId
             {
                 vm.deleteConversation(id: selectedId)
                 return true

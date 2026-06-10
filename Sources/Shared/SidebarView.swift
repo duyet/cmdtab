@@ -140,9 +140,10 @@ struct SidebarView: View {
         var buckets: [String: [Conversation]] = [:]
         for conv in viewModel.conversations {
             let key: String
-            let days = calendar.dateComponents(
-                [.day], from: calendar.startOfDay(for: conv.timestamp), to: calendar.startOfDay(for: now)
-            ).day ?? 0
+            let days =
+                calendar.dateComponents(
+                    [.day], from: calendar.startOfDay(for: conv.timestamp), to: calendar.startOfDay(for: now)
+                ).day ?? 0
             if calendar.isDateInToday(conv.timestamp) {
                 key = "Today"
             } else if calendar.isDateInYesterday(conv.timestamp) {
@@ -225,9 +226,9 @@ private struct SidebarRow: View {
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundColor(.secondary.opacity(0.8))
                         #if os(macOS)
-                        .opacity(isHovered ? 1 : 0)
+                    .opacity(isHovered ? 1 : 0)
                         #else
-                        .opacity(0)
+                    .opacity(0)
                         #endif
                 }
             }

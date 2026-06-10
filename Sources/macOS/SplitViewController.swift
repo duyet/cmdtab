@@ -1,6 +1,6 @@
 import AppKit
-import SwiftUI
 import Combine
+import SwiftUI
 
 @MainActor
 final class SplitViewController: NSSplitViewController {
@@ -81,7 +81,8 @@ final class SplitViewController: NSSplitViewController {
 
         // Auto-hide when main pane would get too cramped; restore with hysteresis.
         let totalWidth = splitView.frame.width
-        let sidebarW = sidebarSplitItem.isCollapsed
+        let sidebarW =
+            sidebarSplitItem.isCollapsed
             ? viewModel.sidebarWidth
             : sidebarSplitItem.viewController.view.frame.width
         let minMainPane: CGFloat = 460
@@ -91,7 +92,7 @@ final class SplitViewController: NSSplitViewController {
             sidebarAutoHidden = true
             viewModel.isSidebarVisible = false
         } else if sidebarAutoHidden, sidebarSplitItem.isCollapsed,
-                  totalWidth >= viewModel.sidebarWidth + minMainPane + restoreSlack
+            totalWidth >= viewModel.sidebarWidth + minMainPane + restoreSlack
         {
             sidebarAutoHidden = false
             viewModel.isSidebarVisible = true

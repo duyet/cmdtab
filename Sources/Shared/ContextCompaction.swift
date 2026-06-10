@@ -50,7 +50,7 @@ extension MainViewModel {
     /// older messages if so. Called before sending a new message.
     func compactIfNeeded() {
         guard let activeId = selectedConversationId,
-              let activeIndex = conversations.firstIndex(where: { $0.id == activeId })
+            let activeIndex = conversations.firstIndex(where: { $0.id == activeId })
         else { return }
 
         let conversation = conversations[activeIndex]

@@ -185,9 +185,9 @@ private struct PresetChip: View {
                 Image(systemName: icon)
                     .font(.system(size: 11))
                     #if os(macOS)
-                    .foregroundColor(isHovered ? Color.accentCoral : .secondary)
+                .foregroundColor(isHovered ? Color.accentCoral : .secondary)
                     #else
-                    .foregroundColor(.secondary)
+                .foregroundColor(.secondary)
                     #endif
                 Text(title)
                     .font(.system(size: 12, weight: .medium))
@@ -200,9 +200,9 @@ private struct PresetChip: View {
             .overlay(
                 Capsule()
                     #if os(macOS)
-                    .stroke(isHovered ? Color.accentCoral.opacity(0.4) : Color.hairline, lineWidth: 1)
+                .stroke(isHovered ? Color.accentCoral.opacity(0.4) : Color.hairline, lineWidth: 1)
                     #else
-                    .stroke(Color.hairline, lineWidth: 1)
+                .stroke(Color.hairline, lineWidth: 1)
                     #endif
             )
             .clipShape(Capsule())

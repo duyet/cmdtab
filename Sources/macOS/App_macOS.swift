@@ -161,9 +161,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem?.button {
-            button.title = "⌘⌥"
+            button.image = NSImage(systemSymbolName: "command.square", accessibilityDescription: "cmdtab")
         }
 
         let menu = NSMenu()

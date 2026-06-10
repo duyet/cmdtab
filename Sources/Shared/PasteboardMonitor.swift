@@ -6,7 +6,8 @@ import AppKit
 import UIKit
 #endif
 
-public final class PasteboardMonitor {
+@MainActor
+public final class PasteboardMonitor: @unchecked Sendable {
     public static let shared = PasteboardMonitor()
 
     #if os(macOS)
@@ -33,7 +34,7 @@ public final class PasteboardMonitor {
         #if os(macOS)
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            self?.checkPasteboard()
+            MainActor.assumeIsolated { self?.checkPasteboard() }
         }
         #elseif os(iOS)
         activeObserver = NotificationCenter.default.addObserver(
@@ -41,7 +42,7 @@ public final class PasteboardMonitor {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.checkPasteboard()
+            MainActor.assumeIsolated { self?.checkPasteboard() }
         }
         // Seed lastCopiedText so the current clipboard content doesn't
         // trigger a spurious banner on first launch.

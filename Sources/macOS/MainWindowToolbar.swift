@@ -9,7 +9,6 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
     private static let sidebarToggleID = NSToolbarItem.Identifier("sidebarToggle")
     private static let newChatID = NSToolbarItem.Identifier("newChat")
     private static let searchID = NSToolbarItem.Identifier("search")
-    private static let settingsID = NSToolbarItem.Identifier("settings")
 
     static func create(viewModel: MainViewModel, windowController: WindowController) -> NSToolbar {
         let toolbar = NSToolbar(identifier: "CmdTabMainWindowToolbar")
@@ -39,8 +38,6 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
             return makeNewChat()
         case Self.searchID:
             return makeSearch()
-        case Self.settingsID:
-            return makeSettings()
         case .flexibleSpace:
             return NSToolbarItem(itemIdentifier: .flexibleSpace)
         default:
@@ -49,7 +46,7 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [Self.sidebarToggleID, Self.newChatID, .flexibleSpace, Self.searchID, Self.settingsID]
+        [Self.sidebarToggleID, Self.newChatID, .flexibleSpace, Self.searchID]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -95,19 +92,6 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
         return item
     }
 
-    private func makeSettings() -> NSToolbarItem {
-        let item = NSToolbarItem(itemIdentifier: Self.settingsID)
-        item.label = "Settings"
-        item.paletteLabel = "Settings"
-        item.toolTip = "Settings (⌘,)"
-        item.image = NSImage(systemSymbolName: "gearshape",
-                             accessibilityDescription: "Settings")
-        item.target = self
-        item.action = #selector(openSettings)
-        item.isBordered = true
-        return item
-    }
-
     // MARK: - Actions
 
     @objc private func toggleSidebar() {
@@ -118,9 +102,5 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
         if !viewModel.isSettingsOpen {
             viewModel.startNewConversation(title: "New Chat")
         }
-    }
-
-    @objc private func openSettings() {
-        viewModel.toggleSettings()
     }
 }

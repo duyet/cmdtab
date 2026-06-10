@@ -1,20 +1,17 @@
 import SwiftUI
 
-/// macOS-only right pane: chat viewport, composer, floating sidebar peek, settings overlay.
+/// macOS-only right pane: chat viewport, composer, settings inspector.
 /// Hosted inside NSSplitViewController's detail item via NSHostingController.
 struct DetailContentView: View {
     @ObservedObject var viewModel: MainViewModel
-    @State private var isFloatingSidebarShown = false
-    @State private var toggleIconHovering = false
-    @State private var floatingPanelHovering = false
 
     var body: some View {
         ZStack {
             mainContentPane
 
-            // Floating sidebar peek (hover on toggle icon while hidden)
-            if isFloatingSidebarShown && !viewModel.isSidebarVisible && !viewModel.isSettingsOpen {
-                floatingSidebarOverlay
+            // Settings — right-side floating inspector panel with scrim
+            if viewModel.isSettingsOpen {
+                settingsInspector
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -26,23 +23,6 @@ struct DetailContentView: View {
     // MARK: - Main Content Pane
     private var mainContentPane: some View {
         VStack(spacing: 0) {
-            // Top bar — sidebar toggle icon when hidden
-            HStack {
-                if !viewModel.isSidebarVisible {
-                    PlainIconButton(systemName: "sidebar.left", size: 13, help: "Show Sidebar") {
-                        isFloatingSidebarShown = false
-                        withAnimation(.easeInOut(duration: 0.25)) { viewModel.isSidebarVisible.toggle() }
-                    }
-                    .padding(.leading, 16)
-                    .onHover { hovering in
-                        toggleIconHovering = hovering
-                        updateFloatingSidebar()
-                    }
-                }
-                Spacer()
-            }
-            .frame(height: 44)
-
             if hasMessages {
                 chatHistoryViewport
             } else {
@@ -53,40 +33,22 @@ struct DetailContentView: View {
         }
     }
 
-    // MARK: - Floating sidebar peek
-    private var floatingSidebarOverlay: some View {
+    // MARK: - Settings Inspector (right-side panel)
+    private var settingsInspector: some View {
         HStack(spacing: 0) {
-            SidebarView(viewModel: viewModel)
-                .frame(width: viewModel.sidebarWidth)
-                .glassCardSurface(cornerRadius: 12)
-                .shadow(color: .black.opacity(0.22), radius: 18, x: 4, y: 6)
-                .padding(.leading, 10)
-                .padding(.top, 44)
-                .padding(.bottom, 14)
-            Spacer()
-        }
-        .transition(.move(edge: .leading).combined(with: .opacity))
-        .zIndex(1)
-        .onHover { hovering in
-            floatingPanelHovering = hovering
-            updateFloatingSidebar()
-        }
-    }
+            // Scrim over content — tap to dismiss
+            Color.black.opacity(0.25)
+                .onTapGesture { viewModel.isSettingsOpen = false }
 
-    private func updateFloatingSidebar() {
-        guard !viewModel.isSidebarVisible else {
-            isFloatingSidebarShown = false
-            return
+            // Settings panel anchored to the right edge
+            SettingsView(viewModel: viewModel)
+                .frame(width: 420)
+                .background(Color.cardSurface)
+                .overlay(Rectangle().frame(width: 1).foregroundColor(Color.hairline), alignment: .leading)
         }
-        if toggleIconHovering || floatingPanelHovering {
-            withAnimation(.easeOut(duration: 0.15)) { isFloatingSidebarShown = true }
-        } else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                if !toggleIconHovering && !floatingPanelHovering {
-                    withAnimation(.easeIn(duration: 0.15)) { isFloatingSidebarShown = false }
-                }
-            }
-        }
+        .ignoresSafeArea()
+        .transition(.move(edge: .trailing))
+        .animation(.easeInOut(duration: 0.2), value: viewModel.isSettingsOpen)
     }
 
     private var hasMessages: Bool {

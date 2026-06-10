@@ -2,197 +2,62 @@ import SwiftUI
 
 public struct MainView: View {
     @ObservedObject var viewModel: MainViewModel
-    @State private var dragStartWidth: CGFloat? = nil
-    #if os(macOS)
-    // Distinguishes width-triggered hiding from a user's manual ⌘B toggle so
-    // we only auto-restore what we auto-hid.
-    @State private var sidebarAutoHidden = false
-    // Hover-to-peek: hovering the toggle icon shows the sidebar as a floating
-    // overlay without changing the persisted visibility state.
-    @State private var isFloatingSidebarShown = false
-    @State private var toggleIconHovering = false
-    @State private var floatingPanelHovering = false
-    #endif
 
     public init(viewModel: MainViewModel) {
         self.viewModel = viewModel
     }
 
+    #if os(iOS)
     public var body: some View {
-        ZStack {
-            // Base layer: sidebar + main pane always present
-            #if os(macOS)
-            HStack(spacing: 0) {
-                if viewModel.isSidebarVisible {
-                    SidebarView(viewModel: viewModel)
-                        .frame(width: viewModel.sidebarWidth)
-                        .transition(.move(edge: .leading).combined(with: .opacity))
+        ZStack(alignment: .leading) {
+            mainContentPane
 
-                    sidebarResizeHandle
-                }
-
-                mainContentPane
-            }
-            .animation(.easeInOut(duration: 0.2), value: viewModel.isSidebarVisible)
-            #else
-            ZStack(alignment: .leading) {
-                mainContentPane
-
-                if viewModel.isSidebarVisible {
-                    // Dimming scrim — tap to dismiss sidebar
-                    Color.black.opacity(0.3)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                viewModel.isSidebarVisible = false
-                            }
+            if viewModel.isSidebarVisible {
+                // Dimming scrim — tap to dismiss sidebar
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            viewModel.isSidebarVisible = false
                         }
-                        .transition(.opacity)
+                    }
+                    .transition(.opacity)
 
-                    SidebarView(viewModel: viewModel)
-                        .frame(width: 300)
-                        .transition(.move(edge: .leading))
-                        .ignoresSafeArea(edges: .vertical)
-                }
-            }
-            .animation(.easeInOut(duration: 0.25), value: viewModel.isSidebarVisible)
-            #endif
-
-            #if os(macOS)
-            // Floating sidebar peek (hover on the toggle icon while hidden)
-            if isFloatingSidebarShown && !viewModel.isSidebarVisible && !viewModel.isSettingsOpen {
-                floatingSidebarOverlay
-            }
-            #endif
-
-            // Settings overlay — instant, full-window scrim + floating panel
-            if viewModel.isSettingsOpen {
-                settingsOverlay
+                SidebarView(viewModel: viewModel)
+                    .frame(width: 300)
+                    .transition(.move(edge: .leading))
+                    .ignoresSafeArea(edges: .vertical)
             }
         }
+        .animation(.easeInOut(duration: 0.25), value: viewModel.isSidebarVisible)
         .platformFrame()
         .background(Color.creamBackground)
         .tint(.primary)
-        // Every static Text in the app is mouse-selectable.
         .textSelection(.enabled)
-        // Extend under the transparent title bar so the sidebar toolbar icons
-        // sit on the same line as the traffic lights.
-        .ignoresSafeArea(.container, edges: .top)
-        #if os(macOS)
-        .background(
-            GeometryReader { geo in
-                Color.clear
-                    .onChange(of: geo.size.width) { _, newWidth in
-                        adaptSidebar(toWidth: newWidth)
-                    }
-                    .onAppear { adaptSidebar(toWidth: geo.size.width) }
-            }
-        )
-        #endif
-    }
 
-    #if os(macOS)
-    /// Auto-hides the sidebar when the main pane would get too cramped, and
-    /// restores it (with hysteresis) once the window is wide enough again.
-    private func adaptSidebar(toWidth width: CGFloat) {
-        let minMainPaneWidth: CGFloat = 460
-        let restoreSlack: CGFloat = 40
-        if viewModel.isSidebarVisible, width < viewModel.sidebarWidth + minMainPaneWidth {
-            withAnimation { viewModel.isSidebarVisible = false }
-            sidebarAutoHidden = true
-        } else if sidebarAutoHidden, !viewModel.isSidebarVisible,
-            width >= viewModel.sidebarWidth + minMainPaneWidth + restoreSlack
-        {
-            withAnimation { viewModel.isSidebarVisible = true }
-            sidebarAutoHidden = false
+        // Settings overlay
+        if viewModel.isSettingsOpen {
+            settingsOverlay
         }
     }
-
-    // MARK: - Floating sidebar peek
-
-    private var floatingSidebarOverlay: some View {
-        HStack(spacing: 0) {
-            SidebarView(viewModel: viewModel)
-                .frame(width: viewModel.sidebarWidth)
-                .glassCardSurface(cornerRadius: 12)
-                .shadow(color: .black.opacity(0.22), radius: 18, x: 4, y: 6)
-                .padding(.leading, 10)
-                .padding(.top, 44)
-                .padding(.bottom, 14)
-            Spacer()
-        }
-        .transition(.move(edge: .leading).combined(with: .opacity))
-        .zIndex(1)
-        .onHover { hovering in
-            floatingPanelHovering = hovering
-            updateFloatingSidebar()
-        }
-    }
-
-    private func updateFloatingSidebar() {
-        guard !viewModel.isSidebarVisible else {
-            isFloatingSidebarShown = false
-            return
-        }
-        if toggleIconHovering || floatingPanelHovering {
-            withAnimation(.easeOut(duration: 0.15)) { isFloatingSidebarShown = true }
-        } else {
-            // Grace period so the pointer can cross the gap between the icon
-            // and the panel without dismissing it.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                if !toggleIconHovering && !floatingPanelHovering {
-                    withAnimation(.easeIn(duration: 0.15)) { isFloatingSidebarShown = false }
-                }
-            }
-        }
+    #else
+    // macOS: MainView is not instantiated (WindowController hosts views separately).
+    // This body exists only to satisfy compilation.
+    public var body: some View {
+        EmptyView()
     }
     #endif
 
-    #if os(macOS)
-    // MARK: - Sidebar resize handle (drag the divider; width persists)
-    private var sidebarResizeHandle: some View {
-        Divider()
-            .overlay(
-                Color.clear
-                    .frame(width: 8)
-                    .contentShape(Rectangle())
-                    .gesture(
-                        DragGesture(minimumDistance: 1, coordinateSpace: .global)
-                            .onChanged { value in
-                                if dragStartWidth == nil { dragStartWidth = viewModel.sidebarWidth }
-                                let proposed = (dragStartWidth ?? 260) + value.translation.width
-                                viewModel.sidebarWidth = min(400, max(220, proposed))
-                            }
-                            .onEnded { _ in dragStartWidth = nil }
-                    )
-                    .onHover { hovering in
-                        if hovering { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
-                    }
-            )
-    }
-    #endif
-
-    // MARK: - Main Content Pane (no header bar)
+    #if os(iOS)
+    // MARK: - Main Content Pane
     private var mainContentPane: some View {
         VStack(spacing: 0) {
-            // Slim top inset matching sidebar toolbar height — no header bar.
             HStack {
                 if !viewModel.isSidebarVisible {
                     PlainIconButton(systemName: "sidebar.left", size: 13, help: "Show Sidebar") {
-                        #if os(macOS)
-                        isFloatingSidebarShown = false
-                        #endif
                         withAnimation(.easeInOut(duration: 0.25)) { viewModel.isSidebarVisible.toggle() }
                     }
-                    #if os(macOS)
-                    .padding(.leading, 72)
-                    .onHover { hovering in
-                        toggleIconHovering = hovering
-                        updateFloatingSidebar()
-                    }
-                    #else
                     .padding(.leading, 16)
-                    #endif
                 }
                 Spacer()
             }
@@ -210,26 +75,23 @@ public struct MainView: View {
         .background(Color.creamBackground)
     }
 
-    // MARK: - Settings Overlay (instant, scrim + floating panel)
+    // MARK: - Settings Overlay
     private var settingsOverlay: some View {
         ZStack {
-            // Scrim over everything including sidebar
             Color.black.opacity(0.35)
                 .ignoresSafeArea()
 
-            // Floating settings panel
             SettingsView(viewModel: viewModel)
                 .frame(maxWidth: 640)
                 .padding(.horizontal, 32)
                 .padding(.vertical, 24)
         }
-        // No animation — instant appearance per spec
         .transaction { $0.animation = nil }
     }
 
     private var hasMessages: Bool {
         if let activeId = viewModel.selectedConversationId,
-            let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
+           let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
         {
             return !activeConv.messages.isEmpty
         }
@@ -242,7 +104,7 @@ public struct MainView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if let activeId = viewModel.selectedConversationId,
-                        let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
+                       let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
                     {
                         ForEach(activeConv.messages) { message in
                             MessageRow(message: message, viewModel: viewModel)
@@ -264,8 +126,8 @@ public struct MainView: View {
 
     private func scrollToLast(_ proxy: ScrollViewProxy) {
         if let activeId = viewModel.selectedConversationId,
-            let activeConv = viewModel.conversations.first(where: { $0.id == activeId }),
-            let lastMsg = activeConv.messages.last
+           let activeConv = viewModel.conversations.first(where: { $0.id == activeId }),
+           let lastMsg = activeConv.messages.last
         {
             withAnimation {
                 proxy.scrollTo(lastMsg.id, anchor: .bottom)
@@ -307,20 +169,6 @@ public struct MainView: View {
                 .foregroundColor(.secondary)
                 .padding(.top, 10)
 
-            #if os(macOS)
-            HStack(spacing: 10) {
-                StarterCard(icon: "doc.on.clipboard", title: "Summarize my clipboard") {
-                    viewModel.prefillComposer("Summarize this for me: ")
-                }
-                StarterCard(icon: "envelope", title: "Draft an email") {
-                    viewModel.prefillComposer("Draft a short, friendly email about ")
-                }
-                StarterCard(icon: "lightbulb", title: "Explain a concept") {
-                    viewModel.prefillComposer("Explain in plain language: ")
-                }
-            }
-            .padding(.top, 22)
-            #else
             VStack(spacing: 8) {
                 StarterCard(icon: "doc.on.clipboard", title: "Summarize my clipboard") {
                     viewModel.prefillComposer("Summarize this for me: ")
@@ -334,12 +182,12 @@ public struct MainView: View {
             }
             .padding(.horizontal, 24)
             .padding(.top, 22)
-            #endif
 
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+    #endif
 }
 
 // MARK: - Starter Card (empty-state suggestion)

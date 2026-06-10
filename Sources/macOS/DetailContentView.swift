@@ -48,7 +48,8 @@ struct DetailContentView: View {
         }
         .ignoresSafeArea()
         .transition(.move(edge: .trailing))
-        .animation(.easeInOut(duration: 0.2), value: viewModel.isSettingsOpen)
+        // Instant appearance — no animation per original spec.
+        .transaction { $0.animation = nil }
     }
 
     private var hasMessages: Bool {

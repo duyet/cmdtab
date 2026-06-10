@@ -14,7 +14,7 @@ struct CmdTabApp: App {
 }
 
 @MainActor
-public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+public final class AppDelegate: NSObject, NSApplicationDelegate {
     public var statusItem: NSStatusItem?
     var windowController: WindowController?
     public var viewModel: MainViewModel?
@@ -234,12 +234,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         windowController?.window?.orderOut(nil)
     }
 
-    // MARK: - NSWindowDelegate & Dock Reopen
-    public func windowShouldClose(_ sender: NSWindow) -> Bool {
-        sender.orderOut(nil)
-        return false
-    }
-
+    // MARK: - Dock Reopen
     public func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag {
             showWindow()

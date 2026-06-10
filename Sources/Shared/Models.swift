@@ -28,14 +28,20 @@ public struct Conversation: Codable, Identifiable, Equatable {
     public var timestamp: Date
     public var presetId: UUID?  // Links to Preset.id for system prompt lookup
 
+    /// Summarized context from older messages that were compacted out.
+    /// nil when no compaction has occurred.
+    public var compactedSummary: String?
+
     public init(
-        id: UUID = UUID(), title: String, messages: [ChatMessage] = [], timestamp: Date = Date(), presetId: UUID? = nil
+        id: UUID = UUID(), title: String, messages: [ChatMessage] = [], timestamp: Date = Date(), presetId: UUID? = nil,
+        compactedSummary: String? = nil
     ) {
         self.id = id
         self.title = title
         self.messages = messages
         self.timestamp = timestamp
         self.presetId = presetId
+        self.compactedSummary = compactedSummary
     }
 }
 

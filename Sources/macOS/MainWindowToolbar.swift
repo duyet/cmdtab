@@ -8,7 +8,6 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
 
     private static let sidebarToggleID = NSToolbarItem.Identifier("sidebarToggle")
     private static let newChatID = NSToolbarItem.Identifier("newChat")
-    private static let searchID = NSToolbarItem.Identifier("search")
 
     static func create(viewModel: MainViewModel, windowController: WindowController) -> NSToolbar {
         let toolbar = NSToolbar(identifier: "CmdTabMainWindowToolbar")
@@ -36,8 +35,6 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
             return makeSidebarToggle()
         case Self.newChatID:
             return makeNewChat()
-        case Self.searchID:
-            return makeSearch()
         case .flexibleSpace:
             return NSToolbarItem(itemIdentifier: .flexibleSpace)
         default:
@@ -46,7 +43,7 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [Self.sidebarToggleID, Self.newChatID, .flexibleSpace, Self.searchID]
+        [Self.sidebarToggleID, Self.newChatID, .flexibleSpace]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -81,21 +78,12 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
         return item
     }
 
-    private func makeSearch() -> NSToolbarItem {
-        let item = NSToolbarItem(itemIdentifier: Self.searchID)
-        item.label = "Search"
-        item.paletteLabel = "Search"
-        item.toolTip = "Search"
-        item.image = NSImage(systemSymbolName: "magnifyingglass",
-                             accessibilityDescription: "Search")
-        item.isBordered = true
-        return item
-    }
-
     // MARK: - Actions
 
     @objc private func toggleSidebar() {
-        viewModel.isSidebarVisible.toggle()
+        if !viewModel.isSettingsOpen {
+            viewModel.isSidebarVisible.toggle()
+        }
     }
 
     @objc private func newChat() {

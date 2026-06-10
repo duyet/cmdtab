@@ -389,6 +389,9 @@ public final class MainViewModel: ObservableObject {
             startNewConversation(title: "General Chat")
         }
 
+        // Auto-compact if conversation history exceeds model's threshold
+        compactIfNeeded()
+
         guard let activeId = selectedConversationId,
             let activeIndex = conversations.firstIndex(where: { $0.id == activeId })
         else { return }

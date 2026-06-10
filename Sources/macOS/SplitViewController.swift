@@ -70,9 +70,10 @@ final class SplitViewController: NSSplitViewController {
 
         guard let sidebarSplitItem else { return }
 
-        // Read actual sidebar width and sync to viewModel (for floating peek, iOS compat)
+        // Read actual sidebar width from the view controller's view (not
+        // splitView.subviews[0] which is fragile on macOS 26 with Liquid Glass).
         if !sidebarSplitItem.isCollapsed {
-            let width = splitView.subviews[0].frame.width
+            let width = sidebarSplitItem.viewController.view.frame.width
             if width >= sidebarSplitItem.minimumThickness {
                 viewModel.sidebarWidth = width
             }
@@ -82,7 +83,7 @@ final class SplitViewController: NSSplitViewController {
         let totalWidth = splitView.frame.width
         let sidebarW = sidebarSplitItem.isCollapsed
             ? viewModel.sidebarWidth
-            : splitView.subviews[0].frame.width
+            : sidebarSplitItem.viewController.view.frame.width
         let minMainPane: CGFloat = 460
         let restoreSlack: CGFloat = 40
 

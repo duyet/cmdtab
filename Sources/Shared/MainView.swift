@@ -335,6 +335,8 @@ private struct MessageRow: View {
                     Text("Thinking…")
                         .font(.system(size: 13 * viewModel.fontScale))
                         .foregroundColor(.secondary.opacity(0.7))
+                } else if message.isError {
+                    errorCard
                 } else {
                     markdownText
                 }
@@ -363,6 +365,28 @@ private struct MessageRow: View {
         .onHover { hovering in
             withAnimation(.easeOut(duration: 0.15)) { isHovered = hovering }
         }
+    }
+
+    /// Failed-request presentation: quiet red card with the concise provider
+    /// message instead of a wall of raw JSON.
+    private var errorCard: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 12))
+                .foregroundColor(.red.opacity(0.85))
+            Text(message.content)
+                .font(.system(size: 13 * viewModel.fontScale))
+                .foregroundColor(.primary.opacity(0.85))
+                .textSelection(.enabled)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.red.opacity(0.07))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.red.opacity(0.18))
+        )
     }
 
     /// Native markdown rendering (inline syntax: bold, italic, code, links).

@@ -348,6 +348,14 @@ public final class MainViewModel: ObservableObject {
         clearConversation()
     }
 
+    public func renameConversation(id: UUID, to newTitle: String) {
+        let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+            let index = conversations.firstIndex(where: { $0.id == id })
+        else { return }
+        conversations[index].title = trimmed
+    }
+
     public func deleteConversation(id: UUID) {
         // Cancel streaming if deleting the active conversation
         if selectedConversationId == id {
@@ -500,14 +508,22 @@ public final class MainViewModel: ObservableObject {
                 }
             } catch {
                 guard !Task.isCancelled else { return }
+                let text = (error as? APIError)?.userMessage ?? error.localizedDescription
                 await MainActor.run {
-                    self?.appendChunk(
-                        chunk: "Error: \(error.localizedDescription)", to: conversationId, messageId: assistantMsgId)
+                    self?.appendChunk(chunk: text, to: conversationId, messageId: assistantMsgId)
+                    self?.markMessageAsError(conversationId: conversationId, messageId: assistantMsgId)
                     self?.isStreaming = false
                     self?.clearStreamingIndices()
                 }
             }
         }
+    }
+
+    private func markMessageAsError(conversationId: UUID, messageId: UUID) {
+        guard let convIdx = conversations.firstIndex(where: { $0.id == conversationId }),
+            let msgIdx = conversations[convIdx].messages.firstIndex(where: { $0.id == messageId })
+        else { return }
+        conversations[convIdx].messages[msgIdx].isError = true
     }
 
     private func appendChunk(chunk: String, to conversationId: UUID, messageId: UUID) {

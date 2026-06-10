@@ -7,12 +7,16 @@ public struct ChatMessage: Codable, Identifiable, Equatable {
     public var role: String  // "user" or "assistant"
     public var content: String
     public var timestamp: Date
+    public var isError: Bool  // renders as an error card instead of markdown
 
-    public init(id: UUID = UUID(), role: String, content: String, timestamp: Date = Date()) {
+    public init(
+        id: UUID = UUID(), role: String, content: String, timestamp: Date = Date(), isError: Bool = false
+    ) {
         self.id = id
         self.role = role
         self.content = content
         self.timestamp = timestamp
+        self.isError = isError
     }
 }
 

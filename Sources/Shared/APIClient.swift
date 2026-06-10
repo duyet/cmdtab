@@ -21,6 +21,25 @@ public enum APIError: Error, LocalizedError {
             return message
         }
     }
+
+    /// Concise message for chat display. Unlike `errorDescription` (which
+    /// preserves the raw body for diagnostics), this extracts the provider's
+    /// human-readable `error.message` from JSON bodies when present.
+    public var userMessage: String {
+        switch self {
+        case .invalidResponse(let code, let body):
+            if let data = body.data(using: .utf8),
+                let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                let error = object["error"] as? [String: Any],
+                let message = error["message"] as? String
+            {
+                return "\(message) (HTTP \(code))"
+            }
+            return "The server returned an error (HTTP \(code))."
+        default:
+            return errorDescription ?? "Something went wrong."
+        }
+    }
 }
 
 // MARK: - SSE Parsing

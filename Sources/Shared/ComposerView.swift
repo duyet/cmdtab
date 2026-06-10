@@ -198,18 +198,17 @@ struct ComposerView: View {
     // MARK: Cloud / Local dropdown (Codex-style "Start in" menu)
     private var localCloudToggle: some View {
         Menu {
-            Button {
-                viewModel.isLocalModelSelected = false
-            } label: {
-                Label("Cloud", systemImage: viewModel.isLocalModelSelected ? "cloud" : "checkmark")
-            }
-            Button {
-                viewModel.isLocalModelSelected = true
-            } label: {
+            // Inline Picker gets the native checkmark on the selected row
+            // while keeping each row's own icon.
+            Picker("Inference", selection: $viewModel.isLocalModelSelected) {
+                Label("Cloud", systemImage: "cloud").tag(false)
                 Label(
                     viewModel.isLocalModelSupported ? "Local · On-device" : "Local · Unavailable",
-                    systemImage: viewModel.isLocalModelSelected ? "checkmark" : "cpu")
+                    systemImage: "cpu"
+                ).tag(true)
             }
+            .pickerStyle(.inline)
+            .labelsHidden()
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
@@ -224,6 +223,7 @@ struct ComposerView: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
+        .modifier(MenuTriggerHover())
         #if os(macOS)
         .help(
             viewModel.isLocalModelSelected
@@ -241,9 +241,13 @@ struct ComposerView: View {
 
     private var modelPicker: some View {
         Menu {
-            ForEach(modelOptions, id: \.id) { option in
-                Button(option.label) { viewModel.modelName = option.id }
+            Picker("Model", selection: $viewModel.modelName) {
+                ForEach(modelOptions, id: \.id) { option in
+                    Text(option.label).tag(option.id)
+                }
             }
+            .pickerStyle(.inline)
+            .labelsHidden()
         } label: {
             HStack(spacing: 3) {
                 Text(currentModelLabel)
@@ -256,6 +260,7 @@ struct ComposerView: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
+        .modifier(MenuTriggerHover())
     }
 
     // MARK: Send button — coral when active
@@ -466,5 +471,31 @@ extension View {
         } else {
             self.onChange(of: value) { _ in action() }
         }
+    }
+}
+
+// MARK: - Menu trigger hover treatment
+/// Quiet pill highlight + pointing-hand cursor so the borderless dropdown
+/// triggers read as clickable controls.
+private struct MenuTriggerHover: ViewModifier {
+    @State private var isHovered = false
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .background(isHovered ? Color.primary.opacity(0.06) : Color.clear)
+            .cornerRadius(6)
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                withAnimation(.easeOut(duration: 0.12)) { isHovered = hovering }
+                #if os(macOS)
+                if hovering {
+                    NSCursor.pointingHand.push()
+                } else {
+                    NSCursor.pop()
+                }
+                #endif
+            }
     }
 }

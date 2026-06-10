@@ -70,22 +70,25 @@ struct SidebarView: View {
             }
 
             if !viewModel.conversations.isEmpty {
-                Text("Recents")
-                    .font(.caption)
-                    .foregroundColor(.secondary.opacity(0.8))
-                    .padding(.horizontal, 22)
-                    .padding(.top, 18)
-                    .padding(.bottom, 6)
-
                 ScrollView {
-                    LazyVStack(spacing: 1) {
-                        ForEach(viewModel.conversations) { conv in
-                            ConversationRow(
-                                title: conv.title,
-                                isSelected: viewModel.selectedConversationId == conv.id,
-                                onSelect: { viewModel.selectConversation(id: conv.id) },
-                                onDelete: { viewModel.deleteConversation(id: conv.id) }
-                            )
+                    LazyVStack(alignment: .leading, spacing: 1) {
+                        ForEach(groupedConversations, id: \.0) { group, conversations in
+                            Text(group)
+                                .font(.caption)
+                                .foregroundColor(.secondary.opacity(0.8))
+                                .padding(.horizontal, 12)
+                                .padding(.top, 16)
+                                .padding(.bottom, 4)
+
+                            ForEach(conversations) { conv in
+                                ConversationRow(
+                                    title: conv.title,
+                                    isSelected: viewModel.selectedConversationId == conv.id,
+                                    onSelect: { viewModel.selectConversation(id: conv.id) },
+                                    onRename: { viewModel.renameConversation(id: conv.id, to: $0) },
+                                    onDelete: { viewModel.deleteConversation(id: conv.id) }
+                                )
+                            }
                         }
                     }
                     .padding(.horizontal, 10)
@@ -95,6 +98,34 @@ struct SidebarView: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 0)
+    }
+
+    /// History buckets in display order. Only non-empty groups are returned;
+    /// conversations stay in their existing (most-recent-first) order.
+    private var groupedConversations: [(String, [Conversation])] {
+        let calendar = Calendar.current
+        let now = Date()
+        var buckets: [String: [Conversation]] = [:]
+        for conv in viewModel.conversations {
+            let key: String
+            let days = calendar.dateComponents(
+                [.day], from: calendar.startOfDay(for: conv.timestamp), to: calendar.startOfDay(for: now)
+            ).day ?? 0
+            if calendar.isDateInToday(conv.timestamp) {
+                key = "Today"
+            } else if calendar.isDateInYesterday(conv.timestamp) {
+                key = "Yesterday"
+            } else if days < 7 {
+                key = "Previous 7 Days"
+            } else if days < 30 {
+                key = "Previous 30 Days"
+            } else {
+                key = "Older"
+            }
+            buckets[key, default: []].append(conv)
+        }
+        return ["Today", "Yesterday", "Previous 7 Days", "Previous 30 Days", "Older"]
+            .compactMap { key in buckets[key].map { (key, $0) } }
     }
 
     // MARK: Placeholder pane for stubbed tabs
@@ -120,10 +151,9 @@ struct SidebarView: View {
     // MARK: Footer — Settings bottom-left; download icon only when an update exists.
     private var footerRow: some View {
         HStack(spacing: 4) {
-            SidebarRow(icon: "gearshape", label: "Settings", compact: true) {
+            PlainIconButton(systemName: "gearshape", size: 14, help: "Settings") {
                 viewModel.toggleSettings()
             }
-            .frame(width: 110)
 
             if viewModel.isUpdateAvailable {
                 PlainIconButton(systemName: "arrow.down.circle", size: 13, help: "Update available") {}
@@ -147,7 +177,7 @@ private struct SidebarRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 9) {
+            HStack(alignment: .firstTextBaseline, spacing: 9) {
                 Image(systemName: icon)
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
@@ -160,6 +190,7 @@ private struct SidebarRow: View {
                     Text(keycap)
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundColor(.secondary.opacity(0.8))
+                        .opacity(isHovered ? 1 : 0)
                 }
             }
             .padding(.horizontal, 12)
@@ -268,37 +299,77 @@ private struct ActionRow: View {
 }
 
 // MARK: - Conversation Row
+/// Click selects; clicking the already-selected row (or Rename in the context
+/// menu) starts inline renaming. Enter commits, Esc cancels.
 private struct ConversationRow: View {
     let title: String
     let isSelected: Bool
     let onSelect: () -> Void
+    let onRename: (String) -> Void
     let onDelete: () -> Void
     @State private var isHovered = false
+    @State private var isEditing = false
+    @State private var draft = ""
+    @FocusState private var fieldFocused: Bool
 
     var body: some View {
-        Button(action: onSelect) {
-            Text(title)
-                .font(.body)
-                .foregroundColor(.primary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(
-                    isSelected
-                        ? Color.primary.opacity(0.08)
-                        : (isHovered ? Color.primary.opacity(0.045) : Color.clear)
-                )
-                .cornerRadius(7)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(PlainButtonStyle())
-        .onHover { h in isHovered = h }
-        .contextMenu {
-            Button(role: .destructive, action: onDelete) {
-                Label("Delete", systemImage: "trash")
+        Group {
+            if isEditing {
+                TextField("Conversation name", text: $draft)
+                    .textFieldStyle(PlainTextFieldStyle())
+                    .font(.body)
+                    .focused($fieldFocused)
+                    .onSubmit { commit() }
+                    .onExitCommand { isEditing = false }
+                    .onChange(of: fieldFocused) { _, focused in
+                        if !focused { commit() }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.primary.opacity(0.08))
+                    .cornerRadius(7)
+            } else {
+                Button(action: { isSelected ? beginEditing() : onSelect() }) {
+                    Text(title)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            isSelected
+                                ? Color.primary.opacity(0.08)
+                                : (isHovered ? Color.primary.opacity(0.045) : Color.clear)
+                        )
+                        .cornerRadius(7)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+                .onHover { h in isHovered = h }
+                .contextMenu {
+                    Button(action: beginEditing) {
+                        Label("Rename", systemImage: "pencil")
+                    }
+                    Button(role: .destructive, action: onDelete) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
             }
+        }
+    }
+
+    private func beginEditing() {
+        draft = title
+        isEditing = true
+        fieldFocused = true
+    }
+
+    private func commit() {
+        if isEditing {
+            isEditing = false
+            onRename(draft)
         }
     }
 }

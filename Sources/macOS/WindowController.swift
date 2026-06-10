@@ -1,10 +1,13 @@
 import AppKit
 import SwiftUI
+import Combine
 
 @MainActor
 final class WindowController: NSWindowController {
     let viewModel: MainViewModel
     let splitViewController: SplitViewController
+    private var settingsPanel: SettingsPanel?
+    private var cancellables = Set<AnyCancellable>()
 
     init(viewModel: MainViewModel) {
         self.viewModel = viewModel
@@ -36,6 +39,16 @@ final class WindowController: NSWindowController {
         // NSToolbar — automatic Liquid Glass on macOS 26
         let toolbar = MainWindowToolbar.create(viewModel: viewModel, windowController: self)
         window.toolbar = toolbar
+
+        // Observe settings toggle
+        viewModel.$isSettingsOpen
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] open in
+                if open { self?.showSettingsPanel() }
+                else { self?.hideSettingsPanel() }
+            }
+            .store(in: &cancellables)
 
         // Wire key events through MainWindow
         window.onKeyPress = { [weak self] event in
@@ -142,6 +155,21 @@ final class WindowController: NSWindowController {
         }
 
         return false
+    }
+
+    // MARK: - Settings Panel
+
+    private func showSettingsPanel() {
+        guard let window else { return }
+        if settingsPanel == nil {
+            settingsPanel = SettingsPanel(viewModel: viewModel, parentWindow: window)
+        }
+        settingsPanel?.center()
+        settingsPanel?.makeKeyAndOrderFront(nil)
+    }
+
+    private func hideSettingsPanel() {
+        settingsPanel?.orderOut(nil)
     }
 }
 

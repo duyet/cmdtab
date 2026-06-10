@@ -16,11 +16,6 @@ struct DetailContentView: View {
             if isFloatingSidebarShown && !viewModel.isSidebarVisible && !viewModel.isSettingsOpen {
                 floatingSidebarOverlay
             }
-
-            // Settings overlay — instant, full-window scrim + floating panel
-            if viewModel.isSettingsOpen {
-                settingsOverlay
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.creamBackground)
@@ -92,20 +87,6 @@ struct DetailContentView: View {
                 }
             }
         }
-    }
-
-    // MARK: - Settings Overlay (instant, scrim + floating panel)
-    private var settingsOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.35)
-                .ignoresSafeArea()
-
-            SettingsView(viewModel: viewModel)
-                .frame(maxWidth: 640)
-                .padding(.horizontal, 32)
-                .padding(.vertical, 24)
-        }
-        .transaction { $0.animation = nil }
     }
 
     private var hasMessages: Bool {

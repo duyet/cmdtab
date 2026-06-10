@@ -303,9 +303,56 @@ public struct MainView: View {
                     .foregroundColor(.primary)
             }
 
+            Text("Copy something to get quick actions, or start with one of these.")
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+                .padding(.top, 10)
+
+            HStack(spacing: 10) {
+                StarterCard(icon: "doc.on.clipboard", title: "Summarize my clipboard") {
+                    viewModel.prefillComposer("Summarize this for me: ")
+                }
+                StarterCard(icon: "envelope", title: "Draft an email") {
+                    viewModel.prefillComposer("Draft a short, friendly email about ")
+                }
+                StarterCard(icon: "lightbulb", title: "Explain a concept") {
+                    viewModel.prefillComposer("Explain in plain language: ")
+                }
+            }
+            .padding(.top, 22)
+
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Starter Card (empty-state suggestion)
+private struct StarterCard: View {
+    let icon: String
+    let title: String
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                Text(title)
+                    .font(.system(size: 12.5))
+                    .foregroundColor(.primary.opacity(0.85))
+            }
+            .padding(.horizontal, 13)
+            .padding(.vertical, 9)
+            .background(isHovered ? Color.primary.opacity(0.06) : Color.cardSurface)
+            .clipShape(Capsule())
+            .overlay(Capsule().strokeBorder(Color.hairline))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(PlainButtonStyle())
+        .onHover { h in withAnimation(.easeOut(duration: 0.12)) { isHovered = h } }
     }
 }
 

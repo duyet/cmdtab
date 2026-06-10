@@ -60,6 +60,10 @@ struct ComposerView: View {
         .padding(.bottom, 16)
         .onAppear { isInputFocused = true }
         .onFocusTick(of: viewModel.composerFocusTick) {
+            if !viewModel.composerPrefill.isEmpty {
+                inputMessageText = viewModel.composerPrefill
+                viewModel.composerPrefill = ""
+            }
             isInputFocused = true
         }
     }

@@ -73,6 +73,14 @@ public final class MainViewModel: ObservableObject {
 
     // Focus signal — incremented whenever the composer should grab first-responder
     @Published public var composerFocusTick: Int = 0
+    /// One-shot text handoff to the composer (starter suggestions). The
+    /// composer consumes it and resets it to empty.
+    @Published public var composerPrefill: String = ""
+
+    public func prefillComposer(_ text: String) {
+        composerPrefill = text
+        composerFocusTick += 1
+    }
 
     /// Date of the last message activity, used for daily-rollover detection.
     private var lastActivityDate: Date? {

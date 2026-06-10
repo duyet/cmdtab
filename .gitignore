@@ -94,3 +94,4 @@ TestRunner.dSYM/
 .agents/
 .claude/
 skills-lock.json
+.env.local

@@ -37,7 +37,11 @@ public final class HotKeyManager: @unchecked Sendable {
             { (nextHandler, theEvent, userData) -> OSStatus in
                 guard let userData = userData else { return noErr }
                 let manager = Unmanaged<HotKeyManager>.fromOpaque(userData).takeUnretainedValue()
-                manager.onHotKeyPressed?()
+                // Carbon callback runs on an arbitrary thread; hop to main
+                // to satisfy MainActor isolation on onHotKeyPressed.
+                DispatchQueue.main.async {
+                    manager.onHotKeyPressed?()
+                }
                 return noErr
             },
             1,

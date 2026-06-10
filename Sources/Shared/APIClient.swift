@@ -12,7 +12,8 @@ public enum APIError: Error, LocalizedError {
         case .invalidURL:
             return "Invalid API Endpoint URL."
         case .invalidResponse(let code, let body):
-            return "Server returned error \(code): \(body)"
+            let preview = String(body.prefix(200))
+            return "Server returned error \(code): \(preview)"
         case .serializationError:
             return "Failed to serialize request payload."
         case .missingApiKey:
@@ -209,6 +210,7 @@ public final class APIClient: Sendable {
             do {
                 for try await line in bytes.lines {
                     errorBody += line + "\n"
+                    if errorBody.count > 10_000 { break }
                 }
             } catch {}
             throw APIError.invalidResponse(statusCode: httpResponse.statusCode, body: errorBody)

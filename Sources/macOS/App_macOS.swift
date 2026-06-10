@@ -18,9 +18,12 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     public var statusItem: NSStatusItem?
     var windowController: WindowController?
     public var viewModel: MainViewModel?
+    private var hasPositionedOnce = false
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.regular)
+        // .accessory: menu-bar agent with full menu bar (for Edit shortcuts)
+        // but no Dock icon. Matches LSUIElement=true in Info.plist.
+        NSApp.setActivationPolicy(.accessory)
 
         let vm = MainViewModel()
         self.viewModel = vm
@@ -176,9 +179,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupGlobalHotKey() {
         HotKeyManager.shared.onHotKeyPressed = { [weak self] in
-            DispatchQueue.main.async {
-                self?.toggleWindow()
-            }
+            self?.toggleWindow()
         }
         HotKeyManager.shared.registerGlobalHotKey()
     }
@@ -208,22 +209,26 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // Position on the screen containing mouse pointer
-        var screen = NSScreen.main
-        let mouseLocation = NSEvent.mouseLocation
-        for s in NSScreen.screens {
-            if NSMouseInRect(mouseLocation, s.frame, false) {
-                screen = s
-                break
+        // Only center the window on the first show; after that, respect the
+        // user's manual placement (setFrameAutosaveName restores it).
+        if !hasPositionedOnce {
+            var screen = NSScreen.main
+            let mouseLocation = NSEvent.mouseLocation
+            for s in NSScreen.screens {
+                if NSMouseInRect(mouseLocation, s.frame, false) {
+                    screen = s
+                    break
+                }
             }
-        }
 
-        if let screen = screen {
-            let screenRect = screen.visibleFrame
-            let windowSize = window.frame.size
-            let x = screenRect.origin.x + (screenRect.size.width - windowSize.width) / 2
-            let y = screenRect.origin.y + (screenRect.size.height - windowSize.height) * 0.65
-            window.setFrameOrigin(NSPoint(x: x, y: y))
+            if let screen = screen {
+                let screenRect = screen.visibleFrame
+                let windowSize = window.frame.size
+                let x = screenRect.origin.x + (screenRect.size.width - windowSize.width) / 2
+                let y = screenRect.origin.y + (screenRect.size.height - windowSize.height) * 0.65
+                window.setFrameOrigin(NSPoint(x: x, y: y))
+            }
+            hasPositionedOnce = true
         }
 
         window.makeKeyAndOrderFront(nil)

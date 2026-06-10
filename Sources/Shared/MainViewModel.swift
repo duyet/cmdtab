@@ -119,6 +119,7 @@ public final class MainViewModel: ObservableObject {
     }
     @Published public var endpointUrl: String = "https://anyrouter.dev/api/v1" {
         didSet {
+            if isApplyingEnvConfig { return }
             UserDefaults.standard.set(endpointUrl, forKey: "endpointUrl")
             updateStatusMessage()
         }
@@ -147,6 +148,8 @@ public final class MainViewModel: ObservableObject {
     }
     @Published public var apiKey: String = "" {
         didSet {
+            // Env-sourced keys are session-only; never persist them (AGENTS.md §3).
+            if isApplyingEnvApiKey { return }
             // Debounce Keychain writes — avoid delete+add on every keystroke
             apiKeySaveTask?.cancel()
             apiKeySaveTask = Task {
@@ -199,6 +202,10 @@ public final class MainViewModel: ObservableObject {
 
     private var currentTask: Task<Void, Never>? = nil
     private var apiKeySaveTask: Task<Void, Never>? = nil
+    /// True while assigning an `.env.local`-sourced key, so the didSet skips Keychain persistence.
+    private var isApplyingEnvApiKey = false
+    /// True while applying env-sourced config (e.g. base URL), so didSet skips UserDefaults.
+    private var isApplyingEnvConfig = false
     private var streamingConversationIndex: Int? = nil
     private var streamingMessageIndex: Int? = nil
 
@@ -347,6 +354,17 @@ public final class MainViewModel: ObservableObject {
         let stored = KeychainHelper.shared.read(service: "cmdtab.app", account: "token") ?? ""
         if !stored.isEmpty && apiKey.isEmpty {
             apiKey = stored
+        }
+        // Dev fallback: .env.local / environment (never persisted to Keychain).
+        if apiKey.isEmpty, let envKey = EnvFile.value(for: "ANYROUTER_API_KEY") {
+            isApplyingEnvApiKey = true
+            apiKey = envKey
+            isApplyingEnvApiKey = false
+            if let envBase = EnvFile.value(for: "ANYROUTER_BASE_URL"), !envBase.isEmpty {
+                isApplyingEnvConfig = true
+                endpointUrl = envBase
+                isApplyingEnvConfig = false
+            }
         }
     }
 

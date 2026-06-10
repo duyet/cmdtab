@@ -265,7 +265,7 @@ struct MessageRow: View {
                 } else if message.isError {
                     errorCard
                 } else {
-                    markdownText
+                    MessageMarkdownView(content: message.content, fontScale: viewModel.fontScale)
                 }
 
                 // Meta row: timestamp + copy

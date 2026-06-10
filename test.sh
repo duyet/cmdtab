@@ -12,6 +12,8 @@ xcrun -sdk macosx swiftc -target arm64-apple-macosx14.0 -D DISABLE_NATIVE_LLM -o
   Sources/Shared/KeychainHelper.swift \
   Sources/Shared/Models.swift \
   Sources/Shared/APIClient.swift \
+  Sources/Shared/EnvFile.swift \
+  Sources/Shared/MarkdownBlocks.swift \
   Sources/Shared/LocalModelClient.swift \
   Sources/Shared/InferenceAdapter.swift
 

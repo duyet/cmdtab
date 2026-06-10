@@ -358,7 +358,63 @@ func testAPIErrorMessaging() {
         "missingApiKey must mention the API key")
 }
 
+func testMarkdownBlockParsing() {
+    let blocks = MarkdownBlock.parse(
+        "# Title\nfirst para\nline two\n\nsecond para\n```swift\nlet x = 1\n```\ntail")
+    assert(blocks.count == 5, "expected 5 blocks, got \(blocks.count)")
+    if case .heading(let level) = blocks[0].kind {
+        assert(level == 1, "title must be h1")
+        assert(blocks[0].text == "Title", "heading text must strip hashes")
+    } else {
+        assert(false, "first block must be a heading")
+    }
+    assert(blocks[1].text == "first para\nline two", "paragraph must keep soft line breaks")
+    assert(blocks[2].text == "second para", "blank line must split paragraphs")
+    if case .code(let lang) = blocks[3].kind {
+        assert(lang == "swift", "fence language must be captured")
+        assert(blocks[3].text == "let x = 1", "code body must exclude fences")
+    } else {
+        assert(false, "fourth block must be code")
+    }
+}
+
+func testMarkdownUnterminatedFenceIsCode() {
+    // Streaming case: fence opened but not yet closed must render as code.
+    let blocks = MarkdownBlock.parse("intro\n```py\nprint(1)")
+    assert(blocks.count == 2, "expected 2 blocks, got \(blocks.count)")
+    if case .code(let lang) = blocks[1].kind {
+        assert(lang == "py", "open fence language must be captured")
+        assert(blocks[1].text == "print(1)", "open fence body must be code")
+    } else {
+        assert(false, "unterminated fence must parse as code")
+    }
+}
+
+func testMarkdownHashWithoutSpaceIsNotHeading() {
+    let blocks = MarkdownBlock.parse("#hashtag not a heading")
+    assert(blocks.count == 1, "expected 1 block")
+    if case .paragraph = blocks[0].kind {
+    } else {
+        assert(false, "#hashtag must stay a paragraph")
+    }
+}
+
+func testEnvFileParsing() {
+    let parsed = EnvFile.parse(
+        contents: "# comment\nANYROUTER_API_KEY=sk-test\n"
+            + "ANYROUTER_BASE_URL=\"https://x.dev/api/v1\"\n\n"
+            + "BAD LINE\n=novalue\nSPACED = padded ")
+    assert(parsed["ANYROUTER_API_KEY"] == "sk-test", "plain value must parse")
+    assert(parsed["ANYROUTER_BASE_URL"] == "https://x.dev/api/v1", "quotes must be stripped")
+    assert(parsed["SPACED"] == "padded", "whitespace must be trimmed")
+    assert(parsed.count == 3, "comments, blanks, malformed lines must be ignored")
+}
+
 func runAllTests() {
+    testMarkdownBlockParsing()
+    testMarkdownUnterminatedFenceIsCode()
+    testMarkdownHashWithoutSpaceIsNotHeading()
+    testEnvFileParsing()
     testClipboardSanitization()
     testKeychainCRUD()
     testConversationModels()

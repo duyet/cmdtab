@@ -175,14 +175,20 @@ private struct PresetChip: View {
     let title: String
     let icon: String
     let action: () -> Void
+    #if os(macOS)
     @State private var isHovered = false
+    #endif
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 5) {
                 Image(systemName: icon)
                     .font(.system(size: 11))
+                    #if os(macOS)
                     .foregroundColor(isHovered ? Color.accentCoral : .secondary)
+                    #else
+                    .foregroundColor(.secondary)
+                    #endif
                 Text(title)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.primary)
@@ -193,15 +199,21 @@ private struct PresetChip: View {
             .background(Color.cardSurface)
             .overlay(
                 Capsule()
+                    #if os(macOS)
                     .stroke(isHovered ? Color.accentCoral.opacity(0.4) : Color.hairline, lineWidth: 1)
+                    #else
+                    .stroke(Color.hairline, lineWidth: 1)
+                    #endif
             )
             .clipShape(Capsule())
             .contentShape(Capsule())
         }
         .buttonStyle(PlainButtonStyle())
+        #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeOut(duration: 0.1)) { isHovered = hovering }
         }
+        #endif
     }
 }
 

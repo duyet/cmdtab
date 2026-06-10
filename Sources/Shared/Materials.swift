@@ -26,8 +26,8 @@ struct VisualEffectBackground: NSViewRepresentable {
 
 // MARK: - Adaptive surfaces
 
-/// Sidebar surface: real vibrancy on macOS, solid color when the user enables
-/// Reduce Transparency (HIG rule 9.5) and on iOS.
+/// Sidebar surface: real vibrancy on macOS, Liquid Glass on iOS 26+,
+/// solid color when the user enables Reduce Transparency.
 struct SidebarSurface: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
@@ -39,13 +39,17 @@ struct SidebarSurface: ViewModifier {
             content.background(VisualEffectBackground(material: .sidebar))
         }
         #else
-        content.background(Color.windowBackground)
+        if #available(iOS 26.0, *), !reduceTransparency {
+            content.background(Color.clear)
+        } else {
+            content.background(Color.windowBackground)
+        }
         #endif
     }
 }
 
-/// Floating card surface: Liquid Glass on macOS 26+, classic card styling
-/// (solid surface + hairline + shadow) everywhere else.
+/// Floating card surface: Liquid Glass on iOS 26+ / macOS 26+, classic card
+/// styling (solid surface + hairline + shadow) everywhere else.
 struct GlassCardSurface: ViewModifier {
     var cornerRadius: CGFloat
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency

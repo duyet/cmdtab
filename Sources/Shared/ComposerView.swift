@@ -276,6 +276,10 @@ struct ComposerView: View {
         .buttonStyle(PlainButtonStyle())
         .accessibilityLabel("Send message")
         .disabled(!canSend)
+        #if os(iOS)
+        // Haptic feedback on send for iOS
+        .sensoryFeedback(.impact(weight: .light), trigger: viewModel.isStreaming)
+        #endif
     }
 
     // MARK: Local availability notice — small, quiet, with one-click fallback
@@ -378,14 +382,20 @@ private struct InlinePresetChip: View {
     let title: String
     let icon: String
     let action: () -> Void
+    #if os(macOS)
     @State private var isHovered = false
+    #endif
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.system(size: 10))
+                    #if os(macOS)
                     .foregroundColor(isHovered ? Color.accentCoral : .secondary)
+                    #else
+                    .foregroundColor(.secondary)
+                    #endif
                 Text(title)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.primary)
@@ -393,7 +403,11 @@ private struct InlinePresetChip: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
+            #if os(macOS)
             .background(Color.primary.opacity(isHovered ? 0.08 : 0.05))
+            #else
+            .background(Color.primary.opacity(0.05))
+            #endif
             .overlay(
                 Capsule()
                     .stroke(Color.hairline, lineWidth: 1)
@@ -401,7 +415,9 @@ private struct InlinePresetChip: View {
             .clipShape(Capsule())
         }
         .buttonStyle(PlainButtonStyle())
+        #if os(macOS)
         .onHover { h in withAnimation(.easeOut(duration: 0.1)) { isHovered = h } }
+        #endif
     }
 }
 

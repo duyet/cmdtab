@@ -50,7 +50,9 @@ private struct PillTabItem<T: Hashable>: View {
     let isSelected: Bool
     var track: Bool = false
     let onTap: () -> Void
+    #if os(macOS)
     @State private var isHovered = false
+    #endif
 
     var body: some View {
         Button(action: onTap) {
@@ -77,7 +79,7 @@ private struct PillTabItem<T: Hashable>: View {
                         .lineLimit(1)
                 }
             }
-            .foregroundColor(isSelected ? .primary : (isHovered ? .primary.opacity(0.75) : .secondary))
+            .foregroundColor(isSelected ? .primary : pillItemSecondaryColor)
             .padding(.horizontal, track ? (isSelected ? 14 : 8) : 9)
             .padding(.vertical, track ? 6 : 5)
             .frame(maxWidth: track && !isSelected ? .infinity : nil)
@@ -95,7 +97,17 @@ private struct PillTabItem<T: Hashable>: View {
         }
         .buttonStyle(PlainButtonStyle())
         .fixedSize(horizontal: !track || isSelected, vertical: true)
+        #if os(macOS)
         .onHover { h in withAnimation(.easeOut(duration: 0.1)) { isHovered = h } }
+        #endif
+    }
+
+    private var pillItemSecondaryColor: Color {
+        #if os(macOS)
+        isHovered ? .primary.opacity(0.75) : .secondary
+        #else
+        .secondary
+        #endif
     }
 }
 

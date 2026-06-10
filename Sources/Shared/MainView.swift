@@ -39,21 +39,23 @@ public struct MainView: View {
                 mainContentPane
 
                 if viewModel.isSidebarVisible {
+                    // Dimming scrim — tap to dismiss sidebar
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
                         .onTapGesture {
-                            withAnimation { viewModel.isSidebarVisible = false }
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                viewModel.isSidebarVisible = false
+                            }
                         }
                         .transition(.opacity)
 
                     SidebarView(viewModel: viewModel)
                         .frame(width: 300)
-                        .background(Color.windowBackground)
                         .transition(.move(edge: .leading))
                         .ignoresSafeArea(edges: .vertical)
                 }
             }
-            .animation(.easeInOut(duration: 0.2), value: viewModel.isSidebarVisible)
+            .animation(.easeInOut(duration: 0.25), value: viewModel.isSidebarVisible)
             #endif
 
             #if os(macOS)
@@ -180,19 +182,21 @@ public struct MainView: View {
                         #if os(macOS)
                         isFloatingSidebarShown = false
                         #endif
-                        withAnimation { viewModel.isSidebarVisible.toggle() }
+                        withAnimation(.easeInOut(duration: 0.25)) { viewModel.isSidebarVisible.toggle() }
                     }
-                    .padding(.leading, 72)
                     #if os(macOS)
+                    .padding(.leading, 72)
                     .onHover { hovering in
                         toggleIconHovering = hovering
                         updateFloatingSidebar()
                     }
+                    #else
+                    .padding(.leading, 16)
                     #endif
                 }
                 Spacer()
             }
-            .frame(height: 36)
+            .frame(height: 44)
 
             if hasMessages {
                 chatHistoryViewport
@@ -303,6 +307,7 @@ public struct MainView: View {
                 .foregroundColor(.secondary)
                 .padding(.top, 10)
 
+            #if os(macOS)
             HStack(spacing: 10) {
                 StarterCard(icon: "doc.on.clipboard", title: "Summarize my clipboard") {
                     viewModel.prefillComposer("Summarize this for me: ")
@@ -315,6 +320,21 @@ public struct MainView: View {
                 }
             }
             .padding(.top, 22)
+            #else
+            VStack(spacing: 8) {
+                StarterCard(icon: "doc.on.clipboard", title: "Summarize my clipboard") {
+                    viewModel.prefillComposer("Summarize this for me: ")
+                }
+                StarterCard(icon: "envelope", title: "Draft an email") {
+                    viewModel.prefillComposer("Draft a short, friendly email about ")
+                }
+                StarterCard(icon: "lightbulb", title: "Explain a concept") {
+                    viewModel.prefillComposer("Explain in plain language: ")
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 22)
+            #endif
 
             Spacer()
         }
@@ -327,7 +347,9 @@ private struct StarterCard: View {
     let icon: String
     let title: String
     let action: () -> Void
+    #if os(macOS)
     @State private var isHovered = false
+    #endif
 
     var body: some View {
         Button(action: action) {
@@ -341,24 +363,33 @@ private struct StarterCard: View {
             }
             .padding(.horizontal, 13)
             .padding(.vertical, 9)
+            #if os(macOS)
             .background(isHovered ? Color.primary.opacity(0.06) : Color.cardSurface)
+            #else
+            .background(Color.cardSurface)
+            #endif
             .clipShape(Capsule())
             .overlay(Capsule().strokeBorder(Color.hairline))
             .contentShape(Capsule())
         }
         .buttonStyle(PlainButtonStyle())
+        #if os(macOS)
         .onHover { h in withAnimation(.easeOut(duration: 0.12)) { isHovered = h } }
+        #endif
     }
 }
 
 // MARK: - Message Row — chat-bubble layout
 /// User messages: right-aligned gray bubble. Assistant: left-aligned plain
 /// markdown text. Small timestamp + copy icons sit below each message.
+/// On macOS: hover reveals meta. On iOS: meta always visible.
 private struct MessageRow: View {
     let message: ChatMessage
     @ObservedObject var viewModel: MainViewModel
-    @State private var isHovered = false
     @State private var copied = false
+    #if os(macOS)
+    @State private var isHovered = false
+    #endif
 
     private var isUser: Bool { message.role == "user" }
 
@@ -383,7 +414,7 @@ private struct MessageRow: View {
                     markdownText
                 }
 
-                // Meta row: timestamp + copy, quiet until hover
+                // Meta row: timestamp + copy
                 HStack(spacing: 8) {
                     Text(message.timestamp, style: .time)
                         .font(.system(size: 10))
@@ -399,14 +430,23 @@ private struct MessageRow: View {
                     .help("Copy")
                     #endif
                 }
+                #if os(macOS)
                 .opacity(isHovered || copied ? 1 : 0)
+                #else
+                .opacity(copied ? 1 : 0.5)
+                #endif
             }
 
             if !isUser { Spacer(minLength: 60) }
         }
+        #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeOut(duration: 0.15)) { isHovered = hovering }
         }
+        #else
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) { copyMessage() }
+        #endif
     }
 
     /// Failed-request presentation: quiet red card with the concise provider

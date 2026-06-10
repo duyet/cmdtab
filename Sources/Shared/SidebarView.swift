@@ -40,6 +40,19 @@ struct SidebarView: View {
         }
         .frame(maxHeight: .infinity)
         .sidebarSurface()
+        #if os(iOS)
+        // Swipe left to dismiss sidebar on iOS
+        .highPriorityGesture(
+            DragGesture(minimumDistance: 30, coordinateSpace: .local)
+                .onEnded { value in
+                    if value.translation.width < -50 {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            viewModel.isSidebarVisible = false
+                        }
+                    }
+                }
+        )
+        #endif
     }
 
     // MARK: Top toolbar — centered on the traffic-light line (~18pt from top).
@@ -180,14 +193,16 @@ struct SidebarView: View {
     }
 }
 
-// MARK: - Sidebar Row (plain icon + label, hover highlight)
+// MARK: - Sidebar Row (plain icon + label, hover highlight on macOS)
 private struct SidebarRow: View {
     let icon: String
     let label: String
     var compact: Bool = false
     var keycap: String? = nil
     let action: () -> Void
+    #if os(macOS)
     @State private var isHovered = false
+    #endif
 
     var body: some View {
         Button(action: action) {
@@ -204,17 +219,27 @@ private struct SidebarRow: View {
                     Text(keycap)
                         .font(.system(size: 11, weight: .medium, design: .rounded))
                         .foregroundColor(.secondary.opacity(0.8))
+                        #if os(macOS)
                         .opacity(isHovered ? 1 : 0)
+                        #else
+                        .opacity(0)
+                        #endif
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, compact ? 6 : 7)
+            #if os(macOS)
             .background(isHovered ? Color.primary.opacity(0.06) : Color.clear)
+            #else
+            .background(Color.clear)
+            #endif
             .cornerRadius(7)
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
+        #if os(macOS)
         .onHover { h in isHovered = h }
+        #endif
         .padding(.horizontal, compact ? 0 : 10)
     }
 }
@@ -321,7 +346,9 @@ private struct ConversationRow: View {
     let onSelect: () -> Void
     let onRename: (String) -> Void
     let onDelete: () -> Void
+    #if os(macOS)
     @State private var isHovered = false
+    #endif
     @State private var isEditing = false
     @State private var draft = ""
     @FocusState private var fieldFocused: Bool
@@ -335,7 +362,13 @@ private struct ConversationRow: View {
                     .background(Color.primary.opacity(0.08))
                     .cornerRadius(7)
             } else {
-                Button(action: { isSelected ? beginEditing() : onSelect() }) {
+                Button(action: {
+                    #if os(macOS)
+                    isSelected ? beginEditing() : onSelect()
+                    #else
+                    onSelect()
+                    #endif
+                }) {
                     Text(title)
                         .font(.body)
                         .foregroundColor(.primary)
@@ -343,17 +376,15 @@ private struct ConversationRow: View {
                         .truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            isSelected
-                                ? Color.primary.opacity(0.08)
-                                : (isHovered ? Color.primary.opacity(0.045) : Color.clear)
-                        )
+                        .padding(.vertical, 8)
+                        .background(rowBackground)
                         .cornerRadius(7)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
+                #if os(macOS)
                 .onHover { h in isHovered = h }
+                #endif
                 .contextMenu {
                     Button(action: beginEditing) {
                         Label("Rename", systemImage: "pencil")
@@ -379,6 +410,15 @@ private struct ConversationRow: View {
         return field.onExitCommand { isEditing = false }
         #else
         return field
+        #endif
+    }
+
+    private var rowBackground: Color {
+        if isSelected { return Color.primary.opacity(0.08) }
+        #if os(macOS)
+        return isHovered ? Color.primary.opacity(0.045) : Color.clear
+        #else
+        return Color.clear
         #endif
     }
 

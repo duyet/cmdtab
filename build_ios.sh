@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "=== Building CmdTab_iOS.app for Simulator ==="
+echo "=== Building CmdTab_iOS.app for Simulator (iOS 26) ==="
 
 # 1. Clean previous build if it exists
 if [ -d "CmdTab_iOS.app" ]; then
@@ -13,10 +13,11 @@ if [ -f "CmdTab_iOS" ]; then
 fi
 
 # 2. Compile iOS Swift sources using iphonesimulator SDK
+#    - iOS 26 target: enables Liquid Glass + FoundationModels natively
+#    - No -D DISABLE_NATIVE_LLM: on-device path compiled in, guarded by #available
 echo "Compiling iOS source files..."
 xcrun -sdk iphonesimulator swiftc \
-  -target arm64-apple-ios17.0-simulator \
-  -D DISABLE_NATIVE_LLM \
+  -target arm64-apple-ios26.0-simulator \
   -parse-as-library -O \
   -o CmdTab_iOS \
   Sources/Shared/*.swift Sources/iOS/*.swift

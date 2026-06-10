@@ -1,0 +1,333 @@
+import SwiftUI
+
+public struct MainView: View {
+    @ObservedObject var viewModel: MainViewModel
+    @State private var dragStartWidth: CGFloat? = nil
+
+    public init(viewModel: MainViewModel) {
+        self.viewModel = viewModel
+    }
+
+    public var body: some View {
+        ZStack {
+            // Base layer: sidebar + main pane always present
+            #if os(macOS)
+            HStack(spacing: 0) {
+                if viewModel.isSidebarVisible {
+                    SidebarView(viewModel: viewModel)
+                        .frame(width: viewModel.sidebarWidth)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+
+                    sidebarResizeHandle
+                }
+
+                mainContentPane
+            }
+            .animation(.easeInOut(duration: 0.2), value: viewModel.isSidebarVisible)
+            #else
+            ZStack(alignment: .leading) {
+                mainContentPane
+
+                if viewModel.isSidebarVisible {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation { viewModel.isSidebarVisible = false }
+                        }
+                        .transition(.opacity)
+
+                    SidebarView(viewModel: viewModel)
+                        .frame(width: 300)
+                        .background(Color.windowBackground)
+                        .transition(.move(edge: .leading))
+                        .ignoresSafeArea(edges: .vertical)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: viewModel.isSidebarVisible)
+            #endif
+
+            // Settings overlay — instant, full-window scrim + floating panel
+            if viewModel.isSettingsOpen {
+                settingsOverlay
+            }
+        }
+        .platformFrame()
+        .background(Color.creamBackground)
+        .tint(.primary)
+        // Extend under the transparent title bar so the sidebar toolbar icons
+        // sit on the same line as the traffic lights.
+        .ignoresSafeArea(.container, edges: .top)
+    }
+
+    #if os(macOS)
+    // MARK: - Sidebar resize handle (drag the divider; width persists)
+    private var sidebarResizeHandle: some View {
+        Divider()
+            .overlay(
+                Color.clear
+                    .frame(width: 8)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                            .onChanged { value in
+                                if dragStartWidth == nil { dragStartWidth = viewModel.sidebarWidth }
+                                let proposed = (dragStartWidth ?? 260) + value.translation.width
+                                viewModel.sidebarWidth = min(400, max(220, proposed))
+                            }
+                            .onEnded { _ in dragStartWidth = nil }
+                    )
+                    .onHover { hovering in
+                        if hovering { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+                    }
+            )
+    }
+    #endif
+
+    // MARK: - Main Content Pane (no header bar)
+    private var mainContentPane: some View {
+        VStack(spacing: 0) {
+            // Slim top inset matching sidebar toolbar height — no header bar.
+            HStack {
+                if !viewModel.isSidebarVisible {
+                    PlainIconButton(systemName: "sidebar.left", size: 13, help: "Show Sidebar") {
+                        withAnimation { viewModel.isSidebarVisible.toggle() }
+                    }
+                    .padding(.leading, 72)
+                }
+                Spacer()
+            }
+            .frame(height: 36)
+
+            if hasMessages {
+                chatHistoryViewport
+            } else {
+                emptyLandingView
+            }
+
+            ComposerView(viewModel: viewModel)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.creamBackground)
+    }
+
+    // MARK: - Settings Overlay (instant, scrim + floating panel)
+    private var settingsOverlay: some View {
+        ZStack {
+            // Scrim over everything including sidebar
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+
+            // Floating settings panel
+            SettingsView(viewModel: viewModel)
+                .frame(maxWidth: 640)
+                .padding(.horizontal, 32)
+                .padding(.vertical, 24)
+        }
+        // No animation — instant appearance per spec
+        .transaction { $0.animation = nil }
+    }
+
+    private var hasMessages: Bool {
+        if let activeId = viewModel.selectedConversationId,
+            let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
+        {
+            return !activeConv.messages.isEmpty
+        }
+        return false
+    }
+
+    // MARK: - Chat History Viewport
+    private var chatHistoryViewport: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    if let activeId = viewModel.selectedConversationId,
+                        let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
+                    {
+                        ForEach(activeConv.messages) { message in
+                            MessageRow(message: message, viewModel: viewModel)
+                                .id(message.id)
+                        }
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 16)
+            }
+            .onStreamingChange(of: viewModel.isStreaming) { _ in
+                scrollToLast(proxy)
+            }
+            .onConversationsChange(of: viewModel.conversations) {
+                scrollToLast(proxy)
+            }
+        }
+    }
+
+    private func scrollToLast(_ proxy: ScrollViewProxy) {
+        if let activeId = viewModel.selectedConversationId,
+            let activeConv = viewModel.conversations.first(where: { $0.id == activeId }),
+            let lastMsg = activeConv.messages.last
+        {
+            withAnimation {
+                proxy.scrollTo(lastMsg.id, anchor: .bottom)
+            }
+        }
+    }
+
+    /// Time-aware headline, personalized when a name is set in Settings.
+    private var welcomeHeadline: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let salutation: String
+        switch hour {
+        case 5..<12: salutation = "Good morning"
+        case 12..<17: salutation = "Good afternoon"
+        case 17..<22: salutation = "Good evening"
+        default: salutation = "Working late"
+        }
+        let name = viewModel.userName.trimmingCharacters(in: .whitespaces)
+        return name.isEmpty ? "\(salutation)!" : "\(salutation), \(name)!"
+    }
+
+    // MARK: - Landing View
+    private var emptyLandingView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            HStack(spacing: 12) {
+                Image(systemName: "command")
+                    .font(.system(size: 26, weight: .medium, design: .rounded))
+                    .foregroundColor(Color.accentCoral)
+
+                Text(welcomeHeadline)
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundColor(.primary)
+            }
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Message Row — chat-bubble layout
+/// User messages: right-aligned gray bubble. Assistant: left-aligned plain
+/// markdown text. Small timestamp + copy icons sit below each message.
+private struct MessageRow: View {
+    let message: ChatMessage
+    @ObservedObject var viewModel: MainViewModel
+    @State private var isHovered = false
+    @State private var copied = false
+
+    private var isUser: Bool { message.role == "user" }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            if isUser { Spacer(minLength: 60) }
+
+            VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
+                if isUser {
+                    markdownText
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .background(Color.primary.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                } else if message.content.isEmpty && viewModel.isStreaming {
+                    Text("Thinking…")
+                        .font(.system(size: 13 * viewModel.fontScale))
+                        .foregroundColor(.secondary.opacity(0.7))
+                } else {
+                    markdownText
+                }
+
+                // Meta row: timestamp + copy, quiet until hover
+                HStack(spacing: 8) {
+                    Text(message.timestamp, style: .time)
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary.opacity(0.7))
+                    Button(action: copyMessage) {
+                        Image(systemName: copied ? "checkmark" : "square.on.square")
+                            .font(.system(size: 10))
+                            .foregroundColor(copied ? Color.accentCoral : .secondary.opacity(0.7))
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    #if os(macOS)
+                    .help("Copy")
+                    #endif
+                }
+                .opacity(isHovered || copied ? 1 : 0)
+            }
+
+            if !isUser { Spacer(minLength: 60) }
+        }
+        .onHover { hovering in
+            withAnimation(.easeOut(duration: 0.15)) { isHovered = hovering }
+        }
+    }
+
+    /// Native markdown rendering (inline syntax: bold, italic, code, links).
+    private var markdownText: some View {
+        Text(attributedContent)
+            .font(.system(size: 13 * viewModel.fontScale))
+            .foregroundColor(.primary)
+            .lineSpacing(4)
+            .textSelection(.enabled)
+            .multilineTextAlignment(isUser ? .trailing : .leading)
+    }
+
+    private var attributedContent: AttributedString {
+        if let attr = try? AttributedString(
+            markdown: message.content,
+            options: AttributedString.MarkdownParsingOptions(
+                interpretedSyntax: .inlineOnlyPreservingWhitespace))
+        {
+            return attr
+        }
+        return AttributedString(message.content)
+    }
+
+    private func copyMessage() {
+        PasteboardMonitor.shared.suppressNextEcho(text: message.content)
+        #if os(macOS)
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(message.content, forType: .string)
+        #elseif os(iOS)
+        UIPasteboard.general.string = message.content
+        #endif
+        withAnimation { copied = true }
+        Task {
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            await MainActor.run {
+                withAnimation { copied = false }
+            }
+        }
+    }
+}
+
+// MARK: - onChange Compatibility Helpers
+extension View {
+    @ViewBuilder
+    func onStreamingChange(of value: Bool, perform action: @escaping (Bool) -> Void) -> some View {
+        if #available(macOS 14.0, iOS 17.0, *) {
+            self.onChange(of: value) { _, newValue in
+                action(newValue)
+            }
+        } else {
+            self.onChange(of: value) { newValue in
+                action(newValue)
+            }
+        }
+    }
+
+    @ViewBuilder
+    func onConversationsChange(of value: [Conversation], perform action: @escaping () -> Void) -> some View {
+        if #available(macOS 14.0, iOS 17.0, *) {
+            self.onChange(of: value) { _, _ in
+                action()
+            }
+        } else {
+            self.onChange(of: value) { _ in
+                action()
+            }
+        }
+    }
+}

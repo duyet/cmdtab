@@ -143,3 +143,43 @@ extension View {
         #endif
     }
 }
+
+#if os(iOS)
+/// iOS-specific layout constants that adapt to device size.
+/// Uses window-scene-based screen queries (UIScreen.main deprecated in iOS 26).
+enum DeviceLayout {
+    /// Sidebar width: narrower on compact devices (iPhone SE), wider on Plus/Max.
+    static var sidebarWidth: CGFloat {
+        let screen = screenBounds.width
+        if screen < 375 { return 260 }   // iPhone SE / compact
+        if screen < 414 { return 280 }   // Standard iPhone
+        return 300                        // Plus / Max / Pro Max
+    }
+
+    /// Whether the device has a home indicator (no physical home button).
+    static var hasHomeIndicator: Bool {
+        let bottom = screenBounds.height -
+            (activeWindowScene?.windows.first?.safeAreaInsets.bottom ?? 0)
+        return bottom > 0
+    }
+
+    // MARK: - Private helpers
+
+    private static var activeWindowScene: UIWindowScene? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first(where: { $0.activationState == .foregroundActive })
+            ?? UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first
+    }
+
+    private static var screenBounds: CGRect {
+        if let scene = activeWindowScene {
+            return scene.screen.bounds
+        }
+        // Fallback when no scene is connected yet (early launch)
+        return CGRect(x: 0, y: 0, width: 393, height: 852)
+    }
+}
+#endif

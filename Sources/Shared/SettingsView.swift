@@ -28,19 +28,19 @@ public struct SettingsView: View {
                     Image(systemName: "xmark")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
-                        .frame(width: 26, height: 26)
+                        .frame(width: 30, height: 30)
                         .background(Color.primary.opacity(0.07))
                         .clipShape(Circle())
                 }
                 .buttonStyle(PlainButtonStyle())
                 .accessibilityLabel("Close settings")
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 20)
-            .padding(.bottom, 14)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
 
-            // Tab row
-            HStack {
+            // Tab row — scrollable on narrow screens
+            ScrollView(.horizontal, showsIndicators: false) {
                 PillTabBar(
                     items: [
                         PillTabBar.Item(value: "general", label: "General"),
@@ -50,7 +50,6 @@ public struct SettingsView: View {
                     ],
                     selection: $viewModel.settingsTab
                 )
-                Spacer()
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 8)
@@ -96,6 +95,29 @@ public struct SettingsView: View {
                 .pickerStyle(SegmentedPickerStyle())
                 .labelsHidden()
                 .frame(maxWidth: 240, alignment: .leading)
+            }
+            #endif
+
+            #if os(iOS)
+            // Apple Intelligence status — prominent on iOS
+            settingsSection("APPLE INTELLIGENCE") {
+                HStack(spacing: 10) {
+                    Image(systemName: viewModel.isLocalModelSupported ? "apple.intelligence" : "apple.logo")
+                        .font(.system(size: 18))
+                        .foregroundColor(viewModel.isLocalModelSupported ? .blue : .secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(viewModel.isLocalModelSupported ? "Available" : "Not Available")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.primary)
+                        Text(LocalModelClient.shared.availability.unavailableReason ?? "On-device model ready for local inference.")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(viewModel.isLocalModelSupported ? Color.blue.opacity(0.06) : Color.primary.opacity(0.03))
+                .cornerRadius(10)
             }
             #endif
 

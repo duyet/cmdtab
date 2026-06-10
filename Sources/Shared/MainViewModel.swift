@@ -475,6 +475,10 @@ public final class MainViewModel: ObservableObject {
         if !custom.isEmpty {
             systemInstructions += "\nUser instructions: \(custom)"
         }
+        // Inject compacted context summary (from auto-compaction of older messages)
+        if let summary = conversation.compactedSummary {
+            systemInstructions += "\n[Earlier conversation context] \(summary)"
+        }
 
         currentTask?.cancel()
         clearStreamingIndices()

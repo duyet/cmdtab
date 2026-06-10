@@ -24,7 +24,7 @@ public struct MainView: View {
                     .transition(.opacity)
 
                 SidebarView(viewModel: viewModel)
-                    .frame(width: 300)
+                    .frame(width: DeviceLayout.sidebarWidth)
                     .transition(.move(edge: .leading))
                     .ignoresSafeArea(edges: .top)
             }
@@ -82,9 +82,14 @@ public struct MainView: View {
                 .ignoresSafeArea()
 
             SettingsView(viewModel: viewModel)
+                #if os(macOS)
                 .frame(maxWidth: 640)
                 .padding(.horizontal, 32)
                 .padding(.vertical, 24)
+                #else
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                #endif
         }
         .transaction { $0.animation = nil }
     }

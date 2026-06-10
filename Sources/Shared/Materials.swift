@@ -26,14 +26,19 @@ struct VisualEffectBackground: NSViewRepresentable {
 
 // MARK: - Adaptive surfaces
 
-/// Sidebar surface: real vibrancy on macOS, Liquid Glass on iOS 26+,
-/// solid color when the user enables Reduce Transparency.
+/// Sidebar surface: Liquid Glass passthrough when hosted inside
+/// NSSplitViewController (macOS 26+), NSVisualEffectView vibrancy on older
+/// macOS, solid color when the user enables Reduce Transparency.
 struct SidebarSurface: ViewModifier {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func body(content: Content) -> some View {
         #if os(macOS)
-        if reduceTransparency {
+        if #available(macOS 26.0, *), !reduceTransparency {
+            // NSSplitViewController provides automatic Liquid Glass — no
+            // custom background needed. Painting over it would hide the glass.
+            content
+        } else if reduceTransparency {
             content.background(Color.windowBackground)
         } else {
             content.background(VisualEffectBackground(material: .sidebar))

@@ -13,8 +13,8 @@ struct ComposerView: View {
     @State private var showLocalHelp: Bool = false
     @State private var isQuoteExpanded: Bool = false
 
-    private var modelOptions: [(id: String, label: String)] {
-        ModelCatalog.entries.map { (id: $0.id, label: $0.displayName) }
+    private var modelOptions: [(id: String, label: String, icon: String)] {
+        ModelCatalog.entries.map { (id: $0.id, label: $0.displayName, icon: $0.sfSymbol) }
     }
 
     private var hasClipboard: Bool {
@@ -243,7 +243,7 @@ struct ComposerView: View {
         Menu {
             Picker("Model", selection: $viewModel.modelName) {
                 ForEach(modelOptions, id: \.id) { option in
-                    Text(option.label).tag(option.id)
+                    Label(option.label, systemImage: option.icon).tag(option.id)
                 }
             }
             .pickerStyle(.inline)
@@ -482,11 +482,11 @@ private struct MenuTriggerHover: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
-            .background(isHovered ? Color.primary.opacity(0.06) : Color.clear)
-            .cornerRadius(6)
-            .contentShape(Rectangle())
+            .padding(.horizontal, 11)
+            .padding(.vertical, 6)
+            .background(isHovered ? Color.primary.opacity(0.07) : Color.clear)
+            .clipShape(Capsule())
+            .contentShape(Capsule())
             .onHover { hovering in
                 withAnimation(.easeOut(duration: 0.12)) { isHovered = hovering }
                 #if os(macOS)

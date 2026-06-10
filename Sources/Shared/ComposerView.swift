@@ -55,7 +55,10 @@ struct ComposerView: View {
                 .stroke(Color.hairline, lineWidth: 1)
         )
         .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.06), radius: 12, y: 4)
+        // Two-layer shadow: tight contact shadow + soft ambient lift, so the
+        // card reads as anchored instead of blending into the background.
+        .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
+        .shadow(color: Color.black.opacity(0.09), radius: 18, y: 8)
         .padding(.horizontal, 20)
         .padding(.bottom, 16)
         .onAppear { isInputFocused = true }

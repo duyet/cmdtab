@@ -93,6 +93,20 @@ struct SidebarView: View {
                     }
                     .padding(.horizontal, 10)
                 }
+            } else {
+                VStack(spacing: 8) {
+                    Spacer()
+                    Image(systemName: "bubble.left.and.bubble.right")
+                        .font(.system(size: 22))
+                        .foregroundColor(.secondary.opacity(0.35))
+                    Text("Your chats live here.\nThey stay in memory and never touch disk.")
+                        .font(.caption)
+                        .foregroundColor(.secondary.opacity(0.65))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
             }
 
             Spacer(minLength: 0)

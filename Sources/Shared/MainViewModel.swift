@@ -2,10 +2,6 @@ import Combine
 import SwiftUI
 import os
 
-#if canImport(SwiftData)
-import SwiftData
-#endif
-
 @MainActor
 public final class MainViewModel: ObservableObject {
     private static let logger = Logger(subsystem: "app.cmdtab", category: "ViewModel")
@@ -205,51 +201,6 @@ public final class MainViewModel: ObservableObject {
     private var apiKeySaveTask: Task<Void, Never>? = nil
     private var streamingConversationIndex: Int? = nil
     private var streamingMessageIndex: Int? = nil
-
-    // MARK: - SwiftData Persistence
-    #if canImport(SwiftData)
-    var modelContext: ModelContext?
-
-    /// Called once by the platform entry point after creating the ModelContainer.
-    public func configurePersistence(_ context: ModelContext) {
-        self.modelContext = context
-        loadPersistedConversations()
-    }
-
-    private func loadPersistedConversations() {
-        guard let modelContext else { return }
-        let descriptor = FetchDescriptor<PersistedConversation>(
-            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
-        )
-        guard let persisted = try? modelContext.fetch(descriptor) else { return }
-        let loaded = persisted.map { $0.toVolatile() }
-        guard !loaded.isEmpty else { return }
-        self.conversations = loaded
-        self.selectedConversationId = loaded.first?.id
-    }
-
-    private func saveConversation(_ conversation: Conversation) {
-        guard let modelContext else { return }
-        let id = conversation.id
-        if let existing = try? modelContext.fetch(
-            FetchDescriptor<PersistedConversation>(predicate: #Predicate { $0.id == id })
-        ).first {
-            modelContext.delete(existing)
-        }
-        modelContext.insert(PersistedConversation(from: conversation))
-        try? modelContext.save()
-    }
-
-    private func deletePersistedConversation(id: UUID) {
-        guard let modelContext else { return }
-        if let existing = try? modelContext.fetch(
-            FetchDescriptor<PersistedConversation>(predicate: #Predicate { $0.id == id })
-        ).first {
-            modelContext.delete(existing)
-            try? modelContext.save()
-        }
-    }
-    #endif
 
     public init() {
         loadSettings()
@@ -567,25 +518,18 @@ public final class MainViewModel: ObservableObject {
                 )
                 for try await chunk in stream {
                     guard !Task.isCancelled else { break }
-                    let currentChunk = chunk
-                    await MainActor.run {
-                        self?.appendChunk(chunk: currentChunk, to: conversationId, messageId: assistantMsgId)
-                    }
+                    self?.appendChunk(chunk: chunk, to: conversationId, messageId: assistantMsgId)
                 }
 
-                await MainActor.run {
-                    self?.isStreaming = false
-                    self?.clearStreamingIndices()
-                }
+                self?.isStreaming = false
+                self?.clearStreamingIndices()
             } catch {
                 guard !Task.isCancelled else { return }
                 let text = (error as? APIError)?.userMessage ?? error.localizedDescription
-                await MainActor.run {
-                    self?.appendChunk(chunk: text, to: conversationId, messageId: assistantMsgId)
-                    self?.markMessageAsError(conversationId: conversationId, messageId: assistantMsgId)
-                    self?.isStreaming = false
-                    self?.clearStreamingIndices()
-                }
+                self?.appendChunk(chunk: text, to: conversationId, messageId: assistantMsgId)
+                self?.markMessageAsError(conversationId: conversationId, messageId: assistantMsgId)
+                self?.isStreaming = false
+                self?.clearStreamingIndices()
             }
         }
     }

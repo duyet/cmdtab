@@ -103,10 +103,21 @@ public struct LocalModelAdapter: InferenceAdapter {
         instructions: String,
         history: [ChatMessage]
     ) async throws -> AsyncThrowingStream<String, Error> {
-        // Foundation Models is single-turn here: use the latest user prompt.
+        // Inject conversation history into instructions so the local model
+        // has multi-turn context. Foundation Models' LanguageModelSession is
+        // single-prompt, so prior turns are formatted as context.
+        var enrichedInstructions = instructions
+        let priorTurns = history.dropLast()  // exclude the current user message
+        if !priorTurns.isEmpty {
+            enrichedInstructions += "\n\nConversation history:"
+            for msg in priorTurns {
+                let label = msg.role == "user" ? "User" : "Assistant"
+                enrichedInstructions += "\n\(label): \(msg.content)"
+            }
+        }
         let prompt = history.last(where: { $0.role == "user" })?.content ?? ""
         return try LocalModelClient.shared.streamResponse(
-            instructions: instructions,
+            instructions: enrichedInstructions,
             prompt: prompt
         )
     }

@@ -30,6 +30,7 @@ mkdir -p CmdTab_iOS.app
 echo "Packaging binary and Info.plist..."
 mv CmdTab_iOS CmdTab_iOS.app/CmdTab_iOS
 cp Resources/iOS_Info.plist CmdTab_iOS.app/Info.plist
+cp Resources/PrivacyInfo.xcprivacy CmdTab_iOS.app/PrivacyInfo.xcprivacy
 
 # 5. Ad-hoc code-sign (required for Apple Silicon Simulator runtime)
 echo "Ad-hoc signing executable and iOS app bundle..."

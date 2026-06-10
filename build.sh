@@ -28,6 +28,7 @@ mkdir -p CmdTab.app/Contents/Resources
 echo "Packaging binary, Info.plist and icon..."
 mv CmdTab CmdTab.app/Contents/MacOS/CmdTab
 cp Info.plist CmdTab.app/Contents/Info.plist
+cp Resources/PrivacyInfo.xcprivacy CmdTab.app/Contents/Resources/PrivacyInfo.xcprivacy
 
 # Compile the Icon Composer bundle (Resources/logo/Icon.icon) into the app
 echo "Compiling app icon..."

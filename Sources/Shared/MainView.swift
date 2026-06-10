@@ -343,7 +343,7 @@ public struct MainView: View {
 }
 
 // MARK: - Starter Card (empty-state suggestion)
-private struct StarterCard: View {
+struct StarterCard: View {
     let icon: String
     let title: String
     let action: () -> Void
@@ -383,7 +383,7 @@ private struct StarterCard: View {
 /// User messages: right-aligned gray bubble. Assistant: left-aligned plain
 /// markdown text. Small timestamp + copy icons sit below each message.
 /// On macOS: hover reveals meta. On iOS: meta always visible.
-private struct MessageRow: View {
+struct MessageRow: View {
     let message: ChatMessage
     @ObservedObject var viewModel: MainViewModel
     @State private var copied = false

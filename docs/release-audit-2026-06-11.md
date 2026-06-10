@@ -2,7 +2,7 @@
 
 ## Summary
 
-Pre-release audit of the macOS codebase identified and fixed **6 categories** of issues across 20 files. All fixes verified with `lint.sh`, `build.sh`, `test.sh`, and `test_launch.sh`.
+Pre-release audit of the macOS codebase identified and fixed **6 + 6 categories** of issues across 23 files in two passes. All fixes verified with `lint.sh`, `build.sh`, `test.sh`, and `test_launch.sh`.
 
 ---
 
@@ -95,3 +95,47 @@ Pre-release audit of the macOS codebase identified and fixed **6 categories** of
 | Localization (~100+ hardcoded strings) | ⚠️ English-only for 1.0 |
 | Dead code: `Persistence.swift` (123 lines) | ⚠️ Not wired in |
 | Large files: `MainViewModel.swift` (646 lines) | ⚠️ Refactoring candidate |
+
+---
+
+## Second Pass Findings (6 more issues)
+
+### 9. API Error Body Drain — Infinite Hang
+
+**Problem:** `APIClient.fetchStream` drains the entire error response body with no size cap or timeout. A misbehaving endpoint could send an infinite stream, wedging the app's inference pipeline permanently.
+
+**Fix:** Added `if errorBody.count > 10_000 { break }` to cap at ~10KB.
+
+**Lesson:** Always cap unbounded network reads in error paths. The happy path has structured SSE parsing, but error handling often gets a free-form `for await` loop that can hang forever.
+
+### 10. Carbon Callback MainActor Isolation
+
+**Problem:** The Carbon `InstallEventHandler` callback is a C function pointer running on an arbitrary thread. It called `onHotKeyPressed?()` which is `@MainActor`-isolated — a concurrency violation.
+
+**Fix:** Wrapped the callback in `DispatchQueue.main.async { }` so the MainActor method is always called on the main thread. Removed the redundant `DispatchQueue.main.async` in `App_macOS.swift`.
+
+**Lesson:** Defense-in-depth for concurrency — put the isolation hop as close to the boundary as possible (in the callback itself, not in the caller). That way every caller is safe by default.
+
+### 11. LSUIElement vs Activation Policy Contradiction
+
+**Problem:** `Info.plist` declared `LSUIElement=true` (no Dock icon) but `App_macOS.swift` immediately overrode with `.regular` (Dock icon + full menu bar). These contradict each other — behavior across macOS versions is unpredictable.
+
+**Fix:** Changed to `.accessory` which gives full menu bar (needed for Edit menu shortcuts like ⌘C/⌘V) without a Dock icon — matching the `LSUIElement=true` intent.
+
+**Lesson:** `.regular` = Dock app. `.accessory` = menu-bar agent with menu bar. `.prohibited` = background-only. Match `LSUIElement` with the corresponding activation policy.
+
+### 12. Raw Server Body in errorDescription
+
+**Problem:** `APIError.invalidResponse(statusCode:body:)` stored the full raw HTTP body and exposed it via `LocalizedError.errorDescription`. This body can contain server paths, stack traces, or API keys — which would leak into logs and crash reports.
+
+**Fix:** Truncate to first 200 characters in `errorDescription`.
+
+**Lesson:** `errorDescription` (via `LocalizedError`) is used by logging, crash reporters, and `.localizedDescription`. Never put raw, potentially-sensitive server responses in it. Keep the full body for `userMessage` which extracts only the provider's error text.
+
+### 13. Window Repositioning on Every Toggle
+
+**Problem:** `showWindow()` recalculated and reset the window frame on every invocation, centering it on the current screen. This fought with `setFrameAutosaveName("CmdTabMainWindow")` — the user's manual window placement was overridden every time they toggled the window.
+
+**Fix:** Added `hasPositionedOnce` flag — only set the frame on the first show, then let `setFrameAutosaveName` restore the user's saved position.
+
+**Lesson:** `setFrameAutosaveName` is macOS's built-in window position persistence. Don't fight it with manual repositioning after the initial placement.

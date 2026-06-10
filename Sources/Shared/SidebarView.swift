@@ -39,7 +39,7 @@ struct SidebarView: View {
             footerRow
         }
         .frame(maxHeight: .infinity)
-        .background(Color.windowBackground)
+        .sidebarSurface()
     }
 
     // MARK: Top toolbar — centered on the traffic-light line (~18pt from top).
@@ -329,15 +329,7 @@ private struct ConversationRow: View {
     var body: some View {
         Group {
             if isEditing {
-                TextField("Conversation name", text: $draft)
-                    .textFieldStyle(PlainTextFieldStyle())
-                    .font(.body)
-                    .focused($fieldFocused)
-                    .onSubmit { commit() }
-                    .onExitCommand { isEditing = false }
-                    .onChange(of: fieldFocused) { _, focused in
-                        if !focused { commit() }
-                    }
+                renameField
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(Color.primary.opacity(0.08))
@@ -372,6 +364,22 @@ private struct ConversationRow: View {
                 }
             }
         }
+    }
+
+    private var renameField: some View {
+        let field = TextField("Conversation name", text: $draft)
+            .textFieldStyle(PlainTextFieldStyle())
+            .font(.body)
+            .focused($fieldFocused)
+            .onSubmit { commit() }
+            .onChange(of: fieldFocused) { _, focused in
+                if !focused { commit() }
+            }
+        #if os(macOS)
+        return field.onExitCommand { isEditing = false }
+        #else
+        return field
+        #endif
     }
 
     private func beginEditing() {

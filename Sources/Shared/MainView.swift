@@ -112,12 +112,7 @@ public struct MainView: View {
         HStack(spacing: 0) {
             SidebarView(viewModel: viewModel)
                 .frame(width: viewModel.sidebarWidth)
-                .background(Color.windowBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(Color.primary.opacity(0.08))
-                )
+                .glassCardSurface(cornerRadius: 12)
                 .shadow(color: .black.opacity(0.22), radius: 18, x: 4, y: 6)
                 .padding(.leading, 10)
                 .padding(.top, 44)

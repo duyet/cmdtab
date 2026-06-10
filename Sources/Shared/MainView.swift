@@ -3,6 +3,16 @@ import SwiftUI
 public struct MainView: View {
     @ObservedObject var viewModel: MainViewModel
     @State private var dragStartWidth: CGFloat? = nil
+    #if os(macOS)
+    // Distinguishes width-triggered hiding from a user's manual ⌘B toggle so
+    // we only auto-restore what we auto-hid.
+    @State private var sidebarAutoHidden = false
+    // Hover-to-peek: hovering the toggle icon shows the sidebar as a floating
+    // overlay without changing the persisted visibility state.
+    @State private var isFloatingSidebarShown = false
+    @State private var toggleIconHovering = false
+    @State private var floatingPanelHovering = false
+    #endif
 
     public init(viewModel: MainViewModel) {
         self.viewModel = viewModel
@@ -46,6 +56,13 @@ public struct MainView: View {
             .animation(.easeInOut(duration: 0.2), value: viewModel.isSidebarVisible)
             #endif
 
+            #if os(macOS)
+            // Floating sidebar peek (hover on the toggle icon while hidden)
+            if isFloatingSidebarShown && !viewModel.isSidebarVisible && !viewModel.isSettingsOpen {
+                floatingSidebarOverlay
+            }
+            #endif
+
             // Settings overlay — instant, full-window scrim + floating panel
             if viewModel.isSettingsOpen {
                 settingsOverlay
@@ -54,10 +71,85 @@ public struct MainView: View {
         .platformFrame()
         .background(Color.creamBackground)
         .tint(.primary)
+        // Every static Text in the app is mouse-selectable.
+        .textSelection(.enabled)
         // Extend under the transparent title bar so the sidebar toolbar icons
         // sit on the same line as the traffic lights.
         .ignoresSafeArea(.container, edges: .top)
+        #if os(macOS)
+        .background(
+            GeometryReader { geo in
+                Color.clear
+                    .onChange(of: geo.size.width) { _, newWidth in
+                        adaptSidebar(toWidth: newWidth)
+                    }
+                    .onAppear { adaptSidebar(toWidth: geo.size.width) }
+            }
+        )
+        #endif
     }
+
+    #if os(macOS)
+    /// Auto-hides the sidebar when the main pane would get too cramped, and
+    /// restores it (with hysteresis) once the window is wide enough again.
+    private func adaptSidebar(toWidth width: CGFloat) {
+        let minMainPaneWidth: CGFloat = 460
+        let restoreSlack: CGFloat = 40
+        if viewModel.isSidebarVisible, width < viewModel.sidebarWidth + minMainPaneWidth {
+            withAnimation { viewModel.isSidebarVisible = false }
+            sidebarAutoHidden = true
+        } else if sidebarAutoHidden, !viewModel.isSidebarVisible,
+            width >= viewModel.sidebarWidth + minMainPaneWidth + restoreSlack
+        {
+            withAnimation { viewModel.isSidebarVisible = true }
+            sidebarAutoHidden = false
+        }
+    }
+
+    // MARK: - Floating sidebar peek
+
+    private var floatingSidebarOverlay: some View {
+        HStack(spacing: 0) {
+            SidebarView(viewModel: viewModel)
+                .frame(width: viewModel.sidebarWidth)
+                .background(Color.windowBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(Color.primary.opacity(0.08))
+                )
+                .shadow(color: .black.opacity(0.22), radius: 18, x: 4, y: 6)
+                .padding(.leading, 10)
+                .padding(.top, 44)
+                .padding(.bottom, 14)
+            Spacer()
+        }
+        .transition(.move(edge: .leading).combined(with: .opacity))
+        .zIndex(1)
+        .onHover { hovering in
+            floatingPanelHovering = hovering
+            updateFloatingSidebar()
+        }
+    }
+
+    private func updateFloatingSidebar() {
+        guard !viewModel.isSidebarVisible else {
+            isFloatingSidebarShown = false
+            return
+        }
+        if toggleIconHovering || floatingPanelHovering {
+            withAnimation(.easeOut(duration: 0.15)) { isFloatingSidebarShown = true }
+        } else {
+            // Grace period so the pointer can cross the gap between the icon
+            // and the panel without dismissing it.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                if !toggleIconHovering && !floatingPanelHovering {
+                    withAnimation(.easeIn(duration: 0.15)) { isFloatingSidebarShown = false }
+                }
+            }
+        }
+    }
+    #endif
 
     #if os(macOS)
     // MARK: - Sidebar resize handle (drag the divider; width persists)
@@ -90,9 +182,18 @@ public struct MainView: View {
             HStack {
                 if !viewModel.isSidebarVisible {
                     PlainIconButton(systemName: "sidebar.left", size: 13, help: "Show Sidebar") {
+                        #if os(macOS)
+                        isFloatingSidebarShown = false
+                        #endif
                         withAnimation { viewModel.isSidebarVisible.toggle() }
                     }
                     .padding(.leading, 72)
+                    #if os(macOS)
+                    .onHover { hovering in
+                        toggleIconHovering = hovering
+                        updateFloatingSidebar()
+                    }
+                    #endif
                 }
                 Spacer()
             }
@@ -249,6 +350,7 @@ private struct MessageRow: View {
                             .foregroundColor(copied ? Color.accentCoral : .secondary.opacity(0.7))
                     }
                     .buttonStyle(PlainButtonStyle())
+                    .accessibilityLabel(copied ? "Copied" : "Copy message")
                     #if os(macOS)
                     .help("Copy")
                     #endif

@@ -33,6 +33,7 @@ public struct SettingsView: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel("Close settings")
             }
             .padding(.horizontal, 24)
             .padding(.top, 20)

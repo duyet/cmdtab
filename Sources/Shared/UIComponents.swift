@@ -157,6 +157,7 @@ struct PlainIconButton: View {
         .buttonStyle(PlainButtonStyle())
         .disabled(disabled)
         .plainFocusEffectDisabled()
+        .accessibilityLabel(help.isEmpty ? systemName : help)
         #if os(macOS)
         .help(help)
         #endif

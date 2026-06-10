@@ -103,6 +103,7 @@ struct ComposerView: View {
                         .foregroundColor(.secondary.opacity(0.6))
                 }
                 .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel("Dismiss clipboard")
             }
             // Preview: one line collapsed; click to expand with scrollbar.
             if isQuoteExpanded {
@@ -175,6 +176,7 @@ struct ComposerView: View {
                     .clipShape(Circle())
             }
             .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel("Attach")
             #if os(macOS)
             .help("Attach")
             #endif
@@ -267,6 +269,7 @@ struct ComposerView: View {
                 .clipShape(Circle())
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityLabel("Send message")
         .disabled(!canSend)
     }
 

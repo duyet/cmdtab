@@ -41,6 +41,7 @@ struct ClipboardQuoteCard: View {
                         .foregroundColor(.secondary.opacity(0.6))
                 }
                 .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel("Dismiss clipboard")
             }
 
             // Preview text
@@ -116,6 +117,7 @@ struct ClipboardDetectionCard: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel("Dismiss clipboard")
             }
             Text(trimmedText)
                 .font(.system(size: 12, design: .monospaced))

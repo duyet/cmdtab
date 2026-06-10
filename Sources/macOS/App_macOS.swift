@@ -42,6 +42,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
 
         let mainWindow = MainWindow(contentRect: rect)
         mainWindow.minSize = NSSize(width: 680, height: 480)
+        // Restores any previously saved frame and persists future moves/resizes.
+        mainWindow.setFrameAutosaveName("CmdTabMainWindow")
 
         let contentView = MainView(viewModel: vm)
         let hostingView = NSHostingView(rootView: contentView)
@@ -123,13 +125,141 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
                 return true
             }
 
+            // 7. Command + W -> Hide window (HIG: Close Window)
+            if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "w" {
+                self.hideWindow()
+                return true
+            }
+
+            // 8. Delete key -> Delete selected conversation (only when not editing text)
+            if event.keyCode == 51 && event.modifierFlags.intersection([.command, .option, .control]).isEmpty {
+                let editingText =
+                    self.window?.firstResponder is NSTextView || self.window?.firstResponder is NSTextField
+                if !editingText && !vm.isSettingsOpen && vm.isSidebarVisible,
+                    let selectedId = vm.selectedConversationId
+                {
+                    vm.deleteConversation(id: selectedId)
+                    return true
+                }
+            }
+
             return false
         }
 
+        setupMainMenu()
         setupStatusItem()
         setupGlobalHotKey()
         setupActivationObserver()
         showWindow()
+    }
+
+    // MARK: - Main Menu
+
+    /// LSUIElement apps get no menu bar by default, which also disables the
+    /// standard Edit shortcuts (⌘C/⌘V/⌘X/⌘A/⌘Z) inside text fields. Since we
+    /// switch to `.regular` activation at launch, a real main menu restores
+    /// those via the responder chain and makes commands discoverable.
+    private func setupMainMenu() {
+        let mainMenu = NSMenu()
+
+        // App menu
+        let appMenuItem = NSMenuItem()
+        mainMenu.addItem(appMenuItem)
+        let appMenu = NSMenu()
+        appMenuItem.submenu = appMenu
+        appMenu.addItem(
+            withTitle: "About cmdtab",
+            action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "Hide cmdtab", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        let hideOthers = appMenu.addItem(
+            withTitle: "Hide Others",
+            action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
+        hideOthers.keyEquivalentModifierMask = [.command, .option]
+        appMenu.addItem(
+            withTitle: "Show All",
+            action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "Quit cmdtab", action: #selector(quitApp), keyEquivalent: "q")
+
+        // File menu
+        let fileMenuItem = NSMenuItem()
+        mainMenu.addItem(fileMenuItem)
+        let fileMenu = NSMenu(title: "File")
+        fileMenuItem.submenu = fileMenu
+        fileMenu.addItem(withTitle: "New Chat", action: #selector(newChat), keyEquivalent: "n")
+        let newChatTab = fileMenu.addItem(withTitle: "New Chat", action: #selector(newChat), keyEquivalent: "t")
+        newChatTab.isAlternate = true
+        newChatTab.keyEquivalentModifierMask = .command
+        fileMenu.addItem(.separator())
+        fileMenu.addItem(
+            withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+
+        // Edit menu — standard selectors resolve through the responder chain.
+        let editMenuItem = NSMenuItem()
+        mainMenu.addItem(editMenuItem)
+        let editMenu = NSMenu(title: "Edit")
+        editMenuItem.submenu = editMenu
+        editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        let redoItem = editMenu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+        redoItem.keyEquivalentModifierMask = [.command, .shift]
+        editMenu.addItem(.separator())
+        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+
+        // View menu
+        let viewMenuItem = NSMenuItem()
+        mainMenu.addItem(viewMenuItem)
+        let viewMenu = NSMenu(title: "View")
+        viewMenuItem.submenu = viewMenu
+        let sidebarItem = viewMenu.addItem(
+            withTitle: "Toggle Sidebar", action: #selector(toggleSidebarVisibility), keyEquivalent: "b")
+        sidebarItem.keyEquivalentModifierMask = .command
+        let clearItem = viewMenu.addItem(
+            withTitle: "Clear Conversation", action: #selector(clearConversation), keyEquivalent: "k")
+        clearItem.keyEquivalentModifierMask = .command
+
+        // Window menu
+        let windowMenuItem = NSMenuItem()
+        mainMenu.addItem(windowMenuItem)
+        let windowMenu = NSMenu(title: "Window")
+        windowMenuItem.submenu = windowMenu
+        windowMenu.addItem(
+            withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        windowMenu.addItem(withTitle: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
+        NSApp.windowsMenu = windowMenu
+
+        // Help menu
+        let helpMenuItem = NSMenuItem()
+        mainMenu.addItem(helpMenuItem)
+        let helpMenu = NSMenu(title: "Help")
+        helpMenuItem.submenu = helpMenu
+        NSApp.helpMenu = helpMenu
+
+        NSApp.mainMenu = mainMenu
+    }
+
+    @objc private func newChat() {
+        showWindow()
+        if viewModel?.isSettingsOpen != true {
+            viewModel?.startNewConversation(title: "New Chat")
+        }
+    }
+
+    @objc private func toggleSidebarVisibility() {
+        if viewModel?.isSettingsOpen != true {
+            viewModel?.isSidebarVisible.toggle()
+        }
+    }
+
+    @objc private func clearConversation() {
+        if viewModel?.isSettingsOpen != true && viewModel?.selectedConversationId != nil {
+            viewModel?.clearConversation()
+        }
     }
 
     private func setupActivationObserver() {

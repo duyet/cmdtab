@@ -28,6 +28,16 @@ public final class MainWindow: NSWindow {
         return true
     }
 
+    // Menu key equivalents are matched before keyDown would ever fire, so the
+    // interceptor must also run here — otherwise the Edit menu's ⌘C would
+    // swallow the "copy streaming output" behavior, ⌘K, ⌘B, etc.
+    public override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if let onKeyPress = onKeyPress, onKeyPress(event) {
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
     public override func keyDown(with event: NSEvent) {
         if let onKeyPress = onKeyPress, onKeyPress(event) {
             return

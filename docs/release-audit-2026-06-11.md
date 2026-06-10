@@ -2,7 +2,7 @@
 
 ## Summary
 
-Pre-release audit of the macOS codebase identified and fixed **6 + 6 categories** of issues across 23 files in two passes. All fixes verified with `lint.sh`, `build.sh`, `test.sh`, and `test_launch.sh`.
+Pre-release audit of the macOS codebase identified and fixed **6 + 5 + 4 categories** of issues across 23 files in three passes. All fixes verified with `lint.sh`, `build.sh`, `test.sh`, and `test_launch.sh`.
 
 ---
 
@@ -139,3 +139,52 @@ Pre-release audit of the macOS codebase identified and fixed **6 + 6 categories*
 **Fix:** Added `hasPositionedOnce` flag — only set the frame on the first show, then let `setFrameAutosaveName` restore the user's saved position.
 
 **Lesson:** `setFrameAutosaveName` is macOS's built-in window position persistence. Don't fight it with manual repositioning after the initial placement.
+
+---
+
+## Third Pass Findings (4 more issues)
+
+### 14. Dead SwiftData Persistence Code
+
+**Problem:** `Persistence.swift` (123 lines) and four methods in `MainViewModel` (`configurePersistence`, `loadPersistedConversations`, `saveConversation`, `deletePersistedConversation`) were fully implemented but never called. No platform entry point created a `ModelContainer`. The app is volatile-by-design for 1.0.
+
+**Fix:** Removed `Persistence.swift` and all dead persistence methods from `MainViewModel`. Net -191 lines of dead code. The SwiftData models can be re-added from git history when persistence is actually wired in.
+
+**Lesson:** Dead code that looks "almost wired" is worse than no code at all — it implies the feature works when it doesn't. Either ship it or remove it. Git history preserves the implementation for later.
+
+### 15. Missing Privacy Manifest for Clipboard and Keychain
+
+**Problem:** Apple requires `PrivacyInfo.xcprivacy` in the app bundle declaring use of Clipboard (`NSPrivacyAccessedAPICategoryClipboard`) and Keychain (`NSPrivacyAccessedAPICategoryKeychain`) APIs. Without it, App Store submission will be rejected and the system may show unwanted permission prompts on iOS 16+.
+
+**Fix:** Created `Resources/PrivacyInfo.xcprivacy` with both API declarations. Wired into `build.sh` and `build_ios.sh` to copy into the bundle.
+
+**Lesson:** Privacy manifests are now mandatory for App Store submission (since 2024). Any app that touches pasteboard or Keychain must declare it. The reason codes (`1B45.1` = "app functionality requires access") must match actual usage.
+
+### 16. LocalModelAdapter Lost Multi-Turn Context
+
+**Problem:** The local adapter only passed the last user message to Foundation Models, discarding all prior conversation turns. Multi-turn conversations with the on-device model had no memory.
+
+**Fix:** Inject prior conversation history into the `instructions` string as formatted context before the current prompt. The model receives full conversation context through the system instructions.
+
+**Lesson:** Apple's `LanguageModelSession` is designed for single-prompt use. For multi-turn, either use the session's built-in conversation tracking (if available) or bake prior turns into the prompt. The instructions-based approach works universally but consumes more context window.
+
+### 17. Redundant MainActor.run Hops in Streaming
+
+**Problem:** `startLLMResponse`'s `Task { [weak self] in ... }` inherits `@MainActor` isolation from the ViewModel. The `await MainActor.run { ... }` wrappers inside were no-ops that added scheduling overhead on every single streamed token.
+
+**Fix:** Removed all `await MainActor.run` wrappers — call `self?.appendChunk(...)` directly since the Task is already on the MainActor.
+
+**Lesson:** When a `Task` is created inside a `@MainActor` context, it inherits that isolation. Adding `await MainActor.run` inside is redundant and adds a dispatch hop per call. During streaming (dozens of tokens per second), this creates measurable latency.
+
+---
+
+## Remaining Pre-Release Items (Infrastructure)
+
+| Item | Status |
+|------|--------|
+| `CmdTab.entitlements` file | ❌ Template in `docs/distribution.md` only |
+| Hardened runtime signing (`--options runtime`) | ❌ Ad-hoc only |
+| Developer ID certificate | ❓ Needs setup |
+| Notarization workflow automation | ❓ Docs exist, not automated |
+| Localization (~100+ hardcoded strings) | ⚠️ English-only for 1.0 |
+| Large files: `MainViewModel.swift` (~595 lines) | ⚠️ Refactoring candidate |

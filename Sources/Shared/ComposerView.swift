@@ -183,11 +183,15 @@ struct ComposerView: View {
 
             Spacer()
 
-            localCloudToggle
+            // Mode + model dropdowns share an even gap, set apart from the send button
+            HStack(spacing: 12) {
+                localCloudToggle
 
-            if !viewModel.isLocalModelSelected {
-                modelPicker
+                if !viewModel.isLocalModelSelected {
+                    modelPicker
+                }
             }
+            .padding(.trailing, 4)
 
             sendButton
         }
@@ -210,11 +214,11 @@ struct ComposerView: View {
             .pickerStyle(.inline)
             .labelsHidden()
         } label: {
-            HStack(spacing: 4) {
-                Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
-                    .font(.system(size: 10))
+            HStack(spacing: 5) {
                 Text(viewModel.isLocalModelSelected ? "Local" : "Cloud")
                     .font(.system(size: 12))
+                Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
+                    .font(.system(size: 11))
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .semibold))
             }
@@ -239,6 +243,10 @@ struct ComposerView: View {
             ?? (viewModel.modelName.isEmpty ? "Model" : viewModel.modelName)
     }
 
+    private var currentModelIcon: String {
+        modelOptions.first(where: { $0.id == viewModel.modelName })?.icon ?? "cloud"
+    }
+
     private var modelPicker: some View {
         Menu {
             Picker("Model", selection: $viewModel.modelName) {
@@ -249,9 +257,11 @@ struct ComposerView: View {
             .pickerStyle(.inline)
             .labelsHidden()
         } label: {
-            HStack(spacing: 3) {
+            HStack(spacing: 5) {
                 Text(currentModelLabel)
                     .font(.system(size: 12))
+                Image(systemName: currentModelIcon)
+                    .font(.system(size: 11))
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .semibold))
             }

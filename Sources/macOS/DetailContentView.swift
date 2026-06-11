@@ -65,7 +65,7 @@ struct DetailContentView: View {
     private var chatHistoryViewport: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 16) {
                     if let activeId = viewModel.selectedConversationId,
                         let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
                     {
@@ -76,7 +76,11 @@ struct DetailContentView: View {
                     }
                 }
                 .padding(.horizontal, 24)
+                .padding(.top, 12)
                 .padding(.bottom, 16)
+                // Centered reading column — keeps lines comfortable on wide windows
+                .frame(maxWidth: 720)
+                .frame(maxWidth: .infinity)
             }
             .onStreamingChange(of: viewModel.isStreaming) { _ in
                 scrollToLast(proxy)
@@ -116,20 +120,19 @@ struct DetailContentView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            HStack(spacing: 12) {
-                Image(systemName: "command")
-                    .font(.system(size: 26, weight: .medium, design: .rounded))
-                    .foregroundColor(Color.accentCoral)
+            Image(systemName: "command")
+                .font(.system(size: 34, weight: .semibold, design: .rounded))
+                .foregroundColor(Color.accentCoral)
 
-                Text(welcomeHeadline)
-                    .font(.system(size: 30, weight: .semibold))
-                    .foregroundColor(.primary)
-            }
+            Text(welcomeHeadline)
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundColor(.primary)
+                .padding(.top, 16)
 
             Text("Copy something to get quick actions, or start with one of these.")
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
-                .padding(.top, 10)
+                .padding(.top, 6)
 
             HStack(spacing: 10) {
                 StarterCard(icon: "doc.on.clipboard", title: "Summarize my clipboard") {
@@ -142,7 +145,7 @@ struct DetailContentView: View {
                     viewModel.prefillComposer("Explain in plain language: ")
                 }
             }
-            .padding(.top, 22)
+            .padding(.top, 26)
 
             Spacer()
         }

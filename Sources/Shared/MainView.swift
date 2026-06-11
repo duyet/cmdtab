@@ -107,7 +107,7 @@ public struct MainView: View {
     private var chatHistoryViewport: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 16) {
                     if let activeId = viewModel.selectedConversationId,
                         let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
                     {
@@ -117,8 +117,12 @@ public struct MainView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
                 .padding(.bottom, 16)
+                // Centered reading column — comfortable line length on iPad widths
+                .frame(maxWidth: 720)
+                .frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
             .onStreamingChange(of: viewModel.isStreaming) { _ in
@@ -160,20 +164,19 @@ public struct MainView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            HStack(spacing: 12) {
-                Image(systemName: "command")
-                    .font(.system(size: 26, weight: .medium, design: .rounded))
-                    .foregroundColor(Color.accentCoral)
+            Image(systemName: "command")
+                .font(.system(size: 34, weight: .semibold, design: .rounded))
+                .foregroundColor(Color.accentCoral)
 
-                Text(welcomeHeadline)
-                    .font(.system(size: 30, weight: .semibold))
-                    .foregroundColor(.primary)
-            }
+            Text(welcomeHeadline)
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundColor(.primary)
+                .padding(.top, 16)
 
             Text("Copy something to get quick actions, or start with one of these.")
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
-                .padding(.top, 10)
+                .padding(.top, 6)
 
             VStack(spacing: 8) {
                 StarterCard(icon: "doc.on.clipboard", title: "Summarize my clipboard") {
@@ -187,7 +190,7 @@ public struct MainView: View {
                 }
             }
             .padding(.horizontal, 24)
-            .padding(.top, 22)
+            .padding(.top, 26)
 
             Spacer()
         }
@@ -234,8 +237,9 @@ struct StarterCard: View {
 }
 
 // MARK: - Message Row — chat-bubble layout
-/// User messages: right-aligned gray bubble. Assistant: left-aligned plain
-/// markdown text. Small timestamp + copy icons sit below each message.
+/// User messages: right-aligned gray bubble with avatar. Assistant:
+/// left-aligned with avatar icon, markdown rendering, and streaming cursor.
+/// Small timestamp + copy icons sit below each message.
 /// On macOS: hover reveals meta. On iOS: meta always visible.
 struct MessageRow: View {
     let message: ChatMessage
@@ -248,8 +252,13 @@ struct MessageRow: View {
     private var isUser: Bool { message.role == "user" }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 0) {
-            if isUser { Spacer(minLength: 60) }
+        HStack(alignment: .top, spacing: 10) {
+            if isUser { Spacer(minLength: 48) }
+
+            // Avatar
+            if !isUser {
+                MessageAvatar(role: message.role)
+            }
 
             VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
                 if isUser {
@@ -259,13 +268,18 @@ struct MessageRow: View {
                         .background(Color.primary.opacity(0.06))
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 } else if message.content.isEmpty && viewModel.isStreaming {
-                    Text("Thinking…")
-                        .font(.system(size: 13 * viewModel.fontScale))
-                        .foregroundColor(.secondary.opacity(0.7))
+                    TypingIndicator(fontScale: viewModel.fontScale)
                 } else if message.isError {
                     errorCard
                 } else {
-                    MessageMarkdownView(content: message.content, fontScale: viewModel.fontScale)
+                    HStack(alignment: .top, spacing: 0) {
+                        MessageMarkdownView(
+                            content: message.content, fontScale: viewModel.fontScale)
+                        // Blinking cursor while streaming
+                        if viewModel.isStreaming {
+                            StreamingCursor()
+                        }
+                    }
                 }
 
                 // Meta row: timestamp + copy
@@ -291,7 +305,12 @@ struct MessageRow: View {
                 #endif
             }
 
-            if !isUser { Spacer(minLength: 60) }
+            // User avatar on right
+            if isUser {
+                MessageAvatar(role: message.role)
+            }
+
+            if !isUser { Spacer(minLength: 48) }
         }
         #if os(macOS)
         .onHover { hovering in
@@ -362,6 +381,80 @@ struct MessageRow: View {
                 withAnimation { copied = false }
             }
         }
+    }
+}
+
+// MARK: - Message Avatar
+/// Small circular avatar: coral "⌘" for the app, gray initial for the user.
+struct MessageAvatar: View {
+    let role: String
+    var size: CGFloat = 24
+
+    private var isUser: Bool { role == "user" }
+
+    var body: some View {
+        Group {
+            if isUser {
+                Text("You")
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .foregroundColor(.secondary)
+            } else {
+                // Plain ⌘ on the coral disc — cleaner than a square-in-circle,
+                // and weight matches the refined app mark.
+                Image(systemName: "command")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+        }
+        .frame(width: size, height: size)
+        .background(isUser ? Color.primary.opacity(0.08) : Color.accentCoral)
+        .clipShape(Circle())
+    }
+}
+
+// MARK: - Typing Indicator
+/// Three bouncing dots animated with staggered delays.
+struct TypingIndicator: View {
+    let fontScale: Double
+    @State private var isActive = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .fill(Color.secondary.opacity(0.5))
+                    .frame(width: 6, height: 6)
+                    .offset(y: isActive ? -4 : 4)
+                    .animation(
+                        Animation.easeInOut(duration: 0.4)
+                            .repeatForever(autoreverses: true)
+                            .delay(Double(index) * 0.15),
+                        value: isActive
+                    )
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .onAppear { isActive = true }
+        .onDisappear { isActive = false }
+    }
+}
+
+// MARK: - Streaming Cursor
+/// Blinking vertical bar at the end of streaming assistant text.
+struct StreamingCursor: View {
+    @State private var isVisible = true
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 1)
+            .fill(Color.accentCoral.opacity(isVisible ? 0.8 : 0))
+            .frame(width: 2, height: 14)
+            .offset(y: 1)
+            .animation(
+                Animation.easeInOut(duration: 0.5).repeatForever(autoreverses: true),
+                value: isVisible
+            )
+            .onAppear { isVisible = false }
     }
 }
 

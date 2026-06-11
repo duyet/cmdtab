@@ -166,21 +166,6 @@ struct ComposerView: View {
     // MARK: Bottom controls row
     private var controlsRow: some View {
         HStack(spacing: 8) {
-            // "+" placeholder
-            Button(action: {}) {
-                Image(systemName: "plus")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .frame(width: 28, height: 28)
-                    .background(Color.primary.opacity(0.05))
-                    .clipShape(Circle())
-            }
-            .buttonStyle(PlainButtonStyle())
-            .accessibilityLabel("Attach")
-            #if os(macOS)
-            .help("Attach")
-            #endif
-
             Spacer()
 
             // Mode + model dropdowns share an even gap, set apart from the send button

@@ -1,9 +1,8 @@
 import SwiftUI
 
-// MARK: - Pill Tab Bar
-/// Unified tab/selector component used across the app.
-/// Selected item: light-gray capsule pill + primary text.
-/// Unselected: secondary text, no background. Hover: slightly darker.
+// MARK: - Segmented Tab Bar
+/// Native segmented selector used across the app. Renders as the system
+/// segmented control (`Picker(.segmented)`) so it matches stock macOS/iOS.
 struct PillTabBar<T: Hashable>: View {
     struct Item {
         let value: T
@@ -19,95 +18,23 @@ struct PillTabBar<T: Hashable>: View {
 
     let items: [Item]
     @Binding var selection: T
-    /// Track style: items sit on a full-width gray track and the selected
-    /// item gets a white (cardSurface) pill — like the Claude/Codex sidebar
-    /// switcher. Non-track style renders bare pills (used in Settings).
+    /// Retained for source compatibility; the native segmented control owns its
+    /// own appearance, so this no longer changes styling.
     var track: Bool = false
 
     var body: some View {
-        HStack(spacing: 2) {
+        Picker("", selection: $selection) {
             ForEach(items.indices, id: \.self) { i in
-                PillTabItem(
-                    item: items[i],
-                    isSelected: items[i].value == selection,
-                    track: track,
-                    onTap: { selection = items[i].value }
-                )
-                // Selected pill hugs its icon + label; unselected items share
-                // the remaining track width as generous icon hit targets.
-                .frame(maxWidth: track && items[i].value != selection ? .infinity : nil)
-            }
-        }
-        .padding(track ? 3 : 0)
-        .background(track ? Color.primary.opacity(0.05) : Color.clear)
-        .cornerRadius(track ? 10 : 0)
-        .fixedSize(horizontal: false, vertical: true)
-    }
-}
-
-private struct PillTabItem<T: Hashable>: View {
-    let item: PillTabBar<T>.Item
-    let isSelected: Bool
-    var track: Bool = false
-    let onTap: () -> Void
-    #if os(macOS)
-    @State private var isHovered = false
-    #endif
-
-    var body: some View {
-        Button(action: onTap) {
-            Group {
-                if isSelected {
-                    // Selected: icon + label, hugging its content
-                    HStack(spacing: 5) {
-                        if let icon = item.icon {
-                            Image(systemName: icon)
-                                .font(.system(size: 11))
-                        }
-                        Text(item.label)
-                            .font(.system(size: 12, weight: .semibold))
-                            .lineLimit(1)
-                    }
-                } else if let icon = item.icon {
-                    // Unselected with icon: icon only — no wrapping
-                    Image(systemName: icon)
-                        .font(.system(size: 13))
+                let item = items[i]
+                if let icon = item.icon {
+                    Label(item.label, systemImage: icon).tag(item.value)
                 } else {
-                    // Unselected, no icon: short label
-                    Text(item.label)
-                        .font(.system(size: 12))
-                        .lineLimit(1)
+                    Text(item.label).tag(item.value)
                 }
             }
-            .foregroundColor(isSelected ? .primary : pillItemSecondaryColor)
-            .padding(.horizontal, track ? (isSelected ? 14 : 8) : 9)
-            .padding(.vertical, track ? 6 : 5)
-            .frame(maxWidth: track && !isSelected ? .infinity : nil)
-            .background(
-                isSelected
-                    ? (track ? Color.cardSurface : Color.primary.opacity(0.10))
-                    : Color.clear
-            )
-            .clipShape(RoundedRectangle(cornerRadius: track ? 8 : 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: track ? 8 : 12)
-                    .stroke(isSelected && track ? Color.hairline : Color.clear, lineWidth: 1)
-            )
-            .contentShape(Rectangle())
         }
-        .buttonStyle(PlainButtonStyle())
-        .fixedSize(horizontal: !track || isSelected, vertical: true)
-        #if os(macOS)
-        .onHover { h in withAnimation(.easeOut(duration: 0.1)) { isHovered = h } }
-        #endif
-    }
-
-    private var pillItemSecondaryColor: Color {
-        #if os(macOS)
-        isHovered ? .primary.opacity(0.75) : .secondary
-        #else
-        .secondary
-        #endif
+        .pickerStyle(.segmented)
+        .labelsHidden()
     }
 }
 
@@ -168,7 +95,7 @@ struct PlainIconButton: View {
                 .frame(width: 22, height: 22)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.borderless)
         .disabled(disabled)
         .plainFocusEffectDisabled()
         .accessibilityLabel(help.isEmpty ? systemName : help)

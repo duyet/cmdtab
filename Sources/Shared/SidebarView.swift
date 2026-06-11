@@ -71,8 +71,6 @@ struct SidebarView: View {
                 withAnimation { viewModel.isSidebarVisible.toggle() }
             }
 
-            PlainIconButton(systemName: "magnifyingglass", size: 13, help: "Search") {}
-
             Spacer()
         }
         .padding(.horizontal, 12)
@@ -186,10 +184,6 @@ struct SidebarView: View {
         HStack(spacing: 4) {
             PlainIconButton(systemName: "gearshape", size: 14, help: "Settings") {
                 viewModel.toggleSettings()
-            }
-
-            if viewModel.isUpdateAvailable {
-                PlainIconButton(systemName: "arrow.down.circle", size: 13, help: "Update available") {}
             }
 
             Spacer()

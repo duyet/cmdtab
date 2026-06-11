@@ -3,7 +3,7 @@ import Foundation
 import os
 
 @MainActor
-public final class HotKeyManager: @unchecked Sendable {
+public final class HotKeyManager {
     public static let shared = HotKeyManager()
     private static let logger = Logger(subsystem: "app.cmdtab", category: "HotKey")
 

@@ -10,19 +10,33 @@ public final class KeychainHelper: Sendable {
     public func save(_ value: String, service: String, account: String) -> Bool {
         guard let data = value.data(using: .utf8) else { return false }
 
+        // Identity of the item (what to match on).
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
-            kSecValueData as String: data,
         ]
 
-        // First delete any existing item
-        SecItemDelete(query as CFDictionary)
+        // Try to update an existing item first. This avoids the lossy
+        // delete-then-add pattern, where a failed delete leaves the old item
+        // and SecItemAdd then fails with errSecDuplicateItem — silently
+        // dropping the user's key.
+        let attributes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+        ]
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if updateStatus == errSecSuccess { return true }
 
-        let status = SecItemAdd(query as CFDictionary, nil)
-        return status == errSecSuccess
+        // No existing item — add a fresh one.
+        if updateStatus == errSecItemNotFound {
+            var addQuery = query
+            addQuery[kSecValueData as String] = data
+            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+            return SecItemAdd(addQuery as CFDictionary, nil) == errSecSuccess
+        }
+
+        return false
     }
 
     public func read(service: String, account: String) -> String? {

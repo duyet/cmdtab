@@ -7,7 +7,7 @@ import UIKit
 #endif
 
 @MainActor
-public final class PasteboardMonitor: @unchecked Sendable {
+public final class PasteboardMonitor {
     public static let shared = PasteboardMonitor()
 
     #if os(macOS)

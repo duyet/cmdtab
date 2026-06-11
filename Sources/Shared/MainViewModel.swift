@@ -65,10 +65,6 @@ public final class MainViewModel: ObservableObject {
         ("creative", "Creative", "Be imaginative and exploratory; offer fresh angles and alternatives."),
     ]
 
-    /// True when a newer app version is available; drives the sidebar download icon.
-    /// No update channel exists yet, so this stays false until one is wired up.
-    @Published public var isUpdateAvailable: Bool = false
-
     // Clipboard Action Banner
     @Published public var detectedClipboardText: String = ""
     @Published public var isClipboardBannerVisible: Bool = false

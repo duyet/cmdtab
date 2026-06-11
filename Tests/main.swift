@@ -425,8 +425,13 @@ func runAllTests() {
     testSSEParsingIgnoresNonPayloadLines()
     testRequestURLNormalization()
     testRequestBodyShape()
-    try! testRequestHeadersAndAuth()
-    try! testRequestOmitsAuthWhenNoKey()
+    do {
+        try testRequestHeadersAndAuth()
+        try testRequestOmitsAuthWhenNoKey()
+    } catch {
+        print("FAILED: request header/auth tests threw: \(error)")
+        exit(1)
+    }
     testAdapterPrependsSystemInstructions()
     testLocalModelCompiledOutUnderFlag()
     testLocalModelStreamThrowsWhenCompiledOut()

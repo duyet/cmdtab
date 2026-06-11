@@ -159,6 +159,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     @objc private func appDidBecomeActive() {
         viewModel?.handleActivation()
     }

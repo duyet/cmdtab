@@ -128,14 +128,20 @@ public enum AnyRouterRequestFactory {
     /// so the final chunk reports token counts; consumers ignore that usage-only frame.
     public static func requestBody(
         model: String,
-        messages: [[String: String]]
+        messages: [[String: String]],
+        reasoningEffort: String? = nil
     ) -> [String: Any] {
-        [
+        var body: [String: Any] = [
             "model": model,
             "messages": messages,
             "stream": true,
             "stream_options": ["include_usage": true],
         ]
+        // Only sent for models that accept it (see ModelCatalog.supportsReasoning).
+        if let reasoningEffort, !reasoningEffort.isEmpty {
+            body["reasoning_effort"] = reasoningEffort
+        }
+        return body
     }
 
     /// Builds the fully-configured `URLRequest`, or throws if the URL or body is invalid.
@@ -143,7 +149,8 @@ public enum AnyRouterRequestFactory {
         endpointUrl: String,
         apiKey: String?,
         model: String,
-        messages: [[String: String]]
+        messages: [[String: String]],
+        reasoningEffort: String? = nil
     ) throws -> URLRequest {
         guard let url = URL(string: normalizedURLString(from: endpointUrl)) else {
             throw APIError.invalidURL
@@ -166,7 +173,8 @@ public enum AnyRouterRequestFactory {
 
         guard
             let httpBody = try? JSONSerialization.data(
-                withJSONObject: requestBody(model: model, messages: messages),
+                withJSONObject: requestBody(
+                    model: model, messages: messages, reasoningEffort: reasoningEffort),
                 options: []
             )
         else {
@@ -189,14 +197,16 @@ public final class APIClient: Sendable {
         endpointUrl: String,
         apiKey: String?,
         model: String,
-        messages: [[String: String]]
+        messages: [[String: String]],
+        reasoningEffort: String? = nil
     ) async throws -> AsyncThrowingStream<String, Error> {
 
         let request = try AnyRouterRequestFactory.makeRequest(
             endpointUrl: endpointUrl,
             apiKey: apiKey,
             model: model,
-            messages: messages
+            messages: messages,
+            reasoningEffort: reasoningEffort
         )
 
         let (bytes, response) = try await URLSession.shared.bytes(for: request)

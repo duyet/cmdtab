@@ -15,7 +15,8 @@ xcrun -sdk macosx swiftc -target arm64-apple-macosx14.0 -D DISABLE_NATIVE_LLM -o
   Sources/Shared/EnvFile.swift \
   Sources/Shared/MarkdownBlocks.swift \
   Sources/Shared/LocalModelClient.swift \
-  Sources/Shared/InferenceAdapter.swift
+  Sources/Shared/InferenceAdapter.swift \
+  Sources/Shared/ModelCatalog.swift
 
 # Execute the compiled tests
 ./TestRunner

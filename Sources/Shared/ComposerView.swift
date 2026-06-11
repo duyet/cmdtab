@@ -174,6 +174,11 @@ struct ComposerView: View {
 
                 if !viewModel.isLocalModelSelected {
                     modelPicker
+
+                    // Reasoning effort — only for cloud models that support it.
+                    if viewModel.modelSupportsReasoning {
+                        reasoningEffortPicker
+                    }
                 }
             }
             .padding(.trailing, 4)
@@ -256,6 +261,36 @@ struct ComposerView: View {
         .menuIndicator(.hidden)
         .fixedSize()
         .modifier(MenuTriggerHover())
+    }
+
+    // MARK: Reasoning effort picker (cloud models that support it)
+    private var reasoningEffortPicker: some View {
+        Menu {
+            Picker("Reasoning", selection: $viewModel.reasoningEffort) {
+                ForEach(ModelCatalog.reasoningEfforts, id: \.self) { effort in
+                    Text(effort.capitalized).tag(effort)
+                }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "brain")
+                    .font(.system(size: 11))
+                Text(viewModel.reasoningEffort.capitalized)
+                    .font(.system(size: 12))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
+            }
+            .foregroundColor(.secondary)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .modifier(MenuTriggerHover())
+        #if os(macOS)
+        .help("Reasoning effort")
+        #endif
     }
 
     // MARK: Send button — coral when active

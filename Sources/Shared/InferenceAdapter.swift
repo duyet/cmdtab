@@ -39,11 +39,16 @@ public struct AnyRouterAdapter: InferenceAdapter {
     private let endpointUrl: String
     private let apiKey: String
     private let model: String
+    /// `reasoning_effort` to send, or nil when the model doesn't support it.
+    private let reasoningEffort: String?
 
-    public init(endpointUrl: String, apiKey: String, model: String) {
+    public init(
+        endpointUrl: String, apiKey: String, model: String, reasoningEffort: String? = nil
+    ) {
         self.endpointUrl = endpointUrl
         self.apiKey = apiKey
         self.model = model
+        self.reasoningEffort = reasoningEffort
     }
 
     public var isAvailable: Bool { !apiKey.isEmpty }
@@ -81,7 +86,8 @@ public struct AnyRouterAdapter: InferenceAdapter {
             endpointUrl: endpointUrl,
             apiKey: apiKey.isEmpty ? nil : apiKey,
             model: model,
-            messages: formatted
+            messages: formatted,
+            reasoningEffort: reasoningEffort
         )
     }
 }

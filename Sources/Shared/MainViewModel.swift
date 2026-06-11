@@ -142,6 +142,15 @@ public final class MainViewModel: ObservableObject {
             updateStatusMessage()
         }
     }
+
+    /// Reasoning effort (low/medium/high) sent to cloud models that support it.
+    /// UI preference — persisted in UserDefaults.
+    @Published public var reasoningEffort: String = "medium" {
+        didSet { UserDefaults.standard.set(reasoningEffort, forKey: "reasoningEffort") }
+    }
+
+    /// True when the active cloud model accepts a `reasoning_effort` parameter.
+    public var modelSupportsReasoning: Bool { ModelCatalog.supportsReasoning(modelName) }
     @Published public var apiKey: String = "" {
         didSet {
             // Env-sourced keys are session-only; never persist them (AGENTS.md §3).
@@ -237,6 +246,12 @@ public final class MainViewModel: ObservableObject {
         self.endpointUrl = UserDefaults.standard.string(forKey: "endpointUrl") ?? "https://anyrouter.dev/api/v1"
         // Drop obsolete persisted model ids (e.g. older OpenRouter free-tier slugs)
         // that are no longer in the known-model list, falling back to the current default.
+        if let storedEffort = UserDefaults.standard.string(forKey: "reasoningEffort"),
+            ModelCatalog.reasoningEfforts.contains(storedEffort)
+        {
+            self.reasoningEffort = storedEffort
+        }
+
         let storedModel = UserDefaults.standard.string(forKey: "modelName")
         if let storedModel, MainViewModel.knownModelIds.contains(storedModel) {
             self.modelName = storedModel
@@ -519,7 +534,9 @@ public final class MainViewModel: ObservableObject {
         let adapter: InferenceAdapter =
             isLocalModelSelected
             ? LocalModelAdapter()
-            : AnyRouterAdapter(endpointUrl: endpointUrl, apiKey: apiKey, model: modelName)
+            : AnyRouterAdapter(
+                endpointUrl: endpointUrl, apiKey: apiKey, model: modelName,
+                reasoningEffort: modelSupportsReasoning ? reasoningEffort : nil)
         let historyMessages = Array(conversations[activeIndex].messages.dropLast())  // all except placeholder
 
         currentTask = Task { [weak self] in

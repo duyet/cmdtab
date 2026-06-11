@@ -7,12 +7,26 @@ public enum ModelCatalog {
         public let id: String  // API model identifier
         public let displayName: String
         public let sfSymbol: String  // menu row icon
+        /// Whether the model accepts the OpenAI-compatible `reasoning_effort` param.
+        public let supportsReasoning: Bool
 
-        public init(id: String, displayName: String, sfSymbol: String = "sparkles") {
+        public init(
+            id: String, displayName: String, sfSymbol: String = "sparkles",
+            supportsReasoning: Bool = false
+        ) {
             self.id = id
             self.displayName = displayName
             self.sfSymbol = sfSymbol
+            self.supportsReasoning = supportsReasoning
         }
+    }
+
+    /// Allowed `reasoning_effort` values, low → high.
+    public static let reasoningEfforts: [String] = ["low", "medium", "high"]
+
+    /// True when the given model id accepts a `reasoning_effort` parameter.
+    public static func supportsReasoning(_ id: String) -> Bool {
+        entries.first(where: { $0.id == id })?.supportsReasoning ?? false
     }
 
     /// Ordered model entries shown in pickers. Keep in sync with
@@ -25,7 +39,9 @@ public enum ModelCatalog {
         Entry(id: "google/gemini-2.5-pro", displayName: "Gemini 2.5 Pro", sfSymbol: "brain"),
         Entry(id: "anthropic/claude-sonnet-4.6", displayName: "Claude Sonnet 4.6", sfSymbol: "sparkles"),
         Entry(id: "anthropic/claude-opus-4.2", displayName: "Claude Opus 4.2", sfSymbol: "brain"),
-        Entry(id: "openai/gpt-5.4", displayName: "GPT-5.4", sfSymbol: "brain"),
-        Entry(id: "openai/gpt-5.4-mini", displayName: "GPT-5.4 Mini", sfSymbol: "bolt"),
+        Entry(id: "openai/gpt-5.4", displayName: "GPT-5.4", sfSymbol: "brain", supportsReasoning: true),
+        Entry(
+            id: "openai/gpt-5.4-mini", displayName: "GPT-5.4 Mini", sfSymbol: "bolt",
+            supportsReasoning: true),
     ]
 }

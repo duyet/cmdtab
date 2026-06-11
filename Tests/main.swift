@@ -210,6 +210,24 @@ func testRequestBodyShape() {
     assert(
         opts?["include_usage"] as? Bool == true,
         "Body must opt into usage reporting via stream_options.include_usage")
+
+    // WHY: reasoning_effort must be omitted by default so models that reject the
+    // field (or the on-device path) never receive an unsupported parameter.
+    assert(body["reasoning_effort"] == nil, "reasoning_effort must be absent unless requested")
+
+    // WHY: when supplied, it must round-trip exactly so the model's reasoning
+    // budget matches the user's selection.
+    let reasoningBody = AnyRouterRequestFactory.requestBody(
+        model: "openai/gpt-5.4", messages: messages, reasoningEffort: "high")
+    assert(
+        reasoningBody["reasoning_effort"] as? String == "high",
+        "Body must carry the requested reasoning_effort")
+
+    // WHY: only specific models accept the param; the catalog gate must reflect that.
+    assert(ModelCatalog.supportsReasoning("openai/gpt-5.4"), "GPT-5.4 supports reasoning effort")
+    assert(
+        !ModelCatalog.supportsReasoning("anthropic/claude-sonnet-4.6"),
+        "Sonnet must not be sent reasoning_effort via this path")
 }
 
 func testRequestHeadersAndAuth() throws {

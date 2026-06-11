@@ -6,6 +6,7 @@ import SwiftUI
 /// No shadows, no card borders — native SF type and quiet grays only.
 struct SidebarView: View {
     @ObservedObject var viewModel: MainViewModel
+    @State private var showHelp = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -179,17 +180,82 @@ struct SidebarView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: Footer — Settings bottom-left; download icon only when an update exists.
+    // MARK: Footer — Settings + Help bottom-left.
     private var footerRow: some View {
         HStack(spacing: 4) {
             PlainIconButton(systemName: "gearshape", size: 14, help: "Settings") {
                 viewModel.toggleSettings()
             }
 
+            PlainIconButton(systemName: "questionmark.circle", size: 14, help: "How to use") {
+                showHelp.toggle()
+            }
+            .popover(isPresented: $showHelp, arrowEdge: .top) {
+                HelpGuide()
+            }
+
             Spacer()
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
+    }
+}
+
+// MARK: - Help Guide
+/// Concise getting-started guide. Plain native type — teaches the four things
+/// that make this app click: clipboard actions, asking, modes, shortcuts.
+private struct HelpGuide: View {
+    private struct Tip: Identifiable {
+        let id = UUID()
+        let icon: String
+        let title: String
+        let detail: String
+    }
+
+    private let tips: [Tip] = [
+        Tip(
+            icon: "doc.on.clipboard",
+            title: "Copy anything",
+            detail: "Copy text in any app and cmdtab offers instant Quick Actions for it."),
+        Tip(
+            icon: "text.bubble",
+            title: "Just ask",
+            detail: "Type a question in the box and press Return. Replies stream in live."),
+        Tip(
+            icon: "cpu",
+            title: "Cloud or on-device",
+            detail:
+                "Switch between a cloud model and Apple's on-device model with the mode menu."),
+        Tip(
+            icon: "command",
+            title: "Shortcuts",
+            detail: "⌘T new chat · ⌘B toggle sidebar · ⌥-Space to summon the window."),
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("How to use cmdtab")
+                .font(.headline)
+
+            ForEach(tips) { tip in
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: tip.icon)
+                        .font(.system(size: 14))
+                        .foregroundColor(.accentColor)
+                        .frame(width: 20)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(tip.title)
+                            .font(.system(size: 12.5, weight: .semibold))
+                        Text(tip.detail)
+                            .font(.system(size: 11.5))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+        .padding(18)
+        .frame(width: 300)
     }
 }
 

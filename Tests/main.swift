@@ -428,6 +428,41 @@ func testEnvFileParsing() {
     assert(parsed.count == 3, "comments, blanks, malformed lines must be ignored")
 }
 
+func testWelcomeHeadlineUsesSettingsName() {
+    print("Testing welcome headline reflects the Settings name…")
+    // WHY: the name the user types in Settings must appear in the landing
+    // greeting — the visible payoff of the Profile setting.
+    let named = Greeting.headline(userName: "  Duyet  ", hour: 9)
+    assert(named == "Good morning, Duyet!", "name must be trimmed and injected: \(named)")
+    let anon = Greeting.headline(userName: "", hour: 9)
+    assert(anon == "Good morning!", "empty name must yield a plain greeting: \(anon)")
+    // WHY: the greeting is time-aware; a wrong bucket would mis-greet the user.
+    assert(Greeting.headline(userName: "", hour: 23) == "Working late!", "late-night bucket")
+}
+
+func testSystemPromptInjectsCustomInstruction() {
+    print("Testing system-prompt assembly injects the custom instruction…")
+    let prompt = SystemPromptBuilder.assemble(
+        base: "You are helpful.",
+        preferredLanguage: "English",
+        personalityPrompt: "Be concise.",
+        customInstructions: "  Always cite sources.  ",
+        contextSummary: "Earlier: discussed Swift.")
+    // WHY: the custom instruction is the user's override — it must reach the model
+    // verbatim (trimmed) or their personalization silently does nothing.
+    assert(
+        prompt.contains("User instructions: Always cite sources."),
+        "custom instruction must be injected: \(prompt)")
+    assert(prompt.contains("All responses must be in English."), "language directive present")
+    assert(prompt.contains("Be concise."), "personality prompt present")
+    assert(prompt.contains("[Earlier conversation context]"), "context summary present")
+    // WHY: an empty custom field must add nothing, not a dangling label.
+    let bare = SystemPromptBuilder.assemble(
+        base: "B", preferredLanguage: "English", personalityPrompt: nil,
+        customInstructions: "   ", contextSummary: nil)
+    assert(!bare.contains("User instructions:"), "blank custom field must inject nothing")
+}
+
 func runAllTests() {
     testMarkdownBlockParsing()
     testMarkdownUnterminatedFenceIsCode()
@@ -455,6 +490,8 @@ func runAllTests() {
     testLocalModelStreamThrowsWhenCompiledOut()
     testLocalModelErrorMessaging()
     testAPIErrorMessaging()
+    testWelcomeHeadlineUsesSettingsName()
+    testSystemPromptInjectsCustomInstruction()
     print("=== All Tests Passed Successfully ===")
 }
 

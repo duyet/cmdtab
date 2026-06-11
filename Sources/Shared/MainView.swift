@@ -147,16 +147,9 @@ public struct MainView: View {
 
     /// Time-aware headline, personalized when a name is set in Settings.
     private var welcomeHeadline: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        let salutation: String
-        switch hour {
-        case 5..<12: salutation = "Good morning"
-        case 12..<17: salutation = "Good afternoon"
-        case 17..<22: salutation = "Good evening"
-        default: salutation = "Working late"
-        }
-        let name = viewModel.userName.trimmingCharacters(in: .whitespaces)
-        return name.isEmpty ? "\(salutation)!" : "\(salutation), \(name)!"
+        Greeting.headline(
+            userName: viewModel.userName,
+            hour: Calendar.current.component(.hour, from: Date()))
     }
 
     // MARK: - Landing View

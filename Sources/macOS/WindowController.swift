@@ -90,8 +90,8 @@ final class WindowController: NSWindowController {
                 let num = Int(String(firstChar)),
                 num >= 1 && num <= 9
             {
-                if vm.isClipboardBannerVisible && !vm.detectedClipboardText.isEmpty {
-                    vm.runPresetWithClipboard(index: num - 1)
+                if !vm.isSettingsOpen && num - 1 < vm.presets.count {
+                    vm.pickPreset(index: num - 1)
                     return true
                 }
             }

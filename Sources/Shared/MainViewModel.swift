@@ -13,7 +13,9 @@ public final class MainViewModel: ObservableObject {
     @Published public var isSettingsOpen: Bool = false
 
     /// Active Settings tab — settable from anywhere (e.g. "Add API key" CTA).
-    @Published public var settingsTab: String = "general"
+    @Published public var settingsTab: String = "general" {
+        didSet { UserDefaults.standard.set(settingsTab, forKey: "settingsTab") }
+    }
 
     /// Keychain is only touched after this flips true (lazy, prompt-free launch).
     public private(set) var hasLoadedApiKey: Bool = false
@@ -234,6 +236,7 @@ public final class MainViewModel: ObservableObject {
 
     private func loadSettings() {
         self.isSidebarVisible = UserDefaults.standard.object(forKey: "isSidebarVisible") as? Bool ?? true
+        self.settingsTab = UserDefaults.standard.string(forKey: "settingsTab") ?? "general"
         self.userName = UserDefaults.standard.string(forKey: "userName") ?? ""
         let storedWidth = UserDefaults.standard.double(forKey: "sidebarWidth")
         if storedWidth >= 220 && storedWidth <= 400 { self.sidebarWidth = CGFloat(storedWidth) }
@@ -440,6 +443,21 @@ public final class MainViewModel: ObservableObject {
         startLLMResponse(for: activeId)
     }
 
+    /// Pick a Quick Action by index (⌘1-9). With clipboard text present this
+    /// runs the preset against it immediately; otherwise it opens a fresh
+    /// conversation primed with the preset and focuses the composer so the user
+    /// can type their own input.
+    public func pickPreset(index: Int) {
+        guard index >= 0 && index < presets.count else { return }
+        if !detectedClipboardText.isEmpty && isClipboardBannerVisible {
+            runPresetWithClipboard(index: index)
+        } else {
+            let preset = presets[index]
+            startNewConversation(title: preset.name, presetId: preset.id)
+            prefillComposer("")  // focus the composer for this preset
+        }
+    }
+
     public func runPresetWithClipboard(index: Int) {
         guard index >= 0 && index < presets.count else { return }
         guard !detectedClipboardText.isEmpty else { return }
@@ -497,24 +515,20 @@ public final class MainViewModel: ObservableObject {
         let conversation = conversations[activeIndex]
 
         // Find instructions based on presetId (not title — avoids fragile string matching)
-        var systemInstructions = "You are a helpful engineering assistant. Respond concisely using markdown."
+        var base = "You are a helpful engineering assistant. Respond concisely using markdown."
         if let pid = conversation.presetId,
             let matchedPreset = presets.first(where: { $0.id == pid })
         {
-            systemInstructions = matchedPreset.systemPrompt
+            base = matchedPreset.systemPrompt
         }
-        systemInstructions += " All responses must be in \(preferredLanguage)."
-        if let p = MainViewModel.personalityOptions.first(where: { $0.id == personality }), !p.prompt.isEmpty {
-            systemInstructions += " " + p.prompt
-        }
-        let custom = customInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !custom.isEmpty {
-            systemInstructions += "\nUser instructions: \(custom)"
-        }
-        // Inject compacted context summary (from auto-compaction of older messages)
-        if let summary = conversation.compactedSummary {
-            systemInstructions += "\n[Earlier conversation context] \(summary)"
-        }
+        let personalityPrompt =
+            MainViewModel.personalityOptions.first(where: { $0.id == personality })?.prompt
+        let systemInstructions = SystemPromptBuilder.assemble(
+            base: base,
+            preferredLanguage: preferredLanguage,
+            personalityPrompt: personalityPrompt,
+            customInstructions: customInstructions,
+            contextSummary: conversation.compactedSummary)
 
         currentTask?.cancel()
         clearStreamingIndices()
@@ -671,6 +685,24 @@ public final class MainViewModel: ObservableObject {
                 sfSymbol: "chevron.left.forwardslash.chevron.right",
                 systemPrompt:
                     "Explain what this code does: describe its purpose, key inputs and outputs, and identify one significant risk or edge case. Use plain language with minimal jargon."
+            ),
+            Preset(
+                name: "English Rewrite",
+                sfSymbol: "character.bubble",
+                systemPrompt:
+                    "Rewrite the input as natural, fluent, native-sounding English. Correct all grammar, spelling, and punctuation; smooth out awkward phrasing and non-idiomatic constructions; and preserve the original meaning, tone, and level of formality. Do not add or remove information, and do not translate proper nouns or technical terms. If the input is already a different language, translate it to English first, then refine. Return only the rewritten English text, with no quotes, labels, or commentary."
+            ),
+            Preset(
+                name: "What did they say?",
+                sfSymbol: "quote.bubble",
+                systemPrompt:
+                    "Interpret what the input is really saying for a reader who may have missed the nuance. In plain, simple language: (1) restate the core message in one or two sentences, (2) decode any jargon, acronyms, slang, idioms, sarcasm, or implied/indirect meaning, and (3) note the tone or intent if it matters (e.g. polite refusal, complaint, joke). Be faithful to the source and do not invent details. Keep it short — return only the interpretation, no preamble."
+            ),
+            Preset(
+                name: "Draw / Explain",
+                sfSymbol: "flowchart",
+                systemPrompt:
+                    "Explain the input clearly and illustrate it with a diagram. First give a brief plain-language explanation (2-4 sentences or short bullets). Then choose the most fitting Mermaid diagram type — flowchart for processes, sequenceDiagram for interactions, classDiagram for structure, stateDiagram-v2 for state, mindmap for concepts — and output exactly one valid, syntactically correct diagram in a fenced ```mermaid code block. Keep node labels concise, avoid unsupported syntax, and make sure the diagram reflects the explanation."
             ),
         ]
     }

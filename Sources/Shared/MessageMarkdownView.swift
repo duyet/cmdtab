@@ -47,7 +47,11 @@ struct MessageMarkdownView: View {
     private func blockView(_ block: MarkdownBlock) -> some View {
         switch block.kind {
         case .code(let language):
-            CodeBlockView(code: block.text, language: language, fontScale: fontScale)
+            if language?.lowercased() == "mermaid", !block.text.isEmpty {
+                MermaidView(source: block.text, fontScale: fontScale)
+            } else {
+                CodeBlockView(code: block.text, language: language, fontScale: fontScale)
+            }
         case .heading(let level):
             Text(inlineMarkdown(block.text))
                 .font(.system(size: headingSize(level) * fontScale, weight: .semibold))

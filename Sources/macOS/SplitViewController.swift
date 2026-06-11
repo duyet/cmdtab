@@ -9,6 +9,10 @@ final class SplitViewController: NSSplitViewController {
     private var detailSplitItem: NSSplitViewItem!
     private var cancellables = Set<AnyCancellable>()
     private var sidebarAutoHidden = false
+    /// While set in the future, suppresses the cramped-window auto-hide. Set
+    /// when the user explicitly opens the sidebar so the resize callbacks fired
+    /// by the open animation can't immediately slam it shut again.
+    private var suppressAutoHideUntil: Date = .distantPast
 
     init(viewModel: MainViewModel) {
         self.viewModel = viewModel
@@ -59,6 +63,13 @@ final class SplitViewController: NSSplitViewController {
     private func syncSplitView(visible: Bool) {
         let collapsed = sidebarSplitItem.isCollapsed
         if visible == collapsed {
+            // An explicit open must win over the cramped-window auto-hide for
+            // the duration of the toggle animation; otherwise the resize
+            // callbacks it triggers would re-hide the sidebar on narrow windows.
+            if visible {
+                sidebarAutoHidden = false
+                suppressAutoHideUntil = Date().addingTimeInterval(0.7)
+            }
             toggleSidebar(sidebarSplitItem)
         }
     }
@@ -85,8 +96,11 @@ final class SplitViewController: NSSplitViewController {
             sidebarSplitItem.isCollapsed
             ? viewModel.sidebarWidth
             : sidebarSplitItem.viewController.view.frame.width
-        let minMainPane: CGFloat = 460
+        let minMainPane: CGFloat = 380
         let restoreSlack: CGFloat = 40
+
+        // Honour a just-issued explicit open: don't auto-hide mid-animation.
+        if Date() < suppressAutoHideUntil { return }
 
         if !sidebarSplitItem.isCollapsed, totalWidth < sidebarW + minMainPane {
             sidebarAutoHidden = true

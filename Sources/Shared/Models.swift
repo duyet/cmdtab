@@ -8,15 +8,23 @@ public struct ChatMessage: Codable, Identifiable, Equatable, Sendable {
     public var content: String
     public var timestamp: Date
     public var isError: Bool  // renders as an error card instead of markdown
+    /// Quick Action that produced this turn, e.g. "Summarize". When set, the
+    /// row shows a small action header. nil for ordinary typed messages.
+    public var actionLabel: String?
+    /// True when `content` is quoted clipboard text (renders with a quote bar).
+    public var isQuote: Bool
 
     public init(
-        id: UUID = UUID(), role: String, content: String, timestamp: Date = Date(), isError: Bool = false
+        id: UUID = UUID(), role: String, content: String, timestamp: Date = Date(),
+        isError: Bool = false, actionLabel: String? = nil, isQuote: Bool = false
     ) {
         self.id = id
         self.role = role
         self.content = content
         self.timestamp = timestamp
         self.isError = isError
+        self.actionLabel = actionLabel
+        self.isQuote = isQuote
     }
 }
 

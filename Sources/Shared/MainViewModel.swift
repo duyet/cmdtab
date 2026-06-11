@@ -473,7 +473,9 @@ public final class MainViewModel: ObservableObject {
         else { return }
 
         // Context contains both instructions and copied text
-        let userMsg = ChatMessage(role: "user", content: detectedClipboardText)
+        let userMsg = ChatMessage(
+            role: "user", content: detectedClipboardText,
+            actionLabel: preset.name, isQuote: true)
         conversations[activeIndex].messages.append(userMsg)
 
         isClipboardBannerVisible = false

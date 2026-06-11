@@ -250,11 +250,35 @@ struct MessageRow: View {
 
             VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
                 if isUser {
-                    markdownText
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 9)
-                        .background(Color.primary.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                    VStack(alignment: .leading, spacing: 6) {
+                        // Quick Action header (e.g. "Summarize") when this turn
+                        // came from a preset run on clipboard text.
+                        if let action = message.actionLabel {
+                            HStack(spacing: 5) {
+                                Image(systemName: "bolt.fill")
+                                    .font(.system(size: 9))
+                                Text(action)
+                                    .font(.system(size: 11, weight: .semibold))
+                            }
+                            .foregroundColor(Color.accentCoral)
+                        }
+
+                        if message.isQuote {
+                            // Quoted clipboard text with an accent bar.
+                            HStack(alignment: .top, spacing: 8) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(Color.accentCoral.opacity(0.6))
+                                    .frame(width: 3)
+                                markdownText
+                            }
+                        } else {
+                            markdownText
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(Color.primary.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                 } else if message.content.isEmpty && viewModel.isStreaming {
                     TypingIndicator(fontScale: viewModel.fontScale)
                 } else if message.isError {

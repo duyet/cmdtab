@@ -1,43 +1,5 @@
 import SwiftUI
 
-// MARK: - Segmented Tab Bar
-/// Native segmented selector used across the app. Renders as the system
-/// segmented control (`Picker(.segmented)`) so it matches stock macOS/iOS.
-struct PillTabBar<T: Hashable>: View {
-    struct Item {
-        let value: T
-        let label: String
-        let icon: String?  // optional SF Symbol name
-
-        init(value: T, label: String, icon: String? = nil) {
-            self.value = value
-            self.label = label
-            self.icon = icon
-        }
-    }
-
-    let items: [Item]
-    @Binding var selection: T
-    /// Retained for source compatibility; the native segmented control owns its
-    /// own appearance, so this no longer changes styling.
-    var track: Bool = false
-
-    var body: some View {
-        Picker("", selection: $selection) {
-            ForEach(items.indices, id: \.self) { i in
-                let item = items[i]
-                if let icon = item.icon {
-                    Label(item.label, systemImage: icon).tag(item.value)
-                } else {
-                    Text(item.label).tag(item.value)
-                }
-            }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-    }
-}
-
 // MARK: - Keycap Badge
 /// Small rounded keycap showing a keyboard shortcut, e.g. "⌘T" or a number.
 struct KeycapBadge: View {

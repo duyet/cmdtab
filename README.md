@@ -1,137 +1,116 @@
-# cmdtab ⌘⌥
+# MinhAgent
 
-`cmdtab` is a sleek, multiplatform application designed for developers and power users. Supporting both native **macOS** and **iOS** platforms from a single shared codebase, it offers a Codex-inspired conversation workspace, automated clipboard detection with Quick Action transformations, and dual-inference support—switching seamlessly between a local on-device LLM (via Apple's `FoundationModels` framework) and cloud APIs (via AnyRouter, OpenAI, Gemini, etc.), while securely storing your API credentials in the system Keychain.
+A native macOS + iOS conversation workspace for developers. Clipboard-aware Quick Actions, dual inference (on-device Apple Intelligence + cloud APIs), and zero disk persistence.
 
 ---
 
-## Key Features
+## Features
 
-- **Double-Pane Workspace**: A transparent, blurred backdrop window using standard macOS controls (close, minimize, resize). It behaves as a regular application—it does not float on top by default, integrates with the Dock, and launches directly on startup.
-- **Collapsible Sidebar**: List your active, volatile in-memory conversations. Toggle the sidebar using `Cmd+\` or `Cmd+B` to maximize screen workspace, and create new chats with the `+` button.
-- **Auto-Detect Clipboard & Quick Actions**: Copy any block of code or text from any application, activate `cmdtab`, and it will immediately display a banner with the copied content and a grid of **Quick Action Presets (1-9)**.
-- **Instant Preset Shortcuts**: Press `⌥1` to `⌥9` (or `Cmd+1` to `Cmd+9`) to instantly send your clipboard text to the LLM with a specific pre-defined system prompt.
-- **Dual Inference Engine**:
-  - **Local Model**: On-device native completion using the Apple Intelligence model (`FoundationModels.framework` on compatible M-series Macs running macOS Sequoia+).
-  - **Cloud Model**: Secure streaming completion from AnyRouter, OpenRouter, OpenAI, Ollama, or Google Gemini.
-- **Zero Disk Leakage (Privacy First)**: In compliance with strict privacy guidelines, all conversations, messages, and processed text reside exclusively in volatile RAM. Quitting `cmdtab` purges all conversations.
-- **Secure Key Storage**: API tokens are secured directly in the macOS Keychain using System Keychain Services. No credentials or keys are ever saved to plain-text configuration files or disk.
+- **Clipboard Quick Actions** — copy any text, activate MinhAgent, and a banner surfaces with 9 instant AI presets (⌥1–⌥9)
+- **Dual Inference** — on-device via `FoundationModels` (Apple Silicon, macOS 26+) or cloud via AnyRouter / OpenAI / Gemini / Ollama
+- **Double-pane workspace** — collapsible sidebar, native window controls, Dock + Cmd-Tab presence
+- **Zero disk leakage** — all conversations live in RAM; quit to purge
+- **Keychain-only secrets** — API keys stored in macOS Keychain, never in plaintext files
 
 ---
 
 ## Keyboard Shortcuts
 
-The app is designed to be fully keyboard-navigable for maximum efficiency:
-
-| Shortcut | Action | Description |
-| :--- | :--- | :--- |
-| `⌥Space` | **Toggle HUD Window** | Globally show or hide the overlay window on the active monitor. |
-| `Esc` | **Hide HUD** | Instantly dismiss the overlay window. |
-| `Cmd + \` or `Cmd + B` | **Toggle Sidebar** | Expand/collapse the conversation list sidebar (persisted in preferences). |
-| `⌥1` – `⌥9` or `⌘1` – `⌘9` | **Run Quick Action** | Executes preset 1-9 on the detected clipboard content. |
-| `Cmd + C` | **Copy Last Output** | Copies the most recent assistant message directly back to the clipboard. |
-| `Cmd + K` | **Clear Chat** | Clears the message history of the current conversation. |
-| `Cmd + ,` | **Settings Panel** | Open/close the configuration screen for API endpoints, keys, and presets. |
+| Shortcut | Action |
+| :--- | :--- |
+| `⌥Space` | Toggle window |
+| `Esc` | Hide window |
+| `⌘\` / `⌘B` | Toggle sidebar |
+| `⌥1`–`⌥9` / `⌘1`–`⌘9` | Run Quick Action preset |
+| `⌘C` | Copy last assistant output |
+| `⌘K` | Clear chat |
+| `⌘,` | Open Settings |
 
 ---
 
-## Quick Action Presets (1-9)
+## Quick Action Presets
 
-The application ships with 9 default presets that can be customized in the Presets tab under Settings:
+Nine presets, fully editable in Settings → Presets:
 
-1. **Fix English & Tone**: Fixes spelling, grammar, and tone to make it professional and clear.
-2. **Explain Logic**: Explains the technical logic, algorithms, or operations of the input text or code.
-3. **Summarize to Bullets**: Summarizes the input into a high-density, bulleted markdown list.
-4. **Generate Python/Rust Workaround**: Writes a complete, functional Python/Rust script resolving the problem.
-5. **Refactor Code**: Refactors the input code to improve performance, readability, and design.
-6. **Translate to SQL**: Writes high-performance ClickHouse or PostgreSQL queries satisfying the prompt.
-7. **Generate JSON Schema**: Parses the input data and outputs a valid JSON Schema (Draft-07).
-8. **Format JSON/XML**: Formats the input block with 2-space indentation.
-9. **Draft Slack Update**: Converts engineering notes into a clean Slack bullet-point update.
-
----
-
-## Requirements & Compatibility
-
-- **Hardware**: Optimized for Apple Silicon M-series Macs (M1, M2, M3, M4, etc.) for local execution. Intel Macs are supported for cloud API completion.
-- **Operating System**: macOS 14.0 Sonoma or later. (macOS 15.0+ Sequoia required for native local Apple Intelligence models).
-- **Toolchain**: Xcode Command Line Tools or Xcode 15+ (Swift 6.0 compatibility).
+1. Fix English & Tone
+2. Explain Logic
+3. Summarize to Bullets
+4. Generate Python/Rust Workaround
+5. Refactor Code
+6. Translate to SQL
+7. Generate JSON Schema
+8. Format JSON/XML
+9. Draft Slack Update
 
 ---
 
-## How to Build & Run
+## Requirements
 
-### 1. Build the macOS App Bundle
-Run the build script in the root directory. This compiles the Swift source files, packages them into a native `CmdTab.app` bundle, and signs it with an ad-hoc signature:
+- macOS 14.0 Sonoma+ (macOS 26+ for on-device Apple Intelligence)
+- Apple Silicon recommended; Intel supported for cloud-only mode
+- Xcode 15+ / Swift 6.0+ toolchain
+
+---
+
+## Build & Run
+
+### Xcode (recommended)
+
 ```bash
-./build.sh
+python3 gen_xcodeproj.py   # generates MinhAgent.xcodeproj
+open MinhAgent.xcodeproj
 ```
 
-### 2. Launch the macOS App
-To open the compiled app bundle, you can double-click it or launch it from the terminal:
+Targets:
+
+| Target | Platform | Min OS | Sources |
+| :--- | :--- | :--- | :--- |
+| `MinhAgent` | macOS | 14.0 | `Sources/Shared` + `Sources/macOS` |
+| `MinhAgent_iOS` | iOS | 26.0 | `Sources/Shared` + `Sources/iOS` |
+
+Press `⌘R` to build and run. Regenerate the project after adding/removing source files.
+
+### Command line
+
 ```bash
-open CmdTab.app
+./build.sh            # → MinhAgent.app
+open MinhAgent.app    # status bar icon ⌘⌥ — press ⌥Space to activate
+
+./build_ios.sh        # → MinhAgent_iOS.app (Simulator)
+./test.sh             # unit tests
+./test_launch.sh      # launch regression (no crash on startup)
 ```
-*Note: A small menu bar icon `⌘⌥` will appear in the top-right corner. You can activate the window by pressing `⌥Space` or clicking the menu bar icon.*
-
-### 3. Build the iOS App for Simulator
-To compile the iOS version for the iOS Simulator:
-```bash
-./build_ios.sh
-```
-*Note: Compiling the iOS app requires a full installation of Xcode with the `iphonesimulator` SDK configured via `xcode-select`.*
-
-### 4. Run Automated Tests
-We maintain two test suites:
-- **Unit Tests**: Verifies pasteboard sanitization, keychain storage security, and data model operations.
-  ```bash
-  ./test.sh
-  ```
-- **Launch Verification Test**: Rebuilds the app and performs background execution tests to ensure the binary loads dynamic frameworks and runs without startup crashes on macOS.
-  ```bash
-  ./test_launch.sh
-  ```
-
----
-
-## Secure API Integration
-
-To prevent key leakage, `cmdtab` never writes API tokens to config files, logs, or defaults.
-- Any API keys entered in **Settings** (under `Cmd + ,`) are immediately transferred to the secure macOS Keychain via:
-  - Service: `cmdtab.app`
-  - Account: `token`
-- Network completed requests are streamed securely via SSE using [APIClient.swift](Sources/APIClient.swift) directly to your chosen provider (e.g. AnyRouter) using secure HTTPS transport.
-- You can clear your API key at any time by clearing the field in Settings.
 
 ---
 
 ## Architecture
 
 ```
-cmdtab/
-├── Sources/
-│   ├── Shared/                # Cross-platform business logic & SwiftUI views
-│   │   ├── APIClient.swift    # HTTP SSE client for cloud inference streaming
-│   │   ├── KeychainHelper.swift # Secure OS Keychain interface (no key disk-writes)
-│   │   ├── MainView.swift     # Main SwiftUI viewport (with iOS adaptive drawer)
-│   │   ├── MainViewModel.swift # State manager: handles conversations & inference
-│   │   ├── PasteboardMonitor.swift # Clipboard monitor (abstracted for both OSes)
-│   │   ├── SettingsView.swift # Settings panel for endpoints, keys, and presets
-│   │   └── Theme.swift        # Color and layout style semantic abstractions
-│   │
-│   ├── macOS/                 # macOS-specific classes and delegate setup
-│   │   ├── App_macOS.swift    # macOS entry point and AppDelegate window lifecycle
-│   │   ├── HotKeyManager.swift # Carbon/CoreGraphics global key down listener
-│   │   └── MainWindow.swift   # Resizable native macOS NSWindow configuration
-│   │
-│   └── iOS/                   # iOS-specific views and app scene entry
-│       └── App_iOS.swift      # iOS entry point using SwiftUI App lifecycle
-│
-├── Resources/
-│   └── iOS_Info.plist         # iOS bundler specifications and orientation rules
-├── Tests/
-│   └── main.swift             # Unit test runner
-├── build.sh                   # Builds and signs CmdTab.app (macOS)
-├── build_ios.sh               # Builds and signs CmdTab_iOS.app (iOS Simulator)
-├── test.sh                    # Runs unit tests
-└── test_launch.sh             # Performs macOS launch regression verification
+Sources/
+├── Shared/         # Cross-platform: views, view model, API, keychain
+├── macOS/          # App delegate, window, global hotkey
+└── iOS/            # UIKit lifecycle + scene delegate
+
+Resources/
+├── logo/           # App icon (Icon.icon bundle + PNGs)
+├── Info.plist      # macOS bundle config
+└── iOS_Info.plist  # iOS bundle config
 ```
+
+**MVVM**: `MainViewModel` (`@MainActor`) is the single source of truth.
+**Dual inference**: cloud via `APIClient.swift` (SSE), local via `LocalModelClient.swift` (`#available(macOS 26, *)`).
+**No `Package.swift` builds**: use `./build.sh`, not `swift build`.
+
+---
+
+## API Configuration
+
+Enter your API key in Settings (`⌘,`). Keys are stored in macOS Keychain under service `minhagent.app`. Default provider: **AnyRouter** at `https://anyrouter.dev/api/v1`.
+
+---
+
+## Security
+
+- Clipboard content is processed in-memory only — never written to disk
+- API keys never touch `UserDefaults` or config files
+- No telemetry; requests go directly from your device to the API host

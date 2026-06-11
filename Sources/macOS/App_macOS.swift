@@ -3,7 +3,7 @@ import SwiftUI
 import AppKit
 
 @main
-struct CmdTabApp: App {
+struct MinhAgentApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
@@ -21,9 +21,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hasPositionedOnce = false
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
-        // .accessory: menu-bar agent with full menu bar (for Edit shortcuts)
-        // but no Dock icon. Matches LSUIElement=true in Info.plist.
-        NSApp.setActivationPolicy(.accessory)
+        // .regular: normal windowed app with Dock icon + Cmd+Tab presence.
+        NSApp.setActivationPolicy(.regular)
 
         let vm = MainViewModel()
         self.viewModel = vm
@@ -38,15 +37,15 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusItem()
         setupGlobalHotKey()
         setupActivationObserver()
-        showWindow()
+        DispatchQueue.main.async { [weak self] in
+            self?.showWindow()
+        }
     }
 
     // MARK: - Main Menu
 
-    /// LSUIElement apps get no menu bar by default, which also disables the
-    /// standard Edit shortcuts (⌘C/⌘V/⌘X/⌘A/⌘Z) inside text fields. Since we
-    /// switch to `.regular` activation at launch, a real main menu restores
-    /// those via the responder chain and makes commands discoverable.
+        /// A programmatic main menu restores standard Edit shortcuts
+        /// (⌘C/⌘V/⌘X/⌘A/⌘Z) inside text fields and makes commands discoverable.
     private func setupMainMenu() {
         let mainMenu = NSMenu()
 
@@ -56,12 +55,12 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let appMenu = NSMenu()
         appMenuItem.submenu = appMenu
         appMenu.addItem(
-            withTitle: "About cmdtab",
+            withTitle: "About MinhAgent",
             action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Hide cmdtab", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: "Hide MinhAgent", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         let hideOthers = appMenu.addItem(
             withTitle: "Hide Others",
             action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
@@ -70,7 +69,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             withTitle: "Show All",
             action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Quit cmdtab", action: #selector(quitApp), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Quit MinhAgent", action: #selector(quitApp), keyEquivalent: "q")
 
         // File menu
         let fileMenuItem = NSMenuItem()
@@ -170,14 +169,20 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "command.square", accessibilityDescription: "cmdtab")
+            button.image = NSImage(systemSymbolName: "command.square", accessibilityDescription: "MinhAgent")
         }
 
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Toggle Window (⌥Space)", action: #selector(toggleWindow), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
+        let toggleItem = NSMenuItem(title: "Toggle Window (⌥Space)", action: #selector(toggleWindow), keyEquivalent: "")
+        toggleItem.target = self
+        menu.addItem(toggleItem)
+        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit cmdtab", action: #selector(quitApp), keyEquivalent: "q"))
+        let quitItem = NSMenuItem(title: "Quit MinhAgent", action: #selector(quitApp), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
         statusItem?.menu = menu
     }
 
@@ -190,7 +195,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc public func toggleWindow() {
         guard let window = windowController?.window else { return }
-        if window.isVisible {
+        // Only hide if the window is visible AND the app is frontmost.
+        // If the window is behind other apps (visible but app inactive),
+        // bring it to front instead.
+        if window.isVisible && window.isKeyWindow && NSApp.isActive {
             hideWindow()
         } else {
             showWindow()
@@ -204,6 +212,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showWindow() {
         guard let window = windowController?.window else { return }
+        NSApp.setActivationPolicy(.regular)
+        NSApp.unhide(nil)
+        if window.isMiniaturized {
+            window.deminiaturize(nil)
+        }
 
         // Check for new clipboard content via PasteboardMonitor (respects echo suppression)
         if let newText = PasteboardMonitor.shared.detectNewContent() {
@@ -235,8 +248,24 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             hasPositionedOnce = true
         }
 
+        windowController?.showWindow(nil)
+        window.makeMain()
         window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
+        activateApplication()
+    }
+
+    private func activateApplication() {
         NSApp.activate(ignoringOtherApps: true)
+        let currentApp = NSRunningApplication.current
+        if #available(macOS 14.0, *),
+            let frontmostApp = NSWorkspace.shared.frontmostApplication,
+            frontmostApp.processIdentifier != currentApp.processIdentifier
+        {
+            currentApp.activate(from: frontmostApp, options: [.activateAllWindows])
+        } else {
+            currentApp.activate(options: [.activateAllWindows])
+        }
     }
 
     private func hideWindow() {
@@ -245,9 +274,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Dock Reopen
     public func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag {
-            showWindow()
-        }
+        showWindow()
         return true
     }
 

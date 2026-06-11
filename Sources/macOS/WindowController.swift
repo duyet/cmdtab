@@ -24,7 +24,7 @@ final class WindowController: NSWindowController {
 
         let window = MainWindow(contentRect: rect)
         window.minSize = NSSize(width: 680, height: 480)
-        window.setFrameAutosaveName("CmdTabMainWindow")
+        window.setFrameAutosaveName("MinhAgentMainWindow")
 
         let splitVC = SplitViewController(viewModel: viewModel)
         self.splitViewController = splitVC
@@ -34,7 +34,7 @@ final class WindowController: NSWindowController {
         window.contentViewController = splitVC
         window.delegate = self
 
-        // NSToolbar — automatic Liquid Glass on macOS 26
+        // Native toolbar for the main window controls.
         let toolbar = MainWindowToolbar.create(viewModel: viewModel, windowController: self)
         window.toolbar = toolbar
 

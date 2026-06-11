@@ -5,7 +5,7 @@ import os
 @MainActor
 public final class HotKeyManager {
     public static let shared = HotKeyManager()
-    private static let logger = Logger(subsystem: "app.cmdtab", category: "HotKey")
+    private static let logger = Logger(subsystem: "app.minhagent", category: "HotKey")
 
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?

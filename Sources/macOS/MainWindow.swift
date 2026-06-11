@@ -14,8 +14,8 @@ public final class MainWindow: NSWindow {
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         self.titleVisibility = .hidden
         self.titlebarAppearsTransparent = true
-        self.backgroundColor = .clear
-        self.isOpaque = false
+        self.backgroundColor = .windowBackgroundColor
+        self.isOpaque = true
         self.hasShadow = true
         // Drag only via the title bar area — body drags would fight text
         // selection and slider/drag interactions in the content.

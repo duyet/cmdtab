@@ -10,7 +10,7 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
     private static let newChatID = NSToolbarItem.Identifier("newChat")
 
     static func create(viewModel: MainViewModel, windowController: WindowController) -> NSToolbar {
-        let toolbar = NSToolbar(identifier: "CmdTabMainWindowToolbar")
+        let toolbar = NSToolbar(identifier: "MinhAgentMainWindowToolbar")
         let delegate = MainWindowToolbar(viewModel: viewModel, windowController: windowController)
         toolbar.delegate = delegate
         toolbar.displayMode = .iconOnly

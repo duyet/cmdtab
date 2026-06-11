@@ -1,11 +1,18 @@
 import SwiftUI
 
 // MARK: - Settings View
-/// Full floating panel: tab row at top, scrollable content per tab.
-/// Presented over a scrim in MainView — instant, no animation.
+/// Full-window settings surface with a left sidebar and plain content pane.
 public struct SettingsView: View {
     @ObservedObject var viewModel: MainViewModel
     private var selectedTab: String { viewModel.settingsTab }
+    private var selectedTitle: String {
+        switch selectedTab {
+        case "profile": return "Profile"
+        case "personalization": return "Personalization"
+        case "cloudmodel": return "Cloud Model"
+        default: return "General"
+        }
+    }
 
     let languages = ["English", "Spanish", "French", "German", "Chinese", "Japanese", "Korean", "Vietnamese"]
 
@@ -14,72 +21,111 @@ public struct SettingsView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            // Header row
-            HStack {
-                Text("Settings")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.primary)
-                Spacer()
-                Button(action: {
-                    viewModel.savePresets()
-                    viewModel.toggleSettings()
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .frame(width: 30, height: 30)
-                        .background(Color.primary.opacity(0.07))
-                        .clipShape(Circle())
+        NavigationSplitView {
+            settingsSidebar
+        } detail: {
+            VStack(spacing: 0) {
+                HStack(spacing: 12) {
+                    Text(selectedTitle)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    closeButton
                 }
-                .buttonStyle(PlainButtonStyle())
-                .accessibilityLabel("Close settings")
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 12)
+                .padding(.horizontal, 28)
+                .padding(.top, 24)
+                .padding(.bottom, 18)
 
-            // Tab row — scrollable on narrow screens
-            ScrollView(.horizontal, showsIndicators: false) {
-                PillTabBar(
-                    items: [
-                        PillTabBar.Item(value: "general", label: "General"),
-                        PillTabBar.Item(value: "profile", label: "Profile"),
-                        PillTabBar.Item(value: "personalization", label: "Personalization"),
-                        PillTabBar.Item(value: "cloudmodel", label: "Cloud Model"),
-                    ],
-                    selection: $viewModel.settingsTab
-                )
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
+                Rectangle()
+                    .fill(Color.hairline)
+                    .frame(height: 1)
 
-            Rectangle()
-                .fill(Color.hairline)
-                .frame(height: 1)
-
-            // Scrollable content
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    switch selectedTab {
-                    case "profile":
-                        profileTabContent
-                    case "personalization":
-                        personalizationTabContent
-                    case "cloudmodel":
-                        cloudModelTabContent
-                    default:
-                        generalTabContent
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        switch selectedTab {
+                        case "profile":
+                            profileTabContent
+                        case "personalization":
+                            personalizationTabContent
+                        case "cloudmodel":
+                            cloudModelTabContent
+                        default:
+                            generalTabContent
+                        }
                     }
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 24)
+                    .frame(maxWidth: 780, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(24)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxHeight: .infinity)
+            .background(Color.appBackground)
         }
-        .background(Color.cardSurface)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.18), radius: 32, y: 8)
+        .background(Color.appBackground)
+        #if os(macOS)
+        .frame(minWidth: 700, minHeight: 500)
+        #endif
+    }
+
+    private func settingsSidebarItem(_ value: String, title: String, icon: String) -> some View {
+        Label(title, systemImage: icon)
+            .font(.system(size: 15.5))
+            .tag(value)
+    }
+
+    private var closeButton: some View {
+        Button(action: {
+            viewModel.savePresets()
+            viewModel.toggleSettings()
+        }) {
+            Image(systemName: "xmark")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(width: 30, height: 30)
+                .background(Color.primary.opacity(0.06))
+                .clipShape(Circle())
+        }
+        .buttonStyle(PlainButtonStyle())
+        .accessibilityLabel("Close settings")
+    }
+
+    @ViewBuilder
+    private var settingsSidebar: some View {
+        #if os(macOS)
+        List(selection: $viewModel.settingsTab) {
+            Section {
+                settingsSidebarItem("general", title: "General", icon: "gearshape")
+                settingsSidebarItem("profile", title: "Profile", icon: "person.circle")
+                settingsSidebarItem("personalization", title: "Personalization", icon: "slider.horizontal.3")
+                settingsSidebarItem("cloudmodel", title: "Cloud Model", icon: "cloud")
+            } header: {
+                Text("Settings")
+            }
+        }
+        .listStyle(.sidebar)
+        .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 280)
+        #else
+        List {
+            Section {
+                settingsSidebarButton("general", title: "General", icon: "gearshape")
+                settingsSidebarButton("profile", title: "Profile", icon: "person.circle")
+                settingsSidebarButton("personalization", title: "Personalization", icon: "slider.horizontal.3")
+                settingsSidebarButton("cloudmodel", title: "Cloud Model", icon: "cloud")
+            } header: {
+                Text("Settings")
+            }
+        }
+        .listStyle(.sidebar)
+        #endif
+    }
+
+    private func settingsSidebarButton(_ value: String, title: String, icon: String) -> some View {
+        Button {
+            viewModel.settingsTab = value
+        } label: {
+            Label(title, systemImage: icon)
+                .font(.system(size: 15.5))
+        }
     }
 
     // MARK: - General Tab (theme, font, language)
@@ -101,26 +147,12 @@ public struct SettingsView: View {
             #if os(iOS)
             // Apple Intelligence status — prominent on iOS
             settingsSection("APPLE INTELLIGENCE") {
-                HStack(spacing: 10) {
-                    Image(systemName: viewModel.isLocalModelSupported ? "apple.intelligence" : "apple.logo")
-                        .font(.system(size: 18))
-                        .foregroundColor(viewModel.isLocalModelSupported ? .blue : .secondary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(viewModel.isLocalModelSupported ? "Available" : "Not Available")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.primary)
-                        Text(
-                            LocalModelClient.shared.availability.unavailableReason
-                                ?? "On-device model ready for local inference."
-                        )
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                    }
-                }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(viewModel.isLocalModelSupported ? Color.blue.opacity(0.06) : Color.primary.opacity(0.03))
-                .cornerRadius(10)
+                AppleIntelligenceAuditView()
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(LocalModelClient.shared.availability.isAvailable
+                        ? Color.blue.opacity(0.06) : Color.primary.opacity(0.03))
+                    .cornerRadius(10)
             }
             #endif
 
@@ -255,7 +287,7 @@ public struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Enable memories")
                             .font(.body)
-                        Text("Let cmdtab remember facts across conversations. Coming soon.")
+                        Text("Let MinhAgent remember facts across conversations. Coming soon.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -355,14 +387,11 @@ public struct SettingsView: View {
             }
 
             settingsSection("ON-DEVICE MODEL") {
-                HStack(spacing: 8) {
-                    Image(systemName: viewModel.isLocalModelSupported ? "checkmark.circle.fill" : "xmark.circle")
-                        .foregroundColor(viewModel.isLocalModelSupported ? .green : .secondary)
-                        .font(.system(size: 13))
-                    Text(LocalModelClient.shared.availability.unavailableReason ?? "Apple Intelligence — available")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                }
+                AppleIntelligenceAuditView()
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.primary.opacity(0.03))
+                    .cornerRadius(10)
             }
         }
     }

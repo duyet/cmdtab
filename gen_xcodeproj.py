@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate CmdTab.xcodeproj (iOS + macOS app targets) for the cmdtab sources.
+"""Generate MinhAgent.xcodeproj (iOS + macOS app targets) for the MinhAgent sources.
 
 This mirrors the canonical swiftc builds (build.sh / build_ios.sh):
   - iOS target  : Sources/Shared + Sources/iOS, Info.plist = Resources/iOS_Info.plist
@@ -104,17 +104,17 @@ add(mac_plist_ref, f'{mac_plist_ref} = {{isa = PBXFileReference; lastKnownFileTy
 # Product refs (.app)
 ios_product = uid("product:ios")
 add(ios_product, f'{ios_product} = {{isa = PBXFileReference; explicitFileType = wrapper.application; '
-                 f'includeInIndex = 0; path = "CmdTab_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; }};')
+                 f'includeInIndex = 0; path = "MinhAgent_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; }};')
 mac_product = uid("product:mac")
 add(mac_product, f'{mac_product} = {{isa = PBXFileReference; explicitFileType = wrapper.application; '
-                 f'includeInIndex = 0; path = "CmdTab.app"; sourceTree = BUILT_PRODUCTS_DIR; }};')
+                 f'includeInIndex = 0; path = "MinhAgent.app"; sourceTree = BUILT_PRODUCTS_DIR; }};')
 
 products_group = uid("group:Products")
 add(products_group, f'''{products_group} = {{
 \t\t\tisa = PBXGroup;
 \t\t\tchildren = (
-\t\t\t\t{ios_product} /* CmdTab_iOS.app */,
-\t\t\t\t{mac_product} /* CmdTab.app */,
+\t\t\t\t{ios_product} /* MinhAgent_iOS.app */,
+\t\t\t\t{mac_product} /* MinhAgent.app */,
 \t\t\t);
 \t\t\tname = Products;
 \t\t\tsourceTree = "<group>";
@@ -199,8 +199,8 @@ proj_cfg_list = config_list("cfglist:proj", proj_debug, proj_release)
 
 # iOS target settings
 ios_settings = {
-    "PRODUCT_NAME": "CmdTab_iOS",
-    "PRODUCT_BUNDLE_IDENTIFIER": "app.cmdtab.ios",
+    "PRODUCT_NAME": "MinhAgent_iOS",
+    "PRODUCT_BUNDLE_IDENTIFIER": "app.minhagent.ios",
     "INFOPLIST_FILE": '"Resources/iOS_Info.plist"',
     "GENERATE_INFOPLIST_FILE": "NO",
     "IPHONEOS_DEPLOYMENT_TARGET": "26.0",
@@ -219,8 +219,8 @@ ios_cfg_list = config_list("cfglist:ios", ios_dbg, ios_rel)
 
 # macOS target settings
 mac_settings = {
-    "PRODUCT_NAME": "CmdTab",
-    "PRODUCT_BUNDLE_IDENTIFIER": "app.cmdtab.macos",
+    "PRODUCT_NAME": "MinhAgent",
+    "PRODUCT_BUNDLE_IDENTIFIER": "app.minhagent.macos",
     "INFOPLIST_FILE": '"Info.plist"',
     "GENERATE_INFOPLIST_FILE": "NO",
     "MACOSX_DEPLOYMENT_TARGET": "14.0",
@@ -249,9 +249,9 @@ add(ios_target, f'''{ios_target} = {{
 \t\t\t);
 \t\t\tdependencies = (
 \t\t\t);
-\t\t\tname = "CmdTab_iOS";
-\t\t\tproductName = "CmdTab_iOS";
-\t\t\tproductReference = {ios_product} /* CmdTab_iOS.app */;
+\t\t\tname = "MinhAgent_iOS";
+\t\t\tproductName = "MinhAgent_iOS";
+\t\t\tproductReference = {ios_product} /* MinhAgent_iOS.app */;
 \t\t\tproductType = "com.apple.product-type.application";
 \t\t}};''')
 
@@ -268,9 +268,9 @@ add(mac_target, f'''{mac_target} = {{
 \t\t\t);
 \t\t\tdependencies = (
 \t\t\t);
-\t\t\tname = CmdTab;
-\t\t\tproductName = CmdTab;
-\t\t\tproductReference = {mac_product} /* CmdTab.app */;
+\t\t\tname = MinhAgent;
+\t\t\tproductName = MinhAgent;
+\t\t\tproductReference = {mac_product} /* MinhAgent.app */;
 \t\t\tproductType = "com.apple.product-type.application";
 \t\t}};''')
 
@@ -300,8 +300,8 @@ add(proj_obj, f'''{proj_obj} = {{
 \t\t\tprojectDirPath = "";
 \t\t\tprojectRoot = "";
 \t\t\ttargets = (
-\t\t\t\t{ios_target} /* CmdTab_iOS */,
-\t\t\t\t{mac_target} /* CmdTab */,
+\t\t\t\t{ios_target} /* MinhAgent_iOS */,
+\t\t\t\t{mac_target} /* MinhAgent */,
 \t\t\t);
 \t\t}};''')
 
@@ -320,7 +320,7 @@ pbxproj = f'''// !$*UTF8*$!
 }}
 '''
 
-proj_dir = os.path.join(ROOT, "CmdTab.xcodeproj")
+proj_dir = os.path.join(ROOT, "MinhAgent.xcodeproj")
 os.makedirs(proj_dir, exist_ok=True)
 with open(os.path.join(proj_dir, "project.pbxproj"), "w") as f:
     f.write(pbxproj)

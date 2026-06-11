@@ -4,7 +4,7 @@ import os
 
 @MainActor
 public final class MainViewModel: ObservableObject {
-    private static let logger = Logger(subsystem: "app.cmdtab", category: "ViewModel")
+    private static let logger = Logger(subsystem: "app.minhagent", category: "ViewModel")
     @Published public var conversations: [Conversation] = []
     @Published public var selectedConversationId: UUID? = nil
     @Published public var presets: [Preset] = []
@@ -163,7 +163,7 @@ public final class MainViewModel: ObservableObject {
                 try? await Task.sleep(nanoseconds: 500_000_000)  // 500ms
                 guard !Task.isCancelled else { return }
                 let saved = KeychainHelper.shared.save(
-                    apiKey, service: "cmdtab.app", account: "token"
+                    apiKey, service: "minhagent.app", account: "token"
                 )
                 if !saved {
                     Self.logger.error("Failed to save API key to Keychain")
@@ -365,7 +365,7 @@ public final class MainViewModel: ObservableObject {
     public func loadApiKeyIfNeeded() {
         guard !hasLoadedApiKey else { return }
         hasLoadedApiKey = true
-        let stored = KeychainHelper.shared.read(service: "cmdtab.app", account: "token") ?? ""
+        let stored = KeychainHelper.shared.read(service: "minhagent.app", account: "token") ?? ""
         if !stored.isEmpty && apiKey.isEmpty {
             apiKey = stored
         }

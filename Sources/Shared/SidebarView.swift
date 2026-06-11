@@ -7,6 +7,8 @@ import SwiftUI
 struct SidebarView: View {
     @ObservedObject var viewModel: MainViewModel
     @State private var showHelp = false
+    @State private var isSearchVisible = false
+    @State private var searchText = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,38 +16,23 @@ struct SidebarView: View {
             topToolbarRow
             #endif
 
-            PillTabBar(
-                items: [
-                    PillTabBar.Item(value: "chat", label: "Chat", icon: "bubble.left.and.bubble.right"),
-                    PillTabBar.Item(value: "actions", label: "Actions", icon: "bolt"),
-                    PillTabBar.Item(value: "automations", label: "Automations", icon: "wand.and.stars"),
-                ],
-                selection: $viewModel.sidebarMode,
-                track: true
-            )
-            .padding(.horizontal, 12)
-            #if os(macOS)
+            primaryNavigation
+                #if os(macOS)
             .padding(.top, 12)
-            #endif
-            .padding(.bottom, 12)
+                #endif
 
-            switch viewModel.sidebarMode {
-            case "actions":
-                ActionsPane(viewModel: viewModel)
-            case "automations":
-                placeholderPane(
-                    icon: "wand.and.stars",
-                    title: "Automations",
-                    description: "Run actions automatically on rules and schedules."
-                )
-            default:
-                chatBody
+            if isSearchVisible && viewModel.sidebarMode == "chat" {
+                searchField
+                    .padding(.top, 4)
+                    .padding(.bottom, 8)
             }
+
+            contentPane
 
             footerRow
         }
         .frame(maxHeight: .infinity)
-        .sidebarSurface()
+        .background(Color.windowBackground)
         #if os(iOS)
         // Swipe left to dismiss sidebar on iOS
         .highPriorityGesture(
@@ -59,6 +46,76 @@ struct SidebarView: View {
                 }
         )
         #endif
+    }
+
+    // MARK: Primary navigation
+    private var primaryNavigation: some View {
+        VStack(spacing: 4) {
+            SidebarNavRow(icon: "square.and.pencil", label: "New chat") {
+                viewModel.startNewConversation(title: "New Chat")
+            }
+
+            SidebarNavRow(
+                icon: "magnifyingglass",
+                label: "Search",
+                isSelected: isSearchVisible && viewModel.sidebarMode == "chat"
+            ) {
+                viewModel.sidebarMode = "chat"
+                isSearchVisible.toggle()
+            }
+
+            SidebarNavRow(
+                icon: "puzzlepiece.extension",
+                label: "Plugins",
+                isSelected: viewModel.sidebarMode == "actions"
+            ) {
+                viewModel.sidebarMode = "actions"
+                isSearchVisible = false
+            }
+
+            SidebarNavRow(
+                icon: "clock",
+                label: "Automations",
+                isSelected: viewModel.sidebarMode == "automations"
+            ) {
+                viewModel.sidebarMode = "automations"
+                isSearchVisible = false
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.bottom, 12)
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+            TextField("Search chats", text: $searchText)
+                .textFieldStyle(PlainTextFieldStyle())
+                .font(.system(size: 14))
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 34)
+        .background(Color.primary.opacity(0.05))
+        .cornerRadius(8)
+        .padding(.horizontal, 12)
+    }
+
+    @ViewBuilder
+    private var contentPane: some View {
+        switch viewModel.sidebarMode {
+        case "actions":
+            ActionsPane(viewModel: viewModel)
+        case "automations":
+            placeholderPane(
+                icon: "clock",
+                title: "Automations",
+                description: "Scheduled actions will appear here."
+            )
+        default:
+            chatBody
+        }
     }
 
     // MARK: Top toolbar — centered on the traffic-light line (~18pt from top).
@@ -89,13 +146,20 @@ struct SidebarView: View {
             if !viewModel.conversations.isEmpty {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 1) {
-                        ForEach(groupedConversations, id: \.0) { group, conversations in
-                            Text(group)
-                                .font(.caption)
-                                .foregroundColor(.secondary.opacity(0.8))
-                                .padding(.horizontal, 12)
+                        ForEach(filteredGroupedConversations, id: \.0) { group, conversations in
+                            HStack(spacing: 8) {
+                                Image(systemName: "folder")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.primary.opacity(0.82))
+                                    .frame(width: 18)
+                                Text(group)
+                                    .font(.system(size: 15.5))
+                                    .foregroundColor(.primary)
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, 12)
                                 .padding(.top, 16)
-                                .padding(.bottom, 4)
+                                .padding(.bottom, 6)
 
                             ForEach(conversations) { conv in
                                 ConversationRow(
@@ -160,6 +224,17 @@ struct SidebarView: View {
             .compactMap { key in buckets[key].map { (key, $0) } }
     }
 
+    private var filteredGroupedConversations: [(String, [Conversation])] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return groupedConversations }
+        return groupedConversations.compactMap { group, conversations in
+            let matches = conversations.filter { conversation in
+                conversation.title.localizedCaseInsensitiveContains(query)
+            }
+            return matches.isEmpty ? nil : (group, matches)
+        }
+    }
+
     // MARK: Placeholder pane for stubbed tabs
     private func placeholderPane(icon: String, title: String, description: String) -> some View {
         VStack(spacing: 10) {
@@ -183,7 +258,7 @@ struct SidebarView: View {
     // MARK: Footer — Settings + Help bottom-left.
     private var footerRow: some View {
         HStack(spacing: 4) {
-            PlainIconButton(systemName: "gearshape", size: 14, help: "Settings") {
+            SidebarNavRow(icon: "gearshape", label: "Settings") {
                 viewModel.toggleSettings()
             }
 
@@ -194,10 +269,69 @@ struct SidebarView: View {
                 HelpGuide()
             }
 
-            Spacer()
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.leading, 10)
+        .padding(.trailing, 10)
+        .padding(.vertical, 10)
+    }
+}
+
+// MARK: - Sidebar Navigation Row
+private struct SidebarNavRow: View {
+    let icon: String
+    let label: String
+    var badge: String? = nil
+    var isSelected: Bool = false
+    let action: () -> Void
+    #if os(macOS)
+    @State private var isHovered = false
+    #endif
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundColor(.primary.opacity(0.84))
+                    .frame(width: 20)
+
+                Text(label)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+
+                if let badge {
+                    Text(badge)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundColor(.primary.opacity(0.75))
+                        .frame(minWidth: 26, minHeight: 24)
+                        .background(Color.primary.opacity(0.08))
+                        .clipShape(Capsule())
+                }
+            }
+            .frame(height: 36)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 10)
+            .background(rowBackground)
+            .cornerRadius(9)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
+        .frame(maxWidth: .infinity)
+        #if os(macOS)
+        .onHover { isHovered = $0 }
+        #endif
+    }
+
+    private var rowBackground: Color {
+        if isSelected { return Color.primary.opacity(0.08) }
+        #if os(macOS)
+        return isHovered ? Color.primary.opacity(0.05) : Color.clear
+        #else
+        return Color.clear
+        #endif
     }
 }
 
@@ -216,7 +350,7 @@ private struct HelpGuide: View {
         Tip(
             icon: "doc.on.clipboard",
             title: "Copy anything",
-            detail: "Copy text in any app and cmdtab offers instant Quick Actions for it."),
+            detail: "Copy text in any app and MinhAgent offers instant Quick Actions for it."),
         Tip(
             icon: "text.bubble",
             title: "Just ask",
@@ -234,7 +368,7 @@ private struct HelpGuide: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("How to use cmdtab")
+            Text("How to use MinhAgent")
                 .font(.headline)
 
             ForEach(tips) { tip in
@@ -274,11 +408,11 @@ private struct SidebarRow: View {
         Button(action: action) {
             HStack(alignment: .firstTextBaseline, spacing: 9) {
                 Image(systemName: icon)
-                    .font(.system(size: 13))
+                    .font(.system(size: 16))
                     .foregroundColor(.secondary)
-                    .frame(width: 16)
+                    .frame(width: 20)
                 Text(label)
-                    .font(.body)
+                    .font(.system(size: 15.5))
                     .foregroundColor(.primary)
                 Spacer(minLength: 0)
                 if let keycap {
@@ -293,7 +427,7 @@ private struct SidebarRow: View {
                 }
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, compact ? 6 : 7)
+            .padding(.vertical, compact ? 6 : 8)
             #if os(macOS)
             .background(isHovered ? Color.primary.opacity(0.06) : Color.clear)
             #else
@@ -436,7 +570,7 @@ private struct ConversationRow: View {
                     #endif
                 }) {
                     Text(title)
-                        .font(.body)
+                        .font(.system(size: 15.5))
                         .foregroundColor(.primary)
                         .lineLimit(1)
                         .truncationMode(.tail)

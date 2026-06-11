@@ -120,9 +120,9 @@ Pre-release audit of the macOS codebase identified and fixed **6 + 5 + 4 categor
 
 **Problem:** `Info.plist` declared `LSUIElement=true` (no Dock icon) but `App_macOS.swift` immediately overrode with `.regular` (Dock icon + full menu bar). These contradict each other — behavior across macOS versions is unpredictable.
 
-**Fix:** Changed to `.accessory` which gives full menu bar (needed for Edit menu shortcuts like ⌘C/⌘V) without a Dock icon — matching the `LSUIElement=true` intent.
+**Fix:** Removed `LSUIElement` and kept `.regular`, because the app is intended to behave as a normal foreground macOS app with Dock and Cmd-Tab presence.
 
-**Lesson:** `.regular` = Dock app. `.accessory` = menu-bar agent with menu bar. `.prohibited` = background-only. Match `LSUIElement` with the corresponding activation policy.
+**Lesson:** `.regular` = Dock app. `.accessory` = menu-bar agent with menu bar. `.prohibited` = background-only. Match the activation policy and plist to the intended product behavior.
 
 ### 12. Raw Server Body in errorDescription
 

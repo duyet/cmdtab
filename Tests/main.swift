@@ -21,7 +21,7 @@ func testClipboardSanitization() {
 
 func testKeychainCRUD() {
     print("Testing KeychainHelper secure storage...")
-    let service = "app.cmdtab.macos.test.ci"
+    let service = "app.minhagent.macos.test.ci"
     let account = "ci_account"
     let secretValue = "test-ci-api-token-999"
 
@@ -249,13 +249,13 @@ func testRequestHeadersAndAuth() throws {
     // WHY: AnyRouter attributes traffic via X-AnyRouter-* headers; dropping them
     // breaks app attribution on the gateway dashboard.
     assert(
-        req.value(forHTTPHeaderField: "X-AnyRouter-App") == "cmdtab",
+        req.value(forHTTPHeaderField: "X-AnyRouter-App") == "minhagent",
         "App attribution header must be present")
     assert(
-        req.value(forHTTPHeaderField: "X-AnyRouter-Referer") == "https://github.com/duyet/cmdtab",
+        req.value(forHTTPHeaderField: "X-AnyRouter-Referer") == "https://github.com/duyet/MinhAgent.app",
         "Referer attribution header must be present")
     assert(
-        req.value(forHTTPHeaderField: "X-AnyRouter-Title") == "cmdtab",
+        req.value(forHTTPHeaderField: "X-AnyRouter-Title") == "minhagent",
         "Title attribution header must be present")
     // WHY: a present key must become a Bearer token, or requests are unauthorized.
     assert(
@@ -492,7 +492,52 @@ func runAllTests() {
     testAPIErrorMessaging()
     testWelcomeHeadlineUsesSettingsName()
     testSystemPromptInjectsCustomInstruction()
+    testAuditLanguageSupportHeuristic()
+    testAuditFindingsForEnableState()
+    testAuditFindingsForAvailableState()
+    testAuditFindingsForCompiledOut()
     print("=== All Tests Passed Successfully ===")
+}
+
+func testAuditLanguageSupportHeuristic() {
+    print("Testing Apple Intelligence language heuristic...")
+    // Supported regional variants
+    assert(AppleIntelligenceAudit.languageIsLikelySupported("en-US"), "en-US should be supported")
+    assert(AppleIntelligenceAudit.languageIsLikelySupported("en_GB"), "en_GB (underscore) should be supported")
+    assert(AppleIntelligenceAudit.languageIsLikelySupported("zh-Hans-CN"), "zh-Hans-CN should normalize to zh-CN")
+    // The real-world failing case: English (Vietnam) — base supported, region not.
+    assert(!AppleIntelligenceAudit.languageIsLikelySupported("en-VN"), "en-VN should be flagged unsupported")
+    // Wholly unsupported language
+    assert(!AppleIntelligenceAudit.languageIsLikelySupported("vi-VN"), "vi-VN should be flagged unsupported")
+    print("✓ Language heuristic passed")
+}
+
+func testAuditFindingsForEnableState() {
+    print("Testing audit findings for appleIntelligenceNotEnabled...")
+    let findings = AppleIntelligenceAudit.findings(availability: .appleIntelligenceNotEnabled)
+    assert(findings.contains { $0.id == "enable" && $0.fix == .appleIntelligenceSettings },
+        "Should surface an enable finding with a one-click Apple Intelligence fix")
+    assert(findings.contains { $0.fix == .appleIntelligenceSettings },
+        "At least one finding must deep-link to Apple Intelligence settings")
+    print("✓ Enable-state findings passed")
+}
+
+func testAuditFindingsForAvailableState() {
+    print("Testing audit findings for available...")
+    let findings = AppleIntelligenceAudit.findings(availability: .available)
+    assert(findings.count == 1, "Available state should yield a single OK row")
+    assert(findings.first?.status == .ok, "Available row should be OK")
+    assert(findings.first?.fix == nil, "Available row needs no fix button")
+    print("✓ Available-state findings passed")
+}
+
+func testAuditFindingsForCompiledOut() {
+    print("Testing audit findings for compiledOut...")
+    let findings = AppleIntelligenceAudit.findings(availability: .compiledOut)
+    assert(findings.count == 1 && findings.first?.status == .blocked,
+        "Compiled-out should yield a single blocked row")
+    assert(findings.first?.fix == nil, "Compiled-out has no system-settings fix")
+    print("✓ Compiled-out findings passed")
 }
 
 runAllTests()

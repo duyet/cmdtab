@@ -163,9 +163,9 @@ public enum AnyRouterRequestFactory {
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
 
         // App attribution headers per the AnyRouter contract.
-        request.setValue("cmdtab", forHTTPHeaderField: "X-AnyRouter-App")
-        request.setValue("https://github.com/duyet/cmdtab", forHTTPHeaderField: "X-AnyRouter-Referer")
-        request.setValue("cmdtab", forHTTPHeaderField: "X-AnyRouter-Title")
+        request.setValue("minhagent", forHTTPHeaderField: "X-AnyRouter-App")
+        request.setValue("https://github.com/duyet/MinhAgent.app", forHTTPHeaderField: "X-AnyRouter-Referer")
+        request.setValue("minhagent", forHTTPHeaderField: "X-AnyRouter-Title")
 
         if let apiKey = apiKey, !apiKey.isEmpty {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")

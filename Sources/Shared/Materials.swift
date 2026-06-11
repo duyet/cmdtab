@@ -1,80 +1,28 @@
 import SwiftUI
 
-#if os(macOS)
-import AppKit
-
-// MARK: - AppKit vibrancy bridge
-/// Smallest possible AppKit bridge (see appkit-interop): a bare
-/// NSVisualEffectView for behind-window vibrancy. SwiftUI stays the source of
-/// truth; this view holds no state and exposes nothing back.
-struct VisualEffectBackground: NSViewRepresentable {
-    var material: NSVisualEffectView.Material = .sidebar
-
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        view.material = material
-        view.blendingMode = .behindWindow
-        view.state = .followsWindowActiveState
-        return view
-    }
-
-    func updateNSView(_ view: NSVisualEffectView, context: Context) {
-        view.material = material
-    }
-}
-#endif
-
 // MARK: - Adaptive surfaces
 
-/// Sidebar surface: Liquid Glass passthrough when hosted inside
-/// NSSplitViewController (macOS 26+), NSVisualEffectView vibrancy on older
-/// macOS, solid color when the user enables Reduce Transparency.
+/// Plain sidebar surface matching the Codex app: solid, quiet, and readable.
 struct SidebarSurface: ViewModifier {
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
     func body(content: Content) -> some View {
-        #if os(macOS)
-        if #available(macOS 26.0, *), !reduceTransparency {
-            // NSSplitViewController provides automatic Liquid Glass — no
-            // custom background needed. Painting over it would hide the glass.
-            content
-        } else if reduceTransparency {
-            content.background(Color.windowBackground)
-        } else {
-            content.background(VisualEffectBackground(material: .sidebar))
-        }
-        #else
-        if #available(iOS 26.0, *), !reduceTransparency {
-            content.background(Color.clear)
-        } else {
-            content.background(Color.windowBackground)
-        }
-        #endif
+        content.background(Color.windowBackground)
     }
 }
 
-/// Floating card surface: Liquid Glass on iOS 26+ / macOS 26+, classic card
-/// styling (solid surface + hairline + shadow) everywhere else.
-struct GlassCardSurface: ViewModifier {
+/// Raised card surface: solid system surface, hairline border, and a small shadow.
+struct PlainCardSurface: ViewModifier {
     var cornerRadius: CGFloat
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, iOS 26.0, *), !reduceTransparency {
-            content
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: cornerRadius))
-        } else {
-            content
-                .background(Color.cardSurface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke(Color.hairline, lineWidth: 1)
-                )
-                .cornerRadius(cornerRadius)
-                .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
-                .shadow(color: Color.black.opacity(0.09), radius: 18, y: 8)
-        }
+        content
+            .background(Color.cardSurface)
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(Color.hairline, lineWidth: 1)
+            )
+            .cornerRadius(cornerRadius)
+            .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
+            .shadow(color: Color.black.opacity(0.09), radius: 18, y: 8)
     }
 }
 
@@ -83,7 +31,7 @@ extension View {
         modifier(SidebarSurface())
     }
 
-    func glassCardSurface(cornerRadius: CGFloat) -> some View {
-        modifier(GlassCardSurface(cornerRadius: cornerRadius))
+    func plainCardSurface(cornerRadius: CGFloat) -> some View {
+        modifier(PlainCardSurface(cornerRadius: cornerRadius))
     }
 }

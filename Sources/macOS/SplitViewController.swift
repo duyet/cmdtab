@@ -9,6 +9,7 @@ final class SplitViewController: NSSplitViewController {
     private var detailSplitItem: NSSplitViewItem!
     private var cancellables = Set<AnyCancellable>()
     private var sidebarAutoHidden = false
+    private var sidebarWasVisibleBeforeSettings: Bool?
     /// While set in the future, suppresses the cramped-window auto-hide. Set
     /// when the user explicitly opens the sidebar so the resize callbacks fired
     /// by the open animation can't immediately slam it shut again.
@@ -52,6 +53,14 @@ final class SplitViewController: NSSplitViewController {
             }
             .store(in: &cancellables)
 
+        viewModel.$isSettingsOpen
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isOpen in
+                self?.syncSettingsPresentation(isOpen: isOpen)
+            }
+            .store(in: &cancellables)
+
         // Initial state: collapse if viewModel says hidden
         if !viewModel.isSidebarVisible {
             sidebarSplitItem.isCollapsed = true
@@ -61,6 +70,7 @@ final class SplitViewController: NSSplitViewController {
     // MARK: - viewModel → split view
 
     private func syncSplitView(visible: Bool) {
+        guard !viewModel.isSettingsOpen else { return }
         let collapsed = sidebarSplitItem.isCollapsed
         if visible == collapsed {
             // An explicit open must win over the cramped-window auto-hide for
@@ -74,6 +84,19 @@ final class SplitViewController: NSSplitViewController {
         }
     }
 
+    private func syncSettingsPresentation(isOpen: Bool) {
+        if isOpen {
+            sidebarWasVisibleBeforeSettings = !sidebarSplitItem.isCollapsed
+            sidebarSplitItem.isCollapsed = true
+            sidebarAutoHidden = false
+            return
+        }
+
+        let shouldRestoreSidebar = sidebarWasVisibleBeforeSettings ?? viewModel.isSidebarVisible
+        sidebarWasVisibleBeforeSettings = nil
+        sidebarSplitItem.isCollapsed = !shouldRestoreSidebar
+    }
+
     // MARK: - split view → viewModel
 
     override func splitViewDidResizeSubviews(_ notification: Notification) {
@@ -81,8 +104,10 @@ final class SplitViewController: NSSplitViewController {
 
         guard let sidebarSplitItem else { return }
 
-        // Read actual sidebar width from the view controller's view (not
-        // splitView.subviews[0] which is fragile on macOS 26 with Liquid Glass).
+        if viewModel.isSettingsOpen { return }
+
+        // Read actual sidebar width from the view controller's view rather than
+        // indexing splitView.subviews, which is fragile across AppKit internals.
         if !sidebarSplitItem.isCollapsed {
             let width = sidebarSplitItem.viewController.view.frame.width
             if width >= sidebarSplitItem.minimumThickness {

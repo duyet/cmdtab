@@ -33,23 +33,11 @@ struct DetailContentView: View {
         }
     }
 
-    // MARK: - Settings Inspector (right-side panel)
+    // MARK: - Settings Overlay
     private var settingsInspector: some View {
-        HStack(spacing: 0) {
-            // Scrim over content — tap to dismiss
-            Color.black.opacity(0.25)
-                .onTapGesture { viewModel.isSettingsOpen = false }
-
-            // Settings panel anchored to the right edge
-            SettingsView(viewModel: viewModel)
-                .frame(width: 420)
-                .background(Color.cardSurface)
-                .overlay(Rectangle().frame(width: 1).foregroundColor(Color.hairline), alignment: .leading)
-        }
-        .ignoresSafeArea()
-        .transition(.move(edge: .trailing))
-        // Instant appearance — no animation per original spec.
-        .transaction { $0.animation = nil }
+        SettingsView(viewModel: viewModel)
+            .ignoresSafeArea()
+            .transaction { $0.animation = nil }
     }
 
     private var hasMessages: Bool {

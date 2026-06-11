@@ -49,9 +49,7 @@ struct ComposerView: View {
                 missingKeyNotice
             }
         }
-        // Liquid Glass on macOS 26+; classic card (surface + hairline +
-        // two-layer shadow) on earlier systems and with Reduce Transparency.
-        .glassCardSurface(cornerRadius: 24)
+        .plainCardSurface(cornerRadius: 24)
         .padding(.horizontal, 20)
         .padding(.bottom, 16)
         .onAppear { isInputFocused = true }
@@ -168,8 +166,9 @@ struct ComposerView: View {
         HStack(spacing: 8) {
             Spacer()
 
-            // Mode + model dropdowns share an even gap, set apart from the send button
-            HStack(spacing: 12) {
+            // Mode + model dropdowns sit close together as one cluster, set
+            // apart from the send button.
+            HStack(spacing: 2) {
                 localCloudToggle
 
                 if !viewModel.isLocalModelSelected {
@@ -181,7 +180,7 @@ struct ComposerView: View {
                     }
                 }
             }
-            .padding(.trailing, 4)
+            .padding(.trailing, 2)
 
             sendButton
         }
@@ -208,7 +207,7 @@ struct ComposerView: View {
                 Text(viewModel.isLocalModelSelected ? "Local" : "Cloud")
                     .font(.system(size: 12))
                 Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
-                    .font(.system(size: 11))
+                    .font(.system(size: 10))
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .semibold))
             }
@@ -251,7 +250,7 @@ struct ComposerView: View {
                 Text(currentModelLabel)
                     .font(.system(size: 12))
                 Image(systemName: currentModelIcon)
-                    .font(.system(size: 11))
+                    .font(.system(size: 10))
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .semibold))
             }
@@ -276,7 +275,7 @@ struct ComposerView: View {
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: "brain")
-                    .font(.system(size: 11))
+                    .font(.system(size: 10))
                 Text(viewModel.reasoningEffort.capitalized)
                     .font(.system(size: 12))
                 Image(systemName: "chevron.down")
@@ -328,39 +327,20 @@ struct ComposerView: View {
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
                 .popover(isPresented: $showLocalHelp, arrowEdge: .top) {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         Text("On-device model (Apple Foundation Models)")
                             .font(.headline)
-                        Text(
-                            """
-                            Local inference uses Apple Intelligence and requires:
-                            • An Apple Silicon Mac eligible for Apple Intelligence
-                            • Apple Intelligence enabled in System Settings
-                            • The on-device model downloaded and ready
 
-                            \(LocalModelClient.shared.availability.unavailableReason ?? "")
+                        // Live readiness audit with one-click fixes.
+                        AppleIntelligenceAuditView(compact: true)
 
-                            Until then, cmdtab uses your configured cloud API.
-                            """
-                        )
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-
-                        #if os(macOS)
-                        Button("Open System Settings…") {
-                            // Apple Intelligence & Siri pane
-                            if let url = URL(
-                                string: "x-apple.systempreferences:com.apple.Siri-Settings.extension")
-                            {
-                                NSWorkspace.shared.open(url)
-                            }
-                            showLocalHelp = false
-                        }
-                        .controlSize(.small)
-                        #endif
+                        Text("Until on-device inference is ready, MinhAgent uses your configured cloud API.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding(16)
-                    .frame(width: 340)
+                    .frame(width: 360)
                 }
 
             Button("Use Cloud") {
@@ -528,7 +508,7 @@ private struct MenuTriggerHover: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, 11)
+            .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background(isHovered ? Color.primary.opacity(0.07) : Color.clear)
             .clipShape(Capsule())

@@ -8,7 +8,7 @@ import Foundation
 /// Lookup order for a key:
 ///   1. Process environment (e.g. launched from a shell with the var set)
 ///   2. `.env.local` in the current working directory
-///   3. `.env.local` next to the app bundle (CmdTab.app sits in the repo root)
+///   3. `.env.local` next to the app bundle (MinhAgent.app sits in the repo root)
 public enum EnvFile {
     public static func value(for key: String) -> String? {
         if let env = ProcessInfo.processInfo.environment[key], !env.isEmpty {

@@ -5,11 +5,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "CmdTab",
+    name: "MinhAgent",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(
-            name: "CmdTab",
+            name: "MinhAgent",
             path: "Sources",
             exclude: ["iOS"],
             swiftSettings: [

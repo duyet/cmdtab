@@ -77,21 +77,9 @@ public struct MainView: View {
 
     // MARK: - Settings Overlay
     private var settingsOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.35)
-                .ignoresSafeArea()
-
-            SettingsView(viewModel: viewModel)
-                #if os(macOS)
-            .frame(maxWidth: 640)
-            .padding(.horizontal, 32)
-            .padding(.vertical, 24)
-                #else
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
-                #endif
-        }
-        .transaction { $0.animation = nil }
+        SettingsView(viewModel: viewModel)
+            .ignoresSafeArea()
+            .transaction { $0.animation = nil }
     }
 
     private var hasMessages: Bool {
@@ -210,7 +198,9 @@ struct StarterCard: View {
                 Text(title)
                     .font(.system(size: 12.5))
                     .foregroundColor(.primary.opacity(0.85))
+                    .lineLimit(1)
             }
+            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 13)
             .padding(.vertical, 9)
             #if os(macOS)

@@ -1,31 +1,25 @@
 #!/bin/bash
 # =============================================================================
-# UI test for CmdTab (macOS) — smoke + end-to-end journey in one.
+# UI test for MinhAgent (macOS) — smoke + end-to-end journey in one.
 #
-# Drives the *built* app through the Accessibility API (System Events), page to
-# page, asserting the app survives every step:
+# Drives the *built* app through the Accessibility API (System Events):
 #
 #   launch → window + toolbar present → type in composer → open Settings
 #          → tab through Settings pages → close Settings → toggle sidebar → alive
 #
-# Idiomatic fit for this repo, which has no Xcode project and so cannot use
-# XCUITest. Targets AX can name reliably (toolbar, Settings button, Close,
-# text field) are HARD assertions; segmented-tab clicks are best-effort and
-# logged. Any step that makes the window vanish/crash fails the test.
-#
 # Requires Accessibility permission for the controlling terminal. SKIPS loudly
-# (exit 0) when it is absent, so it is safe on hosted CI runners.
+# (exit 0) when absent — safe on hosted CI runners.
 #
 # Usage:  ./test_ui.sh            # builds if needed, then runs the journey
 #         ./test_ui.sh --no-build
 # =============================================================================
 set -euo pipefail
 
-APP="CmdTab.app"
-BIN_NAME="CmdTab"
+APP="MinhAgent.app"
+BIN_NAME="MinhAgent"
 SKIP_BUILD="${1:-}"
 
-echo "=== CmdTab UI Test (smoke + e2e journey) ==="
+echo "=== MinhAgent UI Test (smoke + e2e journey) ==="
 
 if [[ "$SKIP_BUILD" != "--no-build" ]]; then
     ./build.sh >/dev/null
@@ -49,7 +43,6 @@ open "$APP"
 echo "Launched $APP — running journey…"
 
 RESULT=$(osascript <<'APPLESCRIPT'
--- Click the first AXButton anywhere in the window whose name/description matches.
 on clickButton(proc, theName)
     tell application "System Events"
         tell proc
@@ -68,7 +61,6 @@ on clickButton(proc, theName)
     return false
 end clickButton
 
--- Does any element in the window expose text containing the needle?
 on hasText(proc, needle)
     tell application "System Events"
         tell proc
@@ -93,12 +85,11 @@ end alive
 
 set journey to {}
 
--- Step 0: wait for the window.
 tell application "System Events"
     set ok to false
     repeat 25 times
-        if exists (process "CmdTab") then
-            if (count of windows of process "CmdTab") > 0 then
+        if exists (process "MinhAgent") then
+            if (count of windows of process "MinhAgent") > 0 then
                 set ok to true
                 exit repeat
             end if
@@ -107,10 +98,9 @@ tell application "System Events"
     end repeat
     if not ok then return "FAIL:no window appeared"
 end tell
-tell application "System Events" to set proc to (first process whose name is "CmdTab")
+tell application "System Events" to set proc to (first process whose name is "MinhAgent")
 set end of journey to "window"
 
--- Step 1 (smoke): the toolbar exposes interactive buttons.
 tell application "System Events"
     tell proc
         if not (exists toolbar 1 of window 1) then return "FAIL:window has no toolbar"
@@ -119,11 +109,6 @@ tell application "System Events"
 end tell
 set end of journey to "toolbar"
 
--- Step 2: type a message and send it (best-effort). This is an LSUIElement
--- app, so an external `open` does not always make its window key, and custom
--- SwiftUI fields are not individually AX-nameable — keystrokes may not land.
--- We attempt the full type -> send -> response round-trip and LOG how far it
--- got, but only a vanished window is a hard failure here.
 set marker to "ui test ping 4242"
 tell application "System Events"
     try
@@ -146,7 +131,6 @@ end repeat
 if not alive(proc) then return "FAIL:window vanished after send"
 if sent then
     set end of journey to "message-sent"
-    -- A reply, typing indicator, or error card all prove a send round-trip.
     set responded to false
     repeat 40 times
         tell application "System Events"
@@ -164,9 +148,6 @@ else
     set end of journey to "type-send-skipped(no-key-focus)"
 end if
 
--- Step 3: navigate the Settings pages (best-effort — the custom SwiftUI
--- buttons are not always individually nameable via AX). Never hard-fails on a
--- missing control; only a vanished window is a failure.
 if clickButton(proc, "Settings") then
     delay 0.5
     set end of journey to "settings-open"
@@ -183,7 +164,6 @@ if clickButton(proc, "Settings") then
     if not alive(proc) then return "FAIL:window vanished during Settings journey"
 end if
 
--- Step 4: toggle the sidebar from the toolbar (reliable AX target).
 clickButton(proc, "Toggle Sidebar")
 delay 0.4
 if not alive(proc) then return "FAIL:window vanished toggling sidebar"

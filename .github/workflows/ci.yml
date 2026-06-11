@@ -27,13 +27,18 @@ jobs:
         swift-version: '6.0.3'
 
     - name: Make Scripts Executable
-      run: chmod +x build.sh test.sh test_launch.sh
+      run: chmod +x build.sh test.sh test_launch.sh test_ui.sh
 
     - name: Run Unit Tests
       run: ./test.sh
 
     - name: Run Launch Verification Test
       run: ./test_launch.sh
+
+    - name: Run UI Smoke Test
+      # Hosted runners don't grant Accessibility (TCC) permission, so this
+      # SKIPS loudly (exit 0) on CI and runs for real on a permitted machine.
+      run: ./test_ui.sh --no-build
 
     - name: Verify App Bundle Structure
       run: |

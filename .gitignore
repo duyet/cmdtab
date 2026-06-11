@@ -94,4 +94,29 @@ TestRunner.dSYM/
 .agents/
 .claude/
 skills-lock.json
-.env.local
+
+# Environment & secrets
+.env
+.env.*
+*.env
+!.env.example
+
+# Keys & certificates
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.cert
+*.key
+*.rsa
+
+# Credentials & tokens
+*secret*
+*credential*
+*token*.json
+*password*
+*auth*.json

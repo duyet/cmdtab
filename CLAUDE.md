@@ -16,6 +16,7 @@ No SPM, no Xcode project. Everything is raw `xcrun swiftc` via shell scripts.
 | `./build_ios.sh` | Build iOS Simulator target |
 | `./test.sh` | Run unit tests (custom runner, **not XCTest**) |
 | `./test_launch.sh` | Build + launch app for 2s to verify no crash |
+| `./test_ui.sh` | UI smoke test — drives the built app via the Accessibility API (System Events). Skips loudly if the terminal lacks Accessibility permission. No Xcode project, so this stands in for XCUITest. |
 
 Always run `./test.sh` and `./test_launch.sh` after changes. Use `/cmdtab-verify` for the full loop.
 

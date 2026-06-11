@@ -252,13 +252,8 @@ struct MessageRow: View {
     private var isUser: Bool { message.role == "user" }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 0) {
             if isUser { Spacer(minLength: 48) }
-
-            // Avatar
-            if !isUser {
-                MessageAvatar(role: message.role)
-            }
 
             VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
                 if isUser {
@@ -303,11 +298,6 @@ struct MessageRow: View {
                 #else
                 .opacity(copied ? 1 : 0.5)
                 #endif
-            }
-
-            // User avatar on right
-            if isUser {
-                MessageAvatar(role: message.role)
             }
 
             if !isUser { Spacer(minLength: 48) }
@@ -381,34 +371,6 @@ struct MessageRow: View {
                 withAnimation { copied = false }
             }
         }
-    }
-}
-
-// MARK: - Message Avatar
-/// Small circular avatar: coral "⌘" for the app, gray initial for the user.
-struct MessageAvatar: View {
-    let role: String
-    var size: CGFloat = 24
-
-    private var isUser: Bool { role == "user" }
-
-    var body: some View {
-        Group {
-            if isUser {
-                Text("You")
-                    .font(.system(size: 9, weight: .semibold, design: .rounded))
-                    .foregroundColor(.secondary)
-            } else {
-                // Plain ⌘ on the coral disc — cleaner than a square-in-circle,
-                // and weight matches the refined app mark.
-                Image(systemName: "command")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.white)
-            }
-        }
-        .frame(width: size, height: size)
-        .background(isUser ? Color.primary.opacity(0.08) : Color.accentCoral)
-        .clipShape(Circle())
     }
 }
 

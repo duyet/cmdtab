@@ -5,9 +5,9 @@
 	<key>CFBundleExecutable</key>
 	<string>MinhAgent</string>
 	<key>CFBundleIconFile</key>
-	<string>Icon</string>
+	<string>AppIcon</string>
 	<key>CFBundleIconName</key>
-	<string>Icon</string>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleName</key>

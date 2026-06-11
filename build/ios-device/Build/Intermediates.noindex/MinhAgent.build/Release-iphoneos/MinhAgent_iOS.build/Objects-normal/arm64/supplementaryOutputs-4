@@ -1,0 +1,23 @@
+{
+  "/Users/duet/project/MinhAgent.app/Sources/Shared/MarkdownBlocks.swift" : {
+    "const-values" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MarkdownBlocks.swiftconstvalues",
+    "dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MarkdownBlocks.d",
+    "diagnostics" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MarkdownBlocks.dia",
+    "object" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MarkdownBlocks.o",
+    "swift-dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MarkdownBlocks.swiftdeps"
+  },
+  "/Users/duet/project/MinhAgent.app/Sources/Shared/Materials.swift" : {
+    "const-values" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/Materials.swiftconstvalues",
+    "dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/Materials.d",
+    "diagnostics" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/Materials.dia",
+    "object" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/Materials.o",
+    "swift-dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/Materials.swiftdeps"
+  },
+  "/Users/duet/project/MinhAgent.app/Sources/Shared/MathView.swift" : {
+    "const-values" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MathView.swiftconstvalues",
+    "dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MathView.d",
+    "diagnostics" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MathView.dia",
+    "object" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MathView.o",
+    "swift-dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MathView.swiftdeps"
+  }
+}

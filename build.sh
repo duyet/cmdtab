@@ -24,10 +24,8 @@ cp Info.plist MinhAgent.app/Contents/Info.plist
 cp Resources/PrivacyInfo.xcprivacy MinhAgent.app/Contents/Resources/PrivacyInfo.xcprivacy
 
 echo "Compiling app icon..."
-xcrun actool --compile MinhAgent.app/Contents/Resources \
-    --app-icon Icon --output-partial-info-plist /tmp/minhagent_icon_partial.plist \
-    --platform macosx --minimum-deployment-target 14.0 \
-    Resources/logo/Icon.icon > /dev/null
+iconutil -c icns Resources/logo/AppIcon.iconset -o MinhAgent.app/Contents/Resources/AppIcon.icns
+cp Resources/logo/StatusBarIconTemplate.png MinhAgent.app/Contents/Resources/StatusBarIconTemplate.png
 
 echo "Ad-hoc signing executable and app bundle..."
 codesign -s - --force MinhAgent.app/Contents/MacOS/MinhAgent

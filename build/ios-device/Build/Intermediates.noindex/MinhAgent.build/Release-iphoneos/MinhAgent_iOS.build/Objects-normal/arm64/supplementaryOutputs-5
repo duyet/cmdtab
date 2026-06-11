@@ -1,0 +1,23 @@
+{
+  "/Users/duet/project/MinhAgent.app/Sources/Shared/MermaidView.swift" : {
+    "const-values" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MermaidView.swiftconstvalues",
+    "dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MermaidView.d",
+    "diagnostics" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MermaidView.dia",
+    "object" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MermaidView.o",
+    "swift-dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MermaidView.swiftdeps"
+  },
+  "/Users/duet/project/MinhAgent.app/Sources/Shared/MessageMarkdownView.swift" : {
+    "const-values" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MessageMarkdownView.swiftconstvalues",
+    "dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MessageMarkdownView.d",
+    "diagnostics" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MessageMarkdownView.dia",
+    "object" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MessageMarkdownView.o",
+    "swift-dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MessageMarkdownView.swiftdeps"
+  },
+  "/Users/duet/project/MinhAgent.app/Sources/Shared/ModelCatalog.swift" : {
+    "const-values" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/ModelCatalog.swiftconstvalues",
+    "dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/ModelCatalog.d",
+    "diagnostics" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/ModelCatalog.dia",
+    "object" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/ModelCatalog.o",
+    "swift-dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/ModelCatalog.swiftdeps"
+  }
+}

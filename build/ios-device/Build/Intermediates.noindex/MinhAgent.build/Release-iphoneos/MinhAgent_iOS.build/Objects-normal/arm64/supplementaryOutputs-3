@@ -1,0 +1,23 @@
+{
+  "/Users/duet/project/MinhAgent.app/Sources/Shared/LocalModelClient.swift" : {
+    "const-values" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/LocalModelClient.swiftconstvalues",
+    "dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/LocalModelClient.d",
+    "diagnostics" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/LocalModelClient.dia",
+    "object" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/LocalModelClient.o",
+    "swift-dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/LocalModelClient.swiftdeps"
+  },
+  "/Users/duet/project/MinhAgent.app/Sources/Shared/MainView.swift" : {
+    "const-values" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MainView.swiftconstvalues",
+    "dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MainView.d",
+    "diagnostics" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MainView.dia",
+    "object" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MainView.o",
+    "swift-dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MainView.swiftdeps"
+  },
+  "/Users/duet/project/MinhAgent.app/Sources/Shared/MainViewModel.swift" : {
+    "const-values" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MainViewModel.swiftconstvalues",
+    "dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MainViewModel.d",
+    "diagnostics" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MainViewModel.dia",
+    "object" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MainViewModel.o",
+    "swift-dependencies" : "/Users/duet/project/MinhAgent.app/build/ios-device/Build/Intermediates.noindex/MinhAgent.build/Release-iphoneos/MinhAgent_iOS.build/Objects-normal/arm64/MainViewModel.swiftdeps"
+  }
+}

@@ -10,8 +10,8 @@ final class WindowController: NSWindowController {
         self.viewModel = viewModel
 
         // Default size — compact utility window
-        let windowWidth: CGFloat = 800
-        let windowHeight: CGFloat = 560
+        let windowWidth: CGFloat = 780
+        let windowHeight: CGFloat = 500
         let screenFrame =
             NSScreen.main?.visibleFrame
             ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
@@ -32,6 +32,9 @@ final class WindowController: NSWindowController {
         super.init(window: window)
 
         window.contentViewController = splitVC
+        // Layer-backed content so opaque pane backgrounds clip to the
+        // window's rounded corners instead of drawing square edges.
+        window.contentView?.wantsLayer = true
         window.delegate = self
 
         // Native toolbar for the main window controls.

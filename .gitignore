@@ -85,7 +85,6 @@ debug_*.swift
 .antigravitycli
 
 # Local Build Outputs
-CmdTab.app/
 *.app/
 TestRunner
 TestRunner.dSYM/

@@ -15,6 +15,9 @@ struct MarkdownBlock: Identifiable {
         case blockquote
         case table
         case horizontalRule
+        case math
+        /// Standalone image line: `![alt](url)` — text holds the raw line.
+        case image
     }
 
     let id: Int
@@ -38,6 +41,8 @@ struct MarkdownBlock: Identifiable {
         var inQuote = false
         var tableLines: [String] = []
         var inTable = false
+        var mathLines: [String] = []
+        var inMath = false
 
         func flushParagraph() {
             let text = paragraph.joined(separator: "\n")
@@ -81,6 +86,16 @@ struct MarkdownBlock: Identifiable {
             inTable = false
         }
 
+        func flushMath() {
+            let text = mathLines.joined(separator: "\n")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty {
+                blocks.append(MarkdownBlock(id: blocks.count, kind: .math, text: text))
+            }
+            mathLines = []
+            inMath = false
+        }
+
         let lines = content.split(separator: "\n", omittingEmptySubsequences: false)
 
         for line in lines {
@@ -93,6 +108,37 @@ struct MarkdownBlock: Identifiable {
                     inCode = false
                 } else {
                     codeLines.append(String(line))
+                }
+                continue
+            }
+
+            // Inside display-math block — only $$ or \] closes it
+            if inMath {
+                if trimmed == "$$" || trimmed == "\\]" {
+                    flushMath()
+                } else {
+                    mathLines.append(String(line))
+                }
+                continue
+            }
+
+            // Display math: $$…$$ on one line, or $$ / \[ opening a block.
+            if trimmed.hasPrefix("$$") || trimmed == "\\[" {
+                if inList { flushList() }
+                if inQuote { flushQuote() }
+                if inTable { flushTable() }
+                flushParagraph()
+                if trimmed.count > 2, trimmed.hasSuffix("$$") {
+                    // Single-line $$x$$
+                    let inner = trimmed.dropFirst(2).dropLast(2)
+                        .trimmingCharacters(in: .whitespaces)
+                    if !inner.isEmpty {
+                        blocks.append(MarkdownBlock(id: blocks.count, kind: .math, text: inner))
+                    }
+                } else {
+                    inMath = true
+                    let rest = trimmed == "\\[" ? "" : String(trimmed.dropFirst(2))
+                    if !rest.isEmpty { mathLines.append(rest) }
                 }
                 continue
             }
@@ -160,25 +206,28 @@ struct MarkdownBlock: Identifiable {
                 continue
             }
 
-            // Unordered list: - , *, + followed by space
-            if isUnorderedListItem(trimmed) {
-                if inTable { flushTable() }
+            // Standalone image line: ![alt](url)
+            if isImageLine(trimmed) {
+                if inList { flushList() }
                 if inQuote { flushQuote() }
+                if inTable { flushTable() }
                 flushParagraph()
-                listLines.append(trimmed)
-                inList = true
-                isOrdered = false
+                blocks.append(MarkdownBlock(id: blocks.count, kind: .image, text: trimmed))
                 continue
             }
 
-            // Ordered list: 1. 2. etc.
-            if isOrderedListItem(trimmed) {
+            // List items (ordered or unordered). Original indentation is kept
+            // so the renderer can nest; a mixed nested item (e.g. "1." under
+            // "-") stays in the same block instead of splitting it.
+            if isUnorderedListItem(trimmed) || isOrderedListItem(trimmed) {
                 if inTable { flushTable() }
                 if inQuote { flushQuote() }
                 flushParagraph()
-                listLines.append(trimmed)
+                if !inList {
+                    isOrdered = isOrderedListItem(trimmed)
+                }
+                listLines.append(String(line))
                 inList = true
-                isOrdered = true
                 continue
             }
 
@@ -201,6 +250,7 @@ struct MarkdownBlock: Identifiable {
 
         // Flush remaining
         if inCode { flushCode() }
+        if inMath { flushMath() }
         if inList { flushList() }
         if inQuote { flushQuote() }
         if inTable { flushTable() }
@@ -245,6 +295,21 @@ struct MarkdownBlock: Identifiable {
         guard rest.first == "." else { return false }
         let afterDot = rest.dropFirst()
         return afterDot.first == " "
+    }
+
+    private static func isImageLine(_ line: String) -> Bool {
+        line.hasPrefix("![") && line.hasSuffix(")") && line.contains("](")
+    }
+
+    /// Parse `![alt](url)` into its parts. Returns nil if malformed.
+    static func imageParts(_ line: String) -> (alt: String, url: String)? {
+        guard line.hasPrefix("!["), line.hasSuffix(")"),
+            let altEnd = line.range(of: "](")
+        else { return nil }
+        let alt = String(line[line.index(line.startIndex, offsetBy: 2)..<altEnd.lowerBound])
+        let url = String(line[altEnd.upperBound..<line.index(before: line.endIndex)])
+            .trimmingCharacters(in: .whitespaces)
+        return url.isEmpty ? nil : (alt, url)
     }
 
     static func isTableSeparator(_ line: String) -> Bool {

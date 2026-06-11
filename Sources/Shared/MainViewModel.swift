@@ -70,6 +70,17 @@ public final class MainViewModel: ObservableObject {
     // Clipboard Action Banner
     @Published public var detectedClipboardText: String = ""
     @Published public var isClipboardBannerVisible: Bool = false
+    /// Quick Action the user has picked but not yet sent — shown as a small
+    /// header line above the composer's text input.
+    @Published public var selectedPresetIndex: Int? = nil
+
+    /// Sidebar search field visibility — toggled from the window toolbar's
+    /// search item (next to the sidebar toggle).
+    @Published public var isSidebarSearchVisible: Bool = false
+
+    /// Per-day usage counters (sessions / messages / token estimates) for the
+    /// welcome activity calendar. Counts only — content never persists.
+    @Published public var usageByDay: [String: DayUsage] = UsageStats.load()
 
     // Focus signal — incremented whenever the composer should grab first-responder
     @Published public var composerFocusTick: Int = 0
@@ -189,6 +200,7 @@ public final class MainViewModel: ObservableObject {
     @Published public var fontScale: CGFloat = 1.0 {
         didSet {
             UserDefaults.standard.set(Double(fontScale), forKey: "fontScale")
+            AppFont.userScale = fontScale
         }
     }
 
@@ -388,11 +400,39 @@ public final class MainViewModel: ObservableObject {
         self.selectedConversationId = newConv.id
         clearConversation()
         composerFocusTick += 1
+        recordUsage { $0.sessions += 1 }
+    }
+
+    /// Toggle the sidebar search field from the window toolbar. Makes sure the
+    /// sidebar is visible and on the Chat tab so the field can actually appear.
+    public func toggleSidebarSearch() {
+        if !isSidebarSearchVisible {
+            isSidebarVisible = true
+            sidebarMode = "chat"
+        }
+        isSidebarSearchVisible.toggle()
+    }
+
+    /// Mutate today's usage bucket and persist the counters.
+    private func recordUsage(_ mutate: (inout DayUsage) -> Void) {
+        let key = UsageStats.dayKey()
+        var day = usageByDay[key] ?? DayUsage()
+        mutate(&day)
+        usageByDay[key] = day
+        UsageStats.save(usageByDay)
     }
 
     public func selectConversation(id: UUID) {
         selectedConversationId = id
         clearConversation()
+    }
+
+    /// Run a saved Quick Action on explicit text. Used by App Intents / Shortcuts
+    /// so the action works from Siri, Spotlight, and the Shortcuts app.
+    public func runQuickAction(presetId: UUID, text: String) {
+        let preset = presets.first { $0.id == presetId }
+        startNewConversation(title: preset?.name ?? "Quick Action", presetId: presetId)
+        sendMessage(content: text)
     }
 
     public func renameConversation(id: UUID, to newTitle: String) {
@@ -438,6 +478,10 @@ public final class MainViewModel: ObservableObject {
         let userMsg = ChatMessage(role: "user", content: content)
         conversations[activeIndex].messages.append(userMsg)
         lastActivityDate = Date()
+        recordUsage {
+            $0.messages += 1
+            $0.tokens += UsageStats.estimateTokens(content)
+        }
 
         isClipboardBannerVisible = false
         startLLMResponse(for: activeId)
@@ -452,10 +496,24 @@ public final class MainViewModel: ObservableObject {
         if !detectedClipboardText.isEmpty && isClipboardBannerVisible {
             runPresetWithClipboard(index: index)
         } else {
-            let preset = presets[index]
-            startNewConversation(title: preset.name, presetId: preset.id)
+            // No clipboard: just mark the preset as selected — the composer
+            // shows it above the input. No conversation is created until send.
+            selectedPresetIndex = index
             prefillComposer("")  // focus the composer for this preset
         }
+    }
+
+    /// Run the selected preset against text the user typed (no clipboard).
+    /// Creates the conversation only now, at send time.
+    public func runPresetWithInput(index: Int, content: String) {
+        guard index >= 0 && index < presets.count else { return }
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let preset = presets[index]
+        startNewConversation(title: preset.name, presetId: preset.id)
+        selectedPresetIndex = nil
+        sendMessage(content: trimmed)
     }
 
     public func runPresetWithClipboard(index: Int) {
@@ -477,13 +535,22 @@ public final class MainViewModel: ObservableObject {
             role: "user", content: detectedClipboardText,
             actionLabel: preset.name, isQuote: true)
         conversations[activeIndex].messages.append(userMsg)
+        recordUsage {
+            $0.messages += 1
+            $0.tokens += UsageStats.estimateTokens(detectedClipboardText)
+        }
 
         isClipboardBannerVisible = false
+        selectedPresetIndex = nil
+        // Consume the clipboard text so handleActivation doesn't resurface the
+        // banner for content already acted on.
+        detectedClipboardText = ""
         startLLMResponse(for: activeId)
     }
 
     public func dismissClipboardBanner() {
         isClipboardBannerVisible = false
+        selectedPresetIndex = nil
     }
 
     /// Called by the platform layer on NSApplication.didBecomeActiveNotification.
@@ -568,6 +635,7 @@ public final class MainViewModel: ObservableObject {
                     self?.appendChunk(chunk: chunk, to: conversationId, messageId: assistantMsgId)
                 }
 
+                self?.finalizeAssistantUsage(conversationId: conversationId, messageId: assistantMsgId)
                 self?.isStreaming = false
                 self?.clearStreamingIndices()
             } catch {
@@ -578,6 +646,18 @@ public final class MainViewModel: ObservableObject {
                 self?.isStreaming = false
                 self?.clearStreamingIndices()
             }
+        }
+    }
+
+    /// Count the completed assistant reply (message + token estimate).
+    private func finalizeAssistantUsage(conversationId: UUID, messageId: UUID) {
+        guard let convIdx = conversations.firstIndex(where: { $0.id == conversationId }),
+            let msg = conversations[convIdx].messages.first(where: { $0.id == messageId }),
+            !msg.content.isEmpty
+        else { return }
+        recordUsage {
+            $0.messages += 1
+            $0.tokens += UsageStats.estimateTokens(msg.content)
         }
     }
 

@@ -1,5 +1,27 @@
 import SwiftUI
 
+// MARK: - Typography config
+/// Single source of truth for text sizes. Every `.system(size:)` in the app
+/// routes through `AppFont.pt(_:)`, so one scale knob resizes all text
+/// consistently. iOS reads larger by default; the Settings "Font Size" control
+/// feeds `userScale`.
+public enum AppFont {
+    #if os(iOS)
+    public static let platformScale: CGFloat = 1.15
+    #else
+    public static let platformScale: CGFloat = 1.0
+    #endif
+
+    /// User preference (Settings → Font Size). Set from the view model on the
+    /// main thread; UI-only scalar, so `nonisolated(unsafe)` is acceptable.
+    nonisolated(unsafe) public static var userScale: CGFloat = 1.0
+
+    /// Scale a base point size by the platform + user factors.
+    public static func pt(_ size: CGFloat) -> CGFloat {
+        size * platformScale * userScale
+    }
+}
+
 #if os(macOS)
 import AppKit
 public typealias PlatformColor = NSColor
@@ -74,6 +96,12 @@ enum DeviceLayout {
         if screen < 375 { return 260 }  // iPhone SE / compact
         if screen < 414 { return 280 }  // Standard iPhone
         return 300  // Plus / Max / Pro Max
+    }
+
+    /// Drawer width for the interactive iOS sidebar: near full-width, leaving a
+    /// peek of the content card on the right (matches the Claude app feel).
+    static var drawerWidth: CGFloat {
+        max(300, screenBounds.width - 56)
     }
 
     /// Whether the device has a home indicator (no physical home button).

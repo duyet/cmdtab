@@ -1,0 +1,32 @@
+{
+  "source": "/Users/duet/project/MinhAgent.app/Sources/Shared/MathView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "math",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 17
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show rendered math",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 27
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show LaTeX source",
+        "location": {
+          "startingColumn": 73,
+          "startingLine": 27
+        }
+      }
+    ]
+  },
+  "version": 1
+}

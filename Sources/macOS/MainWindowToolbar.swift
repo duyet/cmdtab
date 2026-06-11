@@ -7,7 +7,7 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
     private weak var windowController: WindowController?
 
     private static let sidebarToggleID = NSToolbarItem.Identifier("sidebarToggle")
-    private static let newChatID = NSToolbarItem.Identifier("newChat")
+    private static let searchID = NSToolbarItem.Identifier("searchChats")
 
     static func create(viewModel: MainViewModel, windowController: WindowController) -> NSToolbar {
         let toolbar = NSToolbar(identifier: "MinhAgentMainWindowToolbar")
@@ -34,8 +34,8 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
         switch itemIdentifier {
         case Self.sidebarToggleID:
             return makeSidebarToggle()
-        case Self.newChatID:
-            return makeNewChat()
+        case Self.searchID:
+            return makeSearch()
         case .flexibleSpace:
             return NSToolbarItem(itemIdentifier: .flexibleSpace)
         default:
@@ -44,7 +44,7 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [Self.sidebarToggleID, Self.newChatID, .flexibleSpace]
+        [Self.sidebarToggleID, Self.searchID, .flexibleSpace]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -53,31 +53,38 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
 
     // MARK: - Item Builders
 
+    /// One shared symbol configuration so every toolbar glyph renders at the
+    /// exact same size regardless of the symbol's intrinsic proportions.
+    private static let iconConfiguration = NSImage.SymbolConfiguration(
+        pointSize: 13, weight: .regular)
+
+    private static func icon(_ name: String, description: String) -> NSImage? {
+        NSImage(systemSymbolName: name, accessibilityDescription: description)?
+            .withSymbolConfiguration(iconConfiguration)
+    }
+
     private func makeSidebarToggle() -> NSToolbarItem {
         let item = NSToolbarItem(itemIdentifier: Self.sidebarToggleID)
         item.label = "Toggle Sidebar"
         item.paletteLabel = "Toggle Sidebar"
         item.toolTip = "Toggle Sidebar (⌘B)"
-        item.image = NSImage(
-            systemSymbolName: "sidebar.left",
-            accessibilityDescription: "Toggle Sidebar")
+        item.image = Self.icon("sidebar.left", description: "Toggle Sidebar")
         item.target = self
         item.action = #selector(toggleSidebar)
-        item.isBordered = true
+        // Plain glyph — no bordered (glass) capsule behind toolbar icons.
+        item.isBordered = false
         return item
     }
 
-    private func makeNewChat() -> NSToolbarItem {
-        let item = NSToolbarItem(itemIdentifier: Self.newChatID)
-        item.label = "New Chat"
-        item.paletteLabel = "New Chat"
-        item.toolTip = "New Chat (⌘T)"
-        item.image = NSImage(
-            systemSymbolName: "square.and.pencil",
-            accessibilityDescription: "New Chat")
+    private func makeSearch() -> NSToolbarItem {
+        let item = NSToolbarItem(itemIdentifier: Self.searchID)
+        item.label = "Search Chats"
+        item.paletteLabel = "Search Chats"
+        item.toolTip = "Search Chats"
+        item.image = Self.icon("magnifyingglass", description: "Search Chats")
         item.target = self
-        item.action = #selector(newChat)
-        item.isBordered = true
+        item.action = #selector(searchChats)
+        item.isBordered = false
         return item
     }
 
@@ -89,9 +96,9 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate {
         }
     }
 
-    @objc private func newChat() {
+    @objc private func searchChats() {
         if !viewModel.isSettingsOpen {
-            viewModel.startNewConversation(title: "New Chat")
+            viewModel.toggleSidebarSearch()
         }
     }
 }

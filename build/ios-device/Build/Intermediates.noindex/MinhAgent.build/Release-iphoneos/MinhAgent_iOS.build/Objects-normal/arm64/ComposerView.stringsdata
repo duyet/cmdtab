@@ -1,0 +1,184 @@
+{
+  "source": "/Users/duet/project/MinhAgent.app/Sources/Shared/ComposerView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "How can I help you today?",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 267
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dismiss clipboard",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 114
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear selected action",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 144
+        }
+      },
+      {
+        "comment": "",
+        "key": "More",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 200
+        }
+      },
+      {
+        "comment": "",
+        "key": "Attach photo",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 233
+        }
+      },
+      {
+        "comment": "",
+        "key": "Photo attached",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 239
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove photo",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 249
+        }
+      },
+      {
+        "comment": "",
+        "key": "Send message",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 417
+        }
+      },
+      {
+        "comment": "",
+        "key": "Inference",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 307
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cloud",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 308
+        }
+      },
+      {
+        "comment": "",
+        "key": "Local · On-device",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 310
+        }
+      },
+      {
+        "comment": "",
+        "key": "Local · Unavailable",
+        "location": {
+          "startingColumn": 78,
+          "startingLine": 310
+        }
+      },
+      {
+        "comment": "",
+        "key": "Local",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 318
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cloud",
+        "location": {
+          "startingColumn": 65,
+          "startingLine": 318
+        }
+      },
+      {
+        "comment": "",
+        "key": "Model",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 352
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reasoning",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 379
+        }
+      },
+      {
+        "comment": "",
+        "key": "Learn more",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 436
+        }
+      },
+      {
+        "comment": "",
+        "key": "Use Cloud",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 457
+        }
+      },
+      {
+        "comment": "",
+        "key": "On-device model (Apple Foundation Models)",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 442
+        }
+      },
+      {
+        "comment": "",
+        "key": "Until on-device inference is ready, MinhAgent uses your configured cloud API.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 448
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add your API key to use cloud models.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 475
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add API key",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 479
+        }
+      }
+    ]
+  },
+  "version": 1
+}

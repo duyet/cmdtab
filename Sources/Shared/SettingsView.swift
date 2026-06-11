@@ -21,55 +21,124 @@ public struct SettingsView: View {
     }
 
     public var body: some View {
-        NavigationSplitView {
-            settingsSidebar
-        } detail: {
-            VStack(spacing: 0) {
-                HStack(spacing: 12) {
-                    Text(selectedTitle)
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundColor(.primary)
-                    Spacer()
-                    closeButton
-                }
-                .padding(.horizontal, 28)
-                .padding(.top, 24)
-                .padding(.bottom, 18)
+        #if os(iOS)
+        iOSBody
+        #else
+        macOSBody
+        #endif
+    }
 
-                Rectangle()
-                    .fill(Color.hairline)
-                    .frame(height: 1)
+    #if os(iOS)
+    @State private var showAbout = false
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        switch selectedTab {
-                        case "profile":
-                            profileTabContent
-                        case "personalization":
-                            personalizationTabContent
-                        case "cloudmodel":
-                            cloudModelTabContent
-                        default:
-                            generalTabContent
-                        }
+    // iPhone settings: a grouped list that pushes each section full-screen,
+    // styled like the system Settings app. (NavigationSplitView collapses to a
+    // single floating column on compact widths, so iOS gets its own stack.)
+    private var iOSBody: some View {
+        NavigationStack {
+            List {
+                Section {
+                    settingsNavLink("General", icon: "gearshape") { generalTabContent }
+                    settingsNavLink("Profile", icon: "person.circle") { profileTabContent }
+                    settingsNavLink("Personalization", icon: "slider.horizontal.3") {
+                        personalizationTabContent
                     }
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 24)
-                    .frame(maxWidth: 780, alignment: .leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    settingsNavLink("Cloud Model", icon: "cloud") { cloudModelTabContent }
                 }
             }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
             .background(Color.appBackground)
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { closeButton }
+                ToolbarItem(placement: .topBarTrailing) { infoButton }
+            }
+            .alert("MinhAgent", isPresented: $showAbout) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("A native conversation workspace with clipboard Quick Actions and "
+                    + "on-device + cloud inference. Conversations stay in memory only.")
+            }
+        }
+    }
+
+    private var infoButton: some View {
+        Button { showAbout = true } label: {
+            Image(systemName: "info")
+                .font(.system(size: AppFont.pt(15), weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(width: 30, height: 30)
+                .background(Color.primary.opacity(0.06))
+                .clipShape(Circle())
+        }
+        .buttonStyle(PlainButtonStyle())
+        .accessibilityLabel("About MinhAgent")
+    }
+
+    private func settingsNavLink<Content: View>(
+        _ title: String, icon: String, @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        NavigationLink {
+            SettingsDetailScreen(title: title, onSave: { viewModel.savePresets() }) {
+                content()
+            }
+        } label: {
+            Label(title, systemImage: icon)
+                .font(.system(size: AppFont.pt(16)))
+        }
+    }
+    #else
+    private var macOSBody: some View {
+        // Content-only — sidebar nav is hosted in the main app sidebar.
+        settingsContentPane
+    }
+    #endif
+
+    /// macOS: settings detail content (title + scrollable tab content).
+    /// Used when the main sidebar replaces itself with settings navigation.
+    var settingsContentPane: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Text(selectedTitle)
+                    .font(.system(size: AppFont.pt(22), weight: .semibold))
+                    .foregroundColor(.primary)
+                Spacer()
+                closeButton
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 24)
+            .padding(.bottom, 18)
+
+            Rectangle()
+                .fill(Color.hairline)
+                .frame(height: 1)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    switch selectedTab {
+                    case "profile":
+                        profileTabContent
+                    case "personalization":
+                        personalizationTabContent
+                    case "cloudmodel":
+                        cloudModelTabContent
+                    default:
+                        generalTabContent
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.vertical, 24)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .background(Color.appBackground)
-        #if os(macOS)
-        .frame(minWidth: 700, minHeight: 500)
-        #endif
     }
 
     private func settingsSidebarItem(_ value: String, title: String, icon: String) -> some View {
         Label(title, systemImage: icon)
-            .font(.system(size: 15.5))
+            .font(.system(size: AppFont.pt(13)))
             .tag(value)
     }
 
@@ -79,7 +148,7 @@ public struct SettingsView: View {
             viewModel.toggleSettings()
         }) {
             Image(systemName: "xmark")
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: AppFont.pt(14), weight: .medium))
                 .foregroundColor(.secondary)
                 .frame(width: 30, height: 30)
                 .background(Color.primary.opacity(0.06))
@@ -124,7 +193,7 @@ public struct SettingsView: View {
             viewModel.settingsTab = value
         } label: {
             Label(title, systemImage: icon)
-                .font(.system(size: 15.5))
+                .font(.system(size: AppFont.pt(13)))
         }
     }
 
@@ -196,7 +265,7 @@ public struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     TextField("Your name", text: $viewModel.userName)
                         .textFieldStyle(PlainTextFieldStyle())
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: AppFont.pt(18), weight: .semibold))
                     Text("Used in the welcome headline")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -239,7 +308,7 @@ public struct SettingsView: View {
     private func profileStat(value: String, label: String) -> some View {
         VStack(spacing: 2) {
             Text(value)
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .font(.system(size: AppFont.pt(18), weight: .semibold, design: .rounded))
                 .foregroundColor(.primary)
             Text(label)
                 .font(.caption)
@@ -268,7 +337,7 @@ public struct SettingsView: View {
 
             settingsSection("CUSTOM INSTRUCTIONS") {
                 TextEditor(text: $viewModel.customInstructions)
-                    .font(.system(size: 12))
+                    .font(.system(size: AppFont.pt(12)))
                     .frame(height: 110)
                     .padding(6)
                     .background(Color.primary.opacity(0.04))
@@ -342,7 +411,7 @@ public struct SettingsView: View {
 
             settingsSection("ENDPOINT URL") {
                 TextField("https://...", text: $viewModel.endpointUrl)
-                    .font(.system(size: 13))
+                    .font(.system(size: AppFont.pt(13)))
                     .textFieldStyle(PlainTextFieldStyle())
                     .padding(8)
                     .background(Color.primary.opacity(0.04))
@@ -355,7 +424,7 @@ public struct SettingsView: View {
 
             settingsSection("API KEY / TOKEN (Keychain Protected)") {
                 SecureField("Enter API Token...", text: $viewModel.apiKey)
-                    .font(.system(size: 13))
+                    .font(.system(size: AppFont.pt(13)))
                     .textFieldStyle(PlainTextFieldStyle())
                     .padding(8)
                     .background(Color.primary.opacity(0.04))
@@ -401,12 +470,54 @@ public struct SettingsView: View {
     private func settingsSection<Content: View>(_ heading: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(heading)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: AppFont.pt(11), weight: .semibold))
                 .foregroundColor(.secondary)
             content()
         }
     }
 }
+
+#if os(iOS)
+// MARK: - Settings Detail Screen (iOS)
+/// A pushed settings section with a grouped background and a Done checkmark that
+/// saves and pops. Reads its own `dismiss` so the checkmark returns to the list.
+private struct SettingsDetailScreen<Content: View>: View {
+    let title: String
+    let onSave: () -> Void
+    @ViewBuilder var content: Content
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ScrollView {
+            content
+                .padding(.horizontal, 20)
+                .padding(.vertical, 20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .background(Color.appBackground)
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    onSave()
+                    dismiss()
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: AppFont.pt(14), weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .frame(width: 30, height: 30)
+                        .background(Color.primary.opacity(0.06))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(PlainButtonStyle())
+                .accessibilityLabel("Save and go back")
+            }
+        }
+    }
+}
+#endif
 
 extension View {
     @ViewBuilder

@@ -6,8 +6,10 @@
 	<string>MinhAgent_iOS</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleName</key>
-	<string>MinhAgent</string>
+			<key>CFBundleIconName</key>
+		<string>AppIcon</string>
+<key>CFBundleName</key>
+	<string>Minh Agent</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

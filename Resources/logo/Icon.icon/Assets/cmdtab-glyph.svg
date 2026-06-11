@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- cmdtab glyph only (transparent) — layer for Icon Composer -->
-  <!-- Refined ⌘: heavier monoline weight → a custom mark, not the thin system symbol -->
-  <g transform="translate(232 232) scale(23.3333)">
-    <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"
-          fill="none" stroke="#D97757" stroke-width="2.8"
-          stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-</svg>

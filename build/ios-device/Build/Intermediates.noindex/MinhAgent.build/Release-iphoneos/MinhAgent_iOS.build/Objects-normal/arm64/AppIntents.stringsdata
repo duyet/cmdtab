@@ -1,0 +1,144 @@
+{
+  "source": "/Users/duet/project/MinhAgent.app/Sources/iOS/AppIntents.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Quick Action",
+        "location": {
+          "startingColumn": 71,
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ask MinhAgent",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 76
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start a new chat and send a prompt to MinhAgent.",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "Prompt",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "What do you want to ask?",
+        "location": {
+          "startingColumn": 53,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "New MinhAgent Chat",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 97
+        }
+      },
+      {
+        "comment": "",
+        "key": "Open MinhAgent on a new, empty conversation.",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 98
+        }
+      },
+      {
+        "comment": "",
+        "key": "Starting text",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 101
+        }
+      },
+      {
+        "comment": "",
+        "key": "Run Quick Action",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "Run a MinhAgent Quick Action on some text.",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 119
+        }
+      },
+      {
+        "comment": "",
+        "key": "Quick Action",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "Text",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 125
+        }
+      },
+      {
+        "comment": "",
+        "key": "What text should it run on?",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 125
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ask",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 153
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Chat",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 162
+        }
+      },
+      {
+        "comment": "",
+        "key": "Quick Action",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 170
+        }
+      }
+    ]
+  },
+  "version": 1
+}

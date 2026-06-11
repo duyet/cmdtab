@@ -1,0 +1,40 @@
+{
+  "source": "/Users/duet/project/MinhAgent.app/Sources/Shared/MainView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "QUICK ACTIONS",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 245
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copy something for instant Quick Actions, or start with one of these.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 237
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copied",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 428
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copy message",
+        "location": {
+          "startingColumn": 61,
+          "startingLine": 428
+        }
+      }
+    ]
+  },
+  "version": 1
+}

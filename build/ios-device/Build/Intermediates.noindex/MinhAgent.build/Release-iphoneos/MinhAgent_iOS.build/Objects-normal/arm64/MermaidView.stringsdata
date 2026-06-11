@@ -1,0 +1,32 @@
+{
+  "source": "/Users/duet/project/MinhAgent.app/Sources/Shared/MermaidView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "diagram",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 17
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show diagram",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 27
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show source",
+        "location": {
+          "startingColumn": 67,
+          "startingLine": 27
+        }
+      }
+    ]
+  },
+  "version": 1
+}

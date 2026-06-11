@@ -169,7 +169,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "command.square", accessibilityDescription: "MinhAgent")
+            let icon = NSImage(contentsOf: Bundle.main.url(forResource: "StatusBarIconTemplate", withExtension: "png")!)
+                ?? NSImage(systemSymbolName: "command.square", accessibilityDescription: "MinhAgent")!
+            icon.size = NSSize(width: 16, height: 16)
+            icon.isTemplate = true
+            button.image = icon
         }
 
         let menu = NSMenu()
@@ -208,6 +212,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc public func openSettings() {
         showWindow()
         viewModel?.isSettingsOpen = true
+        viewModel?.loadApiKeyIfNeeded()
     }
 
     private func showWindow() {
@@ -276,6 +281,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     public func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         showWindow()
         return true
+    }
+
+    /// Quit when the last window is closed — no background mode.
+    public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
     }
 
     @objc public func quitApp() {

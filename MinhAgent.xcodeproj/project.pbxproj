@@ -18,11 +18,14 @@
 		2404865D8F2510EBC2AED855 /* Materials.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30FCB8C60651768C7CB7B439 /* Materials.swift */; };
 		36F7ACEFCC8CAC770B84637D /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEE1B0B5BDA275FD49AFF133 /* APIClient.swift */; };
 		3BA5295C92A15D0C12F4B928 /* App_iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7A6D4A0618C68AEA02CC60D /* App_iOS.swift */; };
+		AAAA22222222222222220002 /* AppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA22222222222222220001 /* AppIntents.swift */; };
 		45A6AD3315FB31103DC2CE99 /* App_macOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 603114E1CCC37F979DA54D57 /* App_macOS.swift */; };
 		46A3E170B9B8EFECDEF82B7C /* EnvFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137F604312A21B71885EC074 /* EnvFile.swift */; };
 		4957A9E63E691E04DFD761DB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3DF9D63B4A8192A8A5C2485 /* SettingsView.swift */; };
 		4B3FE6C018DD1233A5F21F92 /* MainViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7750A86EC4500D22B7A320AB /* MainViewModel.swift */; };
 		50EA20122C78921D89734CF1 /* MarkdownBlocks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D6010D44A2E098A5CF73AAE /* MarkdownBlocks.swift */; };
+		AAAA11111111111111110002 /* MathView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA11111111111111110001 /* MathView.swift */; };
+		AAAA11111111111111110003 /* MathView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAA11111111111111110001 /* MathView.swift */; };
 		51D9F2621EF36263FB76B84D /* MessageMarkdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2920F1BAF9BB9E965F263E2 /* MessageMarkdownView.swift */; };
 		55719AF93525CEC96F3FED51 /* MainWindowToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92151E8943D557ABB8A4A924 /* MainWindowToolbar.swift */; };
 		58867A47C4162B238C5622CF /* MessageMarkdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2920F1BAF9BB9E965F263E2 /* MessageMarkdownView.swift */; };
@@ -69,6 +72,7 @@
 /* Begin PBXFileReference section */
 		00BF16ACE972C96D47472A75 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		0D6010D44A2E098A5CF73AAE /* MarkdownBlocks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownBlocks.swift; sourceTree = "<group>"; };
+		AAAA11111111111111110001 /* MathView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathView.swift; sourceTree = "<group>"; };
 		137F604312A21B71885EC074 /* EnvFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvFile.swift; sourceTree = "<group>"; };
 		30FCB8C60651768C7CB7B439 /* Materials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Materials.swift; sourceTree = "<group>"; };
 		30FDC3EAE206BAFCEC9CA60D /* AppleIntelligenceAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntelligenceAudit.swift; sourceTree = "<group>"; };
@@ -103,6 +107,7 @@
 		E2920F1BAF9BB9E965F263E2 /* MessageMarkdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageMarkdownView.swift; sourceTree = "<group>"; };
 		E7FD6A653B25BEDCE6775023 /* MainWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindow.swift; sourceTree = "<group>"; };
 		F7A6D4A0618C68AEA02CC60D /* App_iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App_iOS.swift; sourceTree = "<group>"; };
+		AAAA22222222222222220001 /* AppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntents.swift; sourceTree = "<group>"; };
 			AA1ECAF0B8E54A1F8E3B7D01 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -172,6 +177,7 @@
 			isa = PBXGroup;
 			children = (
 				F7A6D4A0618C68AEA02CC60D /* App_iOS.swift */,
+				AAAA22222222222222220001 /* AppIntents.swift */,
 			);
 			path = iOS;
 			sourceTree = "<group>";
@@ -191,6 +197,7 @@
 				9272214ED728C2073401D053 /* MainView.swift */,
 				7750A86EC4500D22B7A320AB /* MainViewModel.swift */,
 				0D6010D44A2E098A5CF73AAE /* MarkdownBlocks.swift */,
+				AAAA11111111111111110001 /* MathView.swift */,
 				30FCB8C60651768C7CB7B439 /* Materials.swift */,
 				7FEC264E753363E971911091 /* MermaidView.swift */,
 				E2920F1BAF9BB9E965F263E2 /* MessageMarkdownView.swift */,
@@ -316,6 +323,7 @@
 				F2C74A87F451FF839DB1033B /* MainView.swift in Sources */,
 				ADA8943F4CC81CD34D31B708 /* MainViewModel.swift in Sources */,
 				50EA20122C78921D89734CF1 /* MarkdownBlocks.swift in Sources */,
+				AAAA11111111111111110002 /* MathView.swift in Sources */,
 				B9E4CB1477484F16F0993F51 /* Materials.swift in Sources */,
 				04B8A2F2269A859B229061AC /* MermaidView.swift in Sources */,
 				58867A47C4162B238C5622CF /* MessageMarkdownView.swift in Sources */,
@@ -329,6 +337,7 @@
 				CF4E8D2C8144FDCCCD7B990F /* UIComponents.swift in Sources */,
 				8E15014368EBC4D1970DFA65 /* WorkspaceComponents.swift in Sources */,
 				3BA5295C92A15D0C12F4B928 /* App_iOS.swift in Sources */,
+				AAAA22222222222222220002 /* AppIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -348,6 +357,7 @@
 				9235B21EFC7273DC0EB8E62E /* MainView.swift in Sources */,
 				4B3FE6C018DD1233A5F21F92 /* MainViewModel.swift in Sources */,
 				6B2AF93CADE70C2E5FC37465 /* MarkdownBlocks.swift in Sources */,
+				AAAA11111111111111110003 /* MathView.swift in Sources */,
 				2404865D8F2510EBC2AED855 /* Materials.swift in Sources */,
 				10BB80F5EC7665B20D536244 /* MermaidView.swift in Sources */,
 				51D9F2621EF36263FB76B84D /* MessageMarkdownView.swift in Sources */,

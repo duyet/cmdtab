@@ -417,6 +417,35 @@ func testMarkdownHashWithoutSpaceIsNotHeading() {
     }
 }
 
+func testMarkdownImageBlock() {
+    // WHY: a standalone image line must become an image block (rendered via
+    // AsyncImage), and its alt/url must round-trip for the renderer.
+    let blocks = MarkdownBlock.parse("before\n![A chart](https://x.dev/c.png)\nafter")
+    assert(blocks.count == 3, "expected 3 blocks, got \(blocks.count)")
+    if case .image = blocks[1].kind {
+        let parts = MarkdownBlock.imageParts(blocks[1].text)
+        assert(parts?.alt == "A chart", "alt must be extracted")
+        assert(parts?.url == "https://x.dev/c.png", "url must be extracted")
+    } else {
+        assert(false, "image line must parse as an image block")
+    }
+    assert(MarkdownBlock.imageParts("![x]()") == nil, "empty url must be rejected")
+}
+
+func testMarkdownNestedMixedListStaysOneBlock() {
+    // WHY: an indented ordered item under a bullet must NOT split the list —
+    // the renderer nests by indentation inside a single block.
+    let blocks = MarkdownBlock.parse("- parent\n  1. child\n- [x] done task")
+    assert(blocks.count == 1, "mixed nested list must stay one block, got \(blocks.count)")
+    if case .unorderedList = blocks[0].kind {
+        let lines = blocks[0].text.split(separator: "\n")
+        assert(lines.count == 3, "all three items must be kept")
+        assert(lines[1].hasPrefix("  "), "child indentation must be preserved")
+    } else {
+        assert(false, "block must keep the opening list kind")
+    }
+}
+
 func testEnvFileParsing() {
     let parsed = EnvFile.parse(
         contents: "# comment\nANYROUTER_API_KEY=sk-test\n"
@@ -467,6 +496,8 @@ func runAllTests() {
     testMarkdownBlockParsing()
     testMarkdownUnterminatedFenceIsCode()
     testMarkdownHashWithoutSpaceIsNotHeading()
+    testMarkdownImageBlock()
+    testMarkdownNestedMixedListStaysOneBlock()
     testEnvFileParsing()
     testClipboardSanitization()
     testKeychainCRUD()

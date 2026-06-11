@@ -49,6 +49,10 @@ struct MessageMarkdownView: View {
         case .code(let language):
             if language?.lowercased() == "mermaid", !block.text.isEmpty {
                 MermaidView(source: block.text, fontScale: fontScale)
+            } else if ["math", "latex", "tex", "katex"].contains(language?.lowercased() ?? ""),
+                !block.text.isEmpty
+            {
+                MathView(source: block.text, fontScale: fontScale)
             } else {
                 CodeBlockView(code: block.text, language: language, fontScale: fontScale)
             }
@@ -60,21 +64,23 @@ struct MessageMarkdownView: View {
                 .multilineTextAlignment(alignment)
         case .paragraph:
             Text(inlineMarkdown(block.text))
-                .font(.system(size: 13 * fontScale))
+                .font(.system(size: AppFont.pt(13) * fontScale))
                 .foregroundColor(.primary)
                 .lineSpacing(4)
                 .textSelection(.enabled)
                 .multilineTextAlignment(alignment)
-        case .unorderedList:
-            UnorderedListView(text: block.text, fontScale: fontScale)
-        case .orderedList:
-            OrderedListView(text: block.text, fontScale: fontScale)
+        case .unorderedList, .orderedList:
+            ListBlockView(text: block.text, fontScale: fontScale)
         case .blockquote:
             BlockquoteView(text: block.text, fontScale: fontScale)
         case .table:
             TableView(text: block.text, fontScale: fontScale)
         case .horizontalRule:
             HorizontalRuleView()
+        case .math:
+            MathView(source: block.text, fontScale: fontScale)
+        case .image:
+            MarkdownImageView(line: block.text, fontScale: fontScale)
         }
     }
 
@@ -98,12 +104,12 @@ private struct CodeBlockView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text(language?.isEmpty == false ? language! : "code")
-                    .font(.system(size: 10 * fontScale, weight: .medium))
+                    .font(.system(size: AppFont.pt(10) * fontScale, weight: .medium))
                     .foregroundColor(.secondary)
                 Spacer()
                 Button(action: copyCode) {
                     Image(systemName: copied ? "checkmark" : "square.on.square")
-                        .font(.system(size: 10))
+                        .font(.system(size: AppFont.pt(10)))
                         .foregroundColor(copied ? Color.accentCoral : .secondary)
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -118,7 +124,7 @@ private struct CodeBlockView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(code)
-                    .font(.system(size: 12 * fontScale, design: .monospaced))
+                    .font(.system(size: AppFont.pt(12) * fontScale, design: .monospaced))
                     .foregroundColor(.primary)
                     .lineSpacing(3)
                     .textSelection(.enabled)
@@ -149,73 +155,158 @@ private struct CodeBlockView: View {
     }
 }
 
-// MARK: - Unordered list
-private struct UnorderedListView: View {
+// MARK: - List block (nested, ordered/unordered/task items mixed)
+/// Renders each list line with its own marker: real source numbers for
+/// ordered items, level-aware bullets (• ◦ ▪) for unordered, and SF-symbol
+/// checkboxes for task items (- [ ] / - [x]). Indentation in the source
+/// (2 spaces per level) becomes visual nesting.
+private struct ListBlockView: View {
     let text: String
     let fontScale: Double
+
+    private struct Item {
+        let level: Int
+        let marker: Marker
+        let content: String
+
+        enum Marker {
+            case bullet
+            case number(String)
+            case checkbox(checked: Bool)
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                 HStack(alignment: .top, spacing: 8) {
-                    Text("•")
-                        .font(.system(size: 13 * fontScale))
-                        .foregroundColor(.secondary)
-                        .frame(width: 12, alignment: .leading)
-                    Text(inlineMarkdown(item))
-                        .font(.system(size: 13 * fontScale))
+                    markerView(item)
+                    Text(inlineMarkdown(item.content))
+                        .font(.system(size: AppFont.pt(13) * fontScale))
                         .foregroundColor(.primary)
                         .lineSpacing(4)
                         .textSelection(.enabled)
                 }
+                .padding(.leading, CGFloat(item.level) * 16)
             }
         }
     }
 
-    private var items: [String] {
-        text.split(separator: "\n", omittingEmptySubsequences: false).map { line in
-            // Strip leading "- ", "* ", "+ "
+    @ViewBuilder
+    private func markerView(_ item: Item) -> some View {
+        switch item.marker {
+        case .bullet:
+            Text(bulletSymbol(for: item.level))
+                .font(.system(size: AppFont.pt(13) * fontScale))
+                .foregroundColor(.secondary)
+                .frame(width: 14, alignment: .center)
+        case .number(let n):
+            Text("\(n).")
+                .font(.system(size: AppFont.pt(13) * fontScale, weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(minWidth: 20, alignment: .trailing)
+        case .checkbox(let checked):
+            Image(systemName: checked ? "checkmark.square.fill" : "square")
+                .font(.system(size: AppFont.pt(12) * fontScale))
+                .foregroundColor(checked ? Color.accentCoral : .secondary)
+                .frame(width: 14, alignment: .center)
+                .padding(.top, 1)
+        }
+    }
+
+    private func bulletSymbol(for level: Int) -> String {
+        switch level {
+        case 0: return "•"
+        case 1: return "◦"
+        default: return "▪"
+        }
+    }
+
+    private var items: [Item] {
+        text.split(separator: "\n", omittingEmptySubsequences: true).map { line in
+            let leadingSpaces = line.prefix(while: { $0 == " " }).count
+            let level = min(leadingSpaces / 2, 3)
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("- ") { return String(trimmed.dropFirst(2)) }
-            if trimmed.hasPrefix("* ") { return String(trimmed.dropFirst(2)) }
-            if trimmed.hasPrefix("+ ") { return String(trimmed.dropFirst(2)) }
-            return String(trimmed)
+
+            // Unordered marker
+            for prefix in ["- ", "* ", "+ "] where trimmed.hasPrefix(prefix) {
+                var rest = String(trimmed.dropFirst(prefix.count))
+                // Task item: [ ] / [x] / [X]
+                if rest.hasPrefix("[ ] ") {
+                    rest = String(rest.dropFirst(4))
+                    return Item(level: level, marker: .checkbox(checked: false), content: rest)
+                }
+                if rest.hasPrefix("[x] ") || rest.hasPrefix("[X] ") {
+                    rest = String(rest.dropFirst(4))
+                    return Item(level: level, marker: .checkbox(checked: true), content: rest)
+                }
+                return Item(level: level, marker: .bullet, content: rest)
+            }
+
+            // Ordered marker — keep the source's own number
+            let digits = trimmed.prefix(while: { $0.isNumber })
+            if !digits.isEmpty, trimmed.dropFirst(digits.count).hasPrefix(". ") {
+                let rest = String(trimmed.dropFirst(digits.count + 2))
+                return Item(level: level, marker: .number(String(digits)), content: rest)
+            }
+
+            return Item(level: level, marker: .bullet, content: String(trimmed))
         }
     }
 }
 
-// MARK: - Ordered list
-private struct OrderedListView: View {
-    let text: String
+// MARK: - Image block
+/// Renders a standalone `![alt](url)` line. Remote images load async with a
+/// progress placeholder; failures fall back to a quiet alt-text card.
+private struct MarkdownImageView: View {
+    let line: String
     let fontScale: Double
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                HStack(alignment: .top, spacing: 8) {
-                    Text("\(index + 1).")
-                        .font(.system(size: 13 * fontScale, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .frame(width: 20, alignment: .trailing)
-                    Text(inlineMarkdown(item))
-                        .font(.system(size: 13 * fontScale))
-                        .foregroundColor(.primary)
-                        .lineSpacing(4)
-                        .textSelection(.enabled)
+        if let parts = MarkdownBlock.imageParts(line), let url = URL(string: parts.url) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxHeight: 320)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.hairline))
+                case .failure:
+                    fallbackCard(parts.alt)
+                default:
+                    ProgressView()
+                        .controlSize(.small)
+                        .frame(maxWidth: .infinity, minHeight: 60)
+                        .background(Color.cardSurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
             }
+            .accessibilityLabel(parts.alt.isEmpty ? "Image" : parts.alt)
+        } else {
+            Text(line)
+                .font(.system(size: AppFont.pt(13) * fontScale))
+                .foregroundColor(.primary)
         }
     }
 
-    private var items: [String] {
-        text.split(separator: "\n", omittingEmptySubsequences: false).map { line in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            // Strip leading "1. ", "2. ", etc.
-            let digits = trimmed.prefix(while: { $0.isNumber })
-            let rest = trimmed.dropFirst(digits.count)
-            if rest.hasPrefix(". ") { return String(rest.dropFirst(2)) }
-            return String(trimmed)
+    private func fallbackCard(_ alt: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "photo")
+                .font(.system(size: AppFont.pt(11)))
+                .foregroundColor(.secondary)
+            Text(alt.isEmpty ? "Image unavailable" : alt)
+                .font(.system(size: AppFont.pt(12) * fontScale))
+                .foregroundColor(.secondary)
+                .lineLimit(2)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.cardSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.hairline))
     }
 }
 
@@ -231,7 +322,7 @@ private struct BlockquoteView: View {
                 .frame(width: 3)
 
             Text(inlineMarkdown(text))
-                .font(.system(size: 13 * fontScale))
+                .font(.system(size: AppFont.pt(13) * fontScale))
                 .foregroundColor(.primary.opacity(0.85))
                 .lineSpacing(4)
                 .textSelection(.enabled)
@@ -263,7 +354,7 @@ private struct TableView: View {
                 HStack(spacing: 0) {
                     ForEach(Array(header.enumerated()), id: \.offset) { _, cell in
                         Text(cell)
-                            .font(.system(size: 11 * fontScale, weight: .semibold))
+                            .font(.system(size: AppFont.pt(11) * fontScale, weight: .semibold))
                             .foregroundColor(.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 8)
@@ -277,7 +368,7 @@ private struct TableView: View {
                     HStack(spacing: 0) {
                         ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
                             Text(inlineMarkdown(cell))
-                                .font(.system(size: 12 * fontScale))
+                                .font(.system(size: AppFont.pt(12) * fontScale))
                                 .foregroundColor(.primary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 8)

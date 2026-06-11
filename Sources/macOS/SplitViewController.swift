@@ -8,12 +8,6 @@ final class SplitViewController: NSSplitViewController {
     private var sidebarSplitItem: NSSplitViewItem!
     private var detailSplitItem: NSSplitViewItem!
     private var cancellables = Set<AnyCancellable>()
-    private var sidebarAutoHidden = false
-    private var sidebarWasVisibleBeforeSettings: Bool?
-    /// While set in the future, suppresses the cramped-window auto-hide. Set
-    /// when the user explicitly opens the sidebar so the resize callbacks fired
-    /// by the open animation can't immediately slam it shut again.
-    private var suppressAutoHideUntil: Date = .distantPast
 
     init(viewModel: MainViewModel) {
         self.viewModel = viewModel
@@ -36,8 +30,12 @@ final class SplitViewController: NSSplitViewController {
 
         sidebarSplitItem = NSSplitViewItem(sidebarWithViewController: sidebarHC)
         sidebarSplitItem.canCollapse = true
-        sidebarSplitItem.minimumThickness = 220
-        sidebarSplitItem.maximumThickness = 400
+        // Minimum readable width — dragging below it collapses the sidebar
+        // (canCollapse), where the hover-on-left-edge floating mode takes over.
+        sidebarSplitItem.minimumThickness = 180
+        sidebarSplitItem.maximumThickness = 480
+        sidebarSplitItem.canCollapseFromWindowResize = false
+        sidebarSplitItem.holdingPriority = .init(260)
 
         detailSplitItem = NSSplitViewItem(viewController: detailHC)
 
@@ -53,14 +51,6 @@ final class SplitViewController: NSSplitViewController {
             }
             .store(in: &cancellables)
 
-        viewModel.$isSettingsOpen
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isOpen in
-                self?.syncSettingsPresentation(isOpen: isOpen)
-            }
-            .store(in: &cancellables)
-
         // Initial state: collapse if viewModel says hidden
         if !viewModel.isSidebarVisible {
             sidebarSplitItem.isCollapsed = true
@@ -70,31 +60,10 @@ final class SplitViewController: NSSplitViewController {
     // MARK: - viewModel → split view
 
     private func syncSplitView(visible: Bool) {
-        guard !viewModel.isSettingsOpen else { return }
         let collapsed = sidebarSplitItem.isCollapsed
         if visible == collapsed {
-            // An explicit open must win over the cramped-window auto-hide for
-            // the duration of the toggle animation; otherwise the resize
-            // callbacks it triggers would re-hide the sidebar on narrow windows.
-            if visible {
-                sidebarAutoHidden = false
-                suppressAutoHideUntil = Date().addingTimeInterval(0.7)
-            }
             toggleSidebar(sidebarSplitItem)
         }
-    }
-
-    private func syncSettingsPresentation(isOpen: Bool) {
-        if isOpen {
-            sidebarWasVisibleBeforeSettings = !sidebarSplitItem.isCollapsed
-            sidebarSplitItem.isCollapsed = true
-            sidebarAutoHidden = false
-            return
-        }
-
-        let shouldRestoreSidebar = sidebarWasVisibleBeforeSettings ?? viewModel.isSidebarVisible
-        sidebarWasVisibleBeforeSettings = nil
-        sidebarSplitItem.isCollapsed = !shouldRestoreSidebar
     }
 
     // MARK: - split view → viewModel
@@ -104,10 +73,9 @@ final class SplitViewController: NSSplitViewController {
 
         guard let sidebarSplitItem else { return }
 
-        if viewModel.isSettingsOpen { return }
-
         // Read actual sidebar width from the view controller's view rather than
         // indexing splitView.subviews, which is fragile across AppKit internals.
+        // No auto-hide: the user resizes freely; dragging to zero collapses.
         if !sidebarSplitItem.isCollapsed {
             let width = sidebarSplitItem.viewController.view.frame.width
             if width >= sidebarSplitItem.minimumThickness {
@@ -115,26 +83,10 @@ final class SplitViewController: NSSplitViewController {
             }
         }
 
-        // Auto-hide when main pane would get too cramped; restore with hysteresis.
-        let totalWidth = splitView.frame.width
-        let sidebarW =
-            sidebarSplitItem.isCollapsed
-            ? viewModel.sidebarWidth
-            : sidebarSplitItem.viewController.view.frame.width
-        let minMainPane: CGFloat = 380
-        let restoreSlack: CGFloat = 40
-
-        // Honour a just-issued explicit open: don't auto-hide mid-animation.
-        if Date() < suppressAutoHideUntil { return }
-
-        if !sidebarSplitItem.isCollapsed, totalWidth < sidebarW + minMainPane {
-            sidebarAutoHidden = true
-            viewModel.isSidebarVisible = false
-        } else if sidebarAutoHidden, sidebarSplitItem.isCollapsed,
-            totalWidth >= viewModel.sidebarWidth + minMainPane + restoreSlack
-        {
-            sidebarAutoHidden = false
-            viewModel.isSidebarVisible = true
+        // Keep the published flag in sync when the user drag-collapses the
+        // sidebar past its minimum (so hover-floating mode activates).
+        if sidebarSplitItem.isCollapsed == viewModel.isSidebarVisible {
+            viewModel.isSidebarVisible = !sidebarSplitItem.isCollapsed
         }
     }
 }

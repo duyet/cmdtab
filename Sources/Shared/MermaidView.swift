@@ -15,12 +15,12 @@ struct MermaidView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("diagram")
-                    .font(.system(size: 10 * fontScale, weight: .medium))
+                    .font(.system(size: AppFont.pt(10) * fontScale, weight: .medium))
                     .foregroundColor(.secondary)
                 Spacer()
                 Button(action: { showSource.toggle() }) {
                     Image(systemName: showSource ? "chart.bar.doc.horizontal" : "curlybraces")
-                        .font(.system(size: 10))
+                        .font(.system(size: AppFont.pt(10)))
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.borderless)
@@ -36,7 +36,7 @@ struct MermaidView: View {
             if showSource {
                 ScrollView(.horizontal, showsIndicators: false) {
                     Text(source)
-                        .font(.system(size: 12 * fontScale, design: .monospaced))
+                        .font(.system(size: AppFont.pt(12) * fontScale, design: .monospaced))
                         .foregroundColor(.primary)
                         .textSelection(.enabled)
                         .padding(12)

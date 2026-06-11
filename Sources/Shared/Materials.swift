@@ -9,7 +9,8 @@ struct SidebarSurface: ViewModifier {
     }
 }
 
-/// Raised card surface: solid system surface, hairline border, and a small shadow.
+/// Raised card surface: solid system surface, light hairline border, minimal shadow.
+/// Flat style matching Claude Code desktop — cards feel integrated, not floating.
 struct PlainCardSurface: ViewModifier {
     var cornerRadius: CGFloat
 
@@ -18,11 +19,10 @@ struct PlainCardSurface: ViewModifier {
             .background(Color.cardSurface)
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.hairline, lineWidth: 1)
+                    .stroke(Color.hairline.opacity(0.5), lineWidth: 1)
             )
             .cornerRadius(cornerRadius)
-            .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
-            .shadow(color: Color.black.opacity(0.09), radius: 18, y: 8)
+            .shadow(color: Color.black.opacity(0.03), radius: 2, y: 1)
     }
 }
 

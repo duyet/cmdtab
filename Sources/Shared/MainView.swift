@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 public struct MainView: View {
     @ObservedObject var viewModel: MainViewModel
@@ -8,37 +11,119 @@ public struct MainView: View {
     }
 
     #if os(iOS)
+    // Live drag translation while the user is dragging the drawer (nil = idle).
+    @State private var sidebarDrag: CGFloat?
+
+    private var drawerWidth: CGFloat { DeviceLayout.drawerWidth }
+
+    /// Current x-offset of the drawer: -drawerWidth (hidden) … 0 (open).
+    private var drawerOffset: CGFloat {
+        let base: CGFloat = viewModel.isSidebarVisible ? 0 : -drawerWidth
+        return min(0, max(-drawerWidth, base + (sidebarDrag ?? 0)))
+    }
+    /// 0 = closed, 1 = fully open. Drives scrim opacity + content peek.
+    private var drawerProgress: CGFloat { (drawerOffset + drawerWidth) / drawerWidth }
+    private var isDrawerInPlay: Bool { viewModel.isSidebarVisible || sidebarDrag != nil }
+
     public var body: some View {
         ZStack(alignment: .leading) {
+            // Content "card" that shrinks + slides as the drawer comes over it.
             mainContentPane
+                .scaleEffect(1 - 0.05 * drawerProgress, anchor: .trailing)
+                .offset(x: drawerProgress * 12)
+                .clipShape(RoundedRectangle(cornerRadius: 28 * drawerProgress, style: .continuous))
+                .disabled(isDrawerInPlay)
 
-            if viewModel.isSidebarVisible {
-                // Dimming scrim — tap to dismiss sidebar
-                Color.black.opacity(0.3)
+            // Left-edge grab strip — owns the open drag while the drawer is closed.
+            if !isDrawerInPlay && !viewModel.isSettingsOpen {
+                Color.clear
+                    .frame(width: 24)
+                    .frame(maxHeight: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .gesture(drawerDragGesture)
+            }
+
+            if isDrawerInPlay {
+                Color.black.opacity(0.28 * drawerProgress)
                     .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation(.easeInOut(duration: 0.25)) {
-                            viewModel.isSidebarVisible = false
-                        }
-                    }
-                    .transition(.opacity)
+                    .contentShape(Rectangle())
+                    .onTapGesture { setSidebar(false) }
+                    .gesture(drawerDragGesture)
 
                 SidebarView(viewModel: viewModel)
-                    .frame(width: DeviceLayout.sidebarWidth)
-                    .transition(.move(edge: .leading))
-                    .ignoresSafeArea(edges: .top)
+                    .frame(width: drawerWidth)
+                    .frame(maxHeight: .infinity)
+                    .background(Color.windowBackground)
+                    .clipShape(
+                        .rect(bottomTrailingRadius: 28, topTrailingRadius: 28, style: .continuous))
+                    .shadow(color: .black.opacity(0.18 * drawerProgress), radius: 24, x: 8, y: 0)
+                    .offset(x: drawerOffset)
+                    .ignoresSafeArea(edges: .vertical)
+                    .gesture(drawerDragGesture)
+            }
+
+            // Settings — full-screen top layer. Owns the whole frame so it
+            // covers the content + keyboard and reliably captures touches.
+            if viewModel.isSettingsOpen {
+                SettingsView(viewModel: viewModel)
+                    .background(Color.appBackground.ignoresSafeArea())
+                    .transition(.move(edge: .bottom))
+                    .zIndex(2)
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: viewModel.isSidebarVisible)
+        .animation(.easeInOut(duration: 0.3), value: viewModel.isSettingsOpen)
         .platformFrame()
         .background(Color.creamBackground)
         .tint(.primary)
         .textSelection(.enabled)
-
-        // Settings overlay
-        if viewModel.isSettingsOpen {
-            settingsOverlay
+        .onChange(of: viewModel.isSidebarVisible) { _, visible in
+            if visible { dismissKeyboard() }
         }
+        .onChange(of: viewModel.isSettingsOpen) { _, open in
+            if open {
+                viewModel.isSidebarVisible = false
+                dismissKeyboard()
+            }
+        }
+    }
+
+    /// Resign the first responder so the software keyboard hides.
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+
+    private func setSidebar(_ open: Bool) {
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+            viewModel.isSidebarVisible = open
+            sidebarDrag = nil
+        }
+    }
+
+    /// Single interactive gesture: the drawer tracks the finger, then snaps
+    /// open/closed on release based on distance + fling velocity.
+    private var drawerDragGesture: some Gesture {
+        DragGesture(minimumDistance: 6)
+            .onChanged { value in
+                guard !viewModel.isSettingsOpen else { return }
+                if viewModel.isSidebarVisible {
+                    sidebarDrag = min(0, value.translation.width)   // drag left to close
+                } else {
+                    sidebarDrag = max(0, value.translation.width)   // drag right to open
+                }
+            }
+            .onEnded { value in
+                guard !viewModel.isSettingsOpen else { return }
+                let projected = value.translation.width + value.predictedEndTranslation.width
+                let open: Bool
+                if viewModel.isSidebarVisible {
+                    open = projected > -drawerWidth * 0.4
+                } else {
+                    open = projected > drawerWidth * 0.3
+                }
+                if open { dismissKeyboard() }
+                setSidebar(open)
+            }
     }
     #else
     // macOS: MainView is not instantiated (WindowController hosts views separately).
@@ -55,7 +140,7 @@ public struct MainView: View {
             HStack {
                 if !viewModel.isSidebarVisible {
                     PlainIconButton(systemName: "sidebar.left", size: 13, help: "Show Sidebar") {
-                        withAnimation(.easeInOut(duration: 0.25)) { viewModel.isSidebarVisible.toggle() }
+                        setSidebar(true)
                     }
                     .padding(.leading, 16)
                 }
@@ -73,13 +158,6 @@ public struct MainView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.creamBackground)
-    }
-
-    // MARK: - Settings Overlay
-    private var settingsOverlay: some View {
-        SettingsView(viewModel: viewModel)
-            .ignoresSafeArea()
-            .transaction { $0.animation = nil }
     }
 
     private var hasMessages: Bool {
@@ -142,43 +220,88 @@ public struct MainView: View {
 
     // MARK: - Landing View
     private var emptyLandingView: some View {
-        VStack(spacing: 0) {
-            Spacer()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                // Hero greeting — large, friendly, left-aligned for mobile.
+                VStack(alignment: .leading, spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: AppFont.pt(30), weight: .semibold))
+                        .foregroundColor(Color.accentCoral)
+                        .padding(.bottom, 4)
 
-            Image(systemName: "command")
-                .font(.system(size: 34, weight: .semibold, design: .rounded))
-                .foregroundColor(Color.accentCoral)
+                    Text(welcomeHeadline)
+                        .font(.system(size: AppFont.pt(34), weight: .bold))
+                        .foregroundColor(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
 
-            Text(welcomeHeadline)
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundColor(.primary)
-                .padding(.top, 16)
-
-            Text("Copy something to get quick actions, or start with one of these.")
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
-                .padding(.top, 6)
-
-            VStack(spacing: 8) {
-                StarterCard(icon: "doc.on.clipboard", title: "Summarize my clipboard") {
-                    viewModel.prefillComposer("Summarize this for me: ")
+                    Text("Copy something for instant Quick Actions, or start with one of these.")
+                        .font(.system(size: AppFont.pt(16)))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                StarterCard(icon: "envelope", title: "Draft an email") {
-                    viewModel.prefillComposer("Draft a short, friendly email about ")
-                }
-                StarterCard(icon: "lightbulb", title: "Explain a concept") {
-                    viewModel.prefillComposer("Explain in plain language: ")
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 24)
+
+                Text("QUICK ACTIONS")
+                    .font(.system(size: AppFont.pt(12), weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .padding(.top, 32)
+                    .padding(.bottom, 12)
+
+                // Suggestion pills are the user's saved Quick Actions (presets).
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 130), spacing: 10)],
+                    alignment: .leading,
+                    spacing: 10
+                ) {
+                    ForEach(viewModel.presets) { preset in
+                        PresetPill(name: preset.name, icon: preset.sfSymbol) {
+                            viewModel.startNewConversation(title: preset.name, presetId: preset.id)
+                        }
+                    }
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 26)
-
-            Spacer()
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
         }
+        .scrollDismissesKeyboard(.interactively)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     #endif
 }
+
+#if os(iOS)
+// MARK: - Preset Pill (mobile homepage)
+/// Compact suggestion pill backed by a saved Quick Action (preset):
+/// icon + name on a hairline-bordered capsule (assistant-ui style).
+struct PresetPill: View {
+    let name: String
+    let icon: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: AppFont.pt(14), weight: .medium))
+                    .foregroundColor(Color.accentCoral)
+                Text(name)
+                    .font(.system(size: AppFont.pt(15), weight: .medium))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .background(Color.cardSurface)
+            .clipShape(Capsule())
+            .overlay(Capsule().strokeBorder(Color.hairline))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+#endif
 
 // MARK: - Starter Card (empty-state suggestion)
 struct StarterCard: View {
@@ -193,14 +316,13 @@ struct StarterCard: View {
         Button(action: action) {
             HStack(spacing: 7) {
                 Image(systemName: icon)
-                    .font(.system(size: 12))
+                    .font(.system(size: AppFont.pt(12)))
                     .foregroundColor(.secondary)
                 Text(title)
-                    .font(.system(size: 12.5))
+                    .font(.system(size: AppFont.pt(12.5)))
                     .foregroundColor(.primary.opacity(0.85))
                     .lineLimit(1)
             }
-            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 13)
             .padding(.vertical, 9)
             #if os(macOS)
@@ -246,20 +368,28 @@ struct MessageRow: View {
                         if let action = message.actionLabel {
                             HStack(spacing: 5) {
                                 Image(systemName: "bolt.fill")
-                                    .font(.system(size: 9))
+                                    .font(.system(size: AppFont.pt(9)))
                                 Text(action)
-                                    .font(.system(size: 11, weight: .semibold))
+                                    .font(.system(size: AppFont.pt(11), weight: .semibold))
                             }
                             .foregroundColor(Color.accentCoral)
                         }
 
                         if message.isQuote {
-                            // Quoted clipboard text with an accent bar.
+                            // Quoted text, assistant-ui style: a quote glyph +
+                            // italic gray text sitting above the user's words.
                             HStack(alignment: .top, spacing: 8) {
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color.accentCoral.opacity(0.6))
-                                    .frame(width: 3)
-                                markdownText
+                                Image(systemName: "quote.opening")
+                                    .font(.system(size: AppFont.pt(12)))
+                                    .foregroundColor(.secondary.opacity(0.6))
+                                    .padding(.top, 1)
+                                Text(message.content)
+                                    .font(.system(size: AppFont.pt(14)))
+                                    .italic()
+                                    .foregroundColor(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .textSelection(.enabled)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         } else {
                             markdownText
@@ -287,11 +417,11 @@ struct MessageRow: View {
                 // Meta row: timestamp + copy
                 HStack(spacing: 8) {
                     Text(message.timestamp, style: .time)
-                        .font(.system(size: 10))
+                        .font(.system(size: AppFont.pt(10)))
                         .foregroundColor(.secondary.opacity(0.7))
                     Button(action: copyMessage) {
                         Image(systemName: copied ? "checkmark" : "square.on.square")
-                            .font(.system(size: 10))
+                            .font(.system(size: AppFont.pt(10)))
                             .foregroundColor(copied ? Color.accentCoral : .secondary.opacity(0.7))
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -324,10 +454,10 @@ struct MessageRow: View {
     private var errorCard: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 12))
+                .font(.system(size: AppFont.pt(12)))
                 .foregroundColor(.red.opacity(0.85))
             Text(message.content)
-                .font(.system(size: 13 * viewModel.fontScale))
+                .font(.system(size: AppFont.pt(13) * viewModel.fontScale))
                 .foregroundColor(.primary.opacity(0.85))
                 .textSelection(.enabled)
         }
@@ -344,7 +474,7 @@ struct MessageRow: View {
     /// Native markdown rendering (inline syntax: bold, italic, code, links).
     private var markdownText: some View {
         Text(attributedContent)
-            .font(.system(size: 13 * viewModel.fontScale))
+            .font(.system(size: AppFont.pt(13) * viewModel.fontScale))
             .foregroundColor(.primary)
             .lineSpacing(4)
             .textSelection(.enabled)

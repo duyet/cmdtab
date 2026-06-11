@@ -1,0 +1,56 @@
+{
+  "source": "/Users/duet/project/MinhAgent.app/Sources/Shared/WorkspaceComponents.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "·",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld chars",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dismiss clipboard",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clipboard detected",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 101
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld chars",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 111
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dismiss clipboard",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 120
+        }
+      }
+    ]
+  },
+  "version": 1
+}

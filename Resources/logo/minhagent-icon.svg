@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- MinhAgent iOS app icon — monochrome girl face avatar on white.
+       iOS masks the corners into a squircle. -->
+  <rect width="1024" height="1024" fill="#FFFFFF"/>
+
+  <g fill="none" stroke="#000000" stroke-width="28"
+     stroke-linecap="round" stroke-linejoin="round">
+    <!-- Hair -->
+    <path d="M330 478
+             C330 338 412 252 512 252
+             C612 252 694 338 694 478
+             C694 572 680 652 654 724"/>
+    <path d="M330 478
+             C330 572 344 652 370 724"/>
+    <!-- Face -->
+    <path d="M386 452
+             C386 566 442 642 512 642
+             C582 642 638 566 638 452"/>
+    <!-- Hair parting -->
+    <path d="M512 256 L512 322"/>
+    <!-- Smile -->
+    <path d="M470 560 C492 580 532 580 554 560"/>
+  </g>
+
+  <g fill="#000000">
+    <circle cx="452" cy="478" r="17"/>
+    <circle cx="572" cy="478" r="17"/>
+  </g>
+</svg>

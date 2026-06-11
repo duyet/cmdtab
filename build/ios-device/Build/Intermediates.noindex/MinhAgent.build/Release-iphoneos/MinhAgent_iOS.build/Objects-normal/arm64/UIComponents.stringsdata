@@ -1,0 +1,16 @@
+{
+  "source": "/Users/duet/project/MinhAgent.app/Sources/Shared/UIComponents.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 30
+        }
+      }
+    ]
+  },
+  "version": 1
+}

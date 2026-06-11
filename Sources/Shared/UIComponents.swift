@@ -8,7 +8,7 @@ struct KeycapBadge: View {
 
     var body: some View {
         Text(label)
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .font(.system(size: AppFont.pt(11), weight: .semibold, design: .rounded))
             .foregroundColor(.secondary)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
@@ -28,7 +28,7 @@ struct NumberKeycap: View {
 
     var body: some View {
         Text("\(number)")
-            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .font(.system(size: AppFont.pt(11), weight: .bold, design: .rounded))
             .foregroundColor(.secondary)
             .frame(width: 20, height: 20)
             .background(Color.keycapFill)

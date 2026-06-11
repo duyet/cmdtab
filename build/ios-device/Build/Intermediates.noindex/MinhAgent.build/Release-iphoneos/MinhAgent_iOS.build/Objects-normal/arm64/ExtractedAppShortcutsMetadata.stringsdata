@@ -1,0 +1,86 @@
+{
+  "source" : "\/Users\/duet\/project\/MinhAgent.app\/Sources\/iOS\/AppIntents.swift",
+  "tables" : {
+    "AppShortcuts" : [
+      {
+        "appShortcutMetadata" : [
+          {
+            "actionIdentifier" : "AskMinhAgentIntent",
+            "index" : 0,
+            "parameterDisplayRepresentations" : {
+
+            },
+            "parameterTypes" : {
+
+            },
+            "title" : "Ask MinhAgent"
+          }
+        ],
+        "key" : "Ask ${applicationName}",
+        "location" : {
+          "startingColumn" : 0,
+          "startingLine" : 146
+        },
+        "values" : [
+          "Ask ${applicationName}",
+          "Ask a question in ${applicationName}"
+        ]
+      },
+      {
+        "appShortcutMetadata" : [
+          {
+            "actionIdentifier" : "NewChatIntent",
+            "index" : 1,
+            "parameterDisplayRepresentations" : {
+
+            },
+            "parameterTypes" : {
+
+            },
+            "title" : "New MinhAgent Chat"
+          }
+        ],
+        "key" : "New chat in ${applicationName}",
+        "location" : {
+          "startingColumn" : 0,
+          "startingLine" : 146
+        },
+        "values" : [
+          "New chat in ${applicationName}",
+          "Start a ${applicationName} chat"
+        ]
+      },
+      {
+        "appShortcutMetadata" : [
+          {
+            "actionIdentifier" : "RunQuickActionIntent",
+            "index" : 2,
+            "parameterDisplayRepresentations" : {
+              "PresetEntity" : [
+                "Quick Action"
+              ]
+            },
+            "parameterTypes" : {
+              "action" : "PresetEntity"
+            },
+            "title" : "Run Quick Action"
+          }
+        ],
+        "key" : "Run a ${applicationName} Quick Action",
+        "location" : {
+          "startingColumn" : 0,
+          "startingLine" : 146
+        },
+        "values" : [
+          "Run a ${applicationName} Quick Action"
+        ]
+      }
+    ],
+    "Localizable" : [
+      {
+        "key" : "Run ${action} on ${text}"
+      }
+    ]
+  },
+  "version" : 2
+}

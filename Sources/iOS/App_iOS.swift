@@ -49,6 +49,8 @@ class SceneDelegate: UIResponder, UISceneDelegate {
             let vm = appDelegate.viewModel
         else { return }
         self.viewModel = vm
+        // Expose the live view model to App Intents so opened intents can route.
+        AppIntentRouter.shared.viewModel = vm
 
         let rootView = MainView(viewModel: vm)
         let hostingController = UIHostingController(rootView: rootView)
@@ -61,6 +63,8 @@ class SceneDelegate: UIResponder, UISceneDelegate {
 
     func sceneDidBecomeActive(_ scene: UIScene) {
         viewModel?.handleActivation()
+        // Apply any pending App Intent now that the scene is live.
+        AppIntentRouter.shared.flush()
     }
 }
 #endif

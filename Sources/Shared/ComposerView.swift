@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(PhotosUI)
+import PhotosUI
+#endif
 
 // MARK: - Composer View
 /// Hero rounded card: optional clipboard quote block + preset chips row (when clipboard
@@ -8,10 +11,12 @@ struct ComposerView: View {
     // Composer-local state: keystrokes re-render ONLY this view, never the
     // whole window — keeps typing latency imperceptible.
     @State private var inputMessageText: String = ""
-    @State private var pulseOpacity: Double = 0.3
     @FocusState private var isInputFocused: Bool
     @State private var showLocalHelp: Bool = false
-    @State private var isQuoteExpanded: Bool = false
+    #if os(iOS)
+    @State private var photoItem: PhotosPickerItem?
+    @State private var hasPhoto: Bool = false
+    #endif
 
     private var modelOptions: [(id: String, label: String, icon: String)] {
         ModelCatalog.entries.map { (id: $0.id, label: $0.displayName, icon: $0.sfSymbol) }
@@ -22,36 +27,46 @@ struct ComposerView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            streamingIndicator
-
-            // 1. Quote block (clipboard present)
-            if hasClipboard {
-                clipboardQuoteBlock
-                presetChipsRow
-                Divider()
-                    .background(Color.hairline)
+        VStack(spacing: 8) {
+            // 1. Clipboard/preset context — its OWN card floating above the
+            //    input (Claude desktop style). Tapping a preset chip sends
+            //    the quoted clipboard text immediately.
+            if let sel = viewModel.selectedPresetIndex, sel < viewModel.presets.count {
+                selectedPresetBlock(viewModel.presets[sel])
+                    .plainCardSurface(cornerRadius: 12)
+            } else if hasClipboard {
+                VStack(spacing: 0) {
+                    clipboardQuoteBlock
+                    presetList
+                }
+                .plainCardSurface(cornerRadius: 12)
             }
 
-            // 2. Text input
-            textField
+            // 2. Input card: text field on top, controls docked inside at the
+            //    bottom ("+", model badge, send).
+            VStack(spacing: 0) {
+                #if os(iOS)
+                attachmentRow
+                #endif
 
-            // 3. Bottom controls row
-            controlsRow
+                textField
 
-            // 4. Local-model availability notice (Apple Foundation Models)
-            if viewModel.isLocalModelSelected && !viewModel.isLocalModelSupported {
-                localUnavailableNotice
+                // Local-model availability notice (Apple Foundation Models)
+                if viewModel.isLocalModelSelected && !viewModel.isLocalModelSupported {
+                    localUnavailableNotice
+                }
+
+                // Missing API key CTA (cloud mode, key checked lazily)
+                if !viewModel.isLocalModelSelected && viewModel.hasLoadedApiKey && viewModel.apiKey.isEmpty {
+                    missingKeyNotice
+                }
+
+                controlsRow
             }
-
-            // 5. Missing API key CTA (cloud mode, key checked lazily)
-            if !viewModel.isLocalModelSelected && viewModel.hasLoadedApiKey && viewModel.apiKey.isEmpty {
-                missingKeyNotice
-            }
+            .plainCardSurface(cornerRadius: 12)
         }
-        .plainCardSurface(cornerRadius: 24)
-        .padding(.horizontal, 20)
-        .padding(.bottom, 16)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 12)
         .onAppear { isInputFocused = true }
         .onFocusTick(of: viewModel.composerFocusTick) {
             if !viewModel.composerPrefill.isEmpty {
@@ -62,171 +77,269 @@ struct ComposerView: View {
         }
     }
 
-    // MARK: Streaming indicator (thin coral stripe at top)
-    @ViewBuilder
-    private var streamingIndicator: some View {
-        if viewModel.isStreaming {
-            Rectangle()
-                .fill(Color.accentCoral.opacity(0.7))
-                .frame(height: 2)
-                .cornerRadius(2)
-                .opacity(pulseOpacity)
-                .onAppear {
-                    withAnimation(Animation.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
-                        pulseOpacity = 0.9
-                    }
-                }
-                .onDisappear { pulseOpacity = 0.3 }
+    // MARK: Clipboard quote — single-line preview with quote glyph.
+    private var clipboardQuoteBlock: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "quote.opening")
+                .font(.system(size: AppFont.pt(11)))
+                .foregroundColor(.secondary.opacity(0.5))
+
+            Text(viewModel.detectedClipboardText.trimmingCharacters(in: .whitespacesAndNewlines))
+                .font(.system(size: AppFont.pt(12)))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button(action: { viewModel.dismissClipboardBanner() }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: AppFont.pt(10)))
+                    .foregroundColor(.secondary.opacity(0.5))
+            }
+            .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel("Dismiss clipboard")
         }
+        .padding(.horizontal, 14)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
     }
 
-    // MARK: Clipboard quote block (inside card, darker inset)
-    private var clipboardQuoteBlock: some View {
+    // MARK: Selected preset header — small line above the text input
+    private func selectedPresetBlock(_ preset: Preset) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            // Header row
-            HStack(spacing: 6) {
-                Image(systemName: "arrow.turn.up.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.secondary)
-                Text("Text from your clipboard")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.primary)
-                Image(systemName: isQuoteExpanded ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 8, weight: .semibold))
-                    .foregroundColor(.secondary.opacity(0.6))
+            HStack(spacing: 5) {
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: AppFont.pt(9)))
+                Text(preset.name)
+                    .font(.system(size: AppFont.pt(11), weight: .semibold))
                 Spacer()
-                Button(action: { viewModel.dismissClipboardBanner() }) {
+                Button(action: { viewModel.selectedPresetIndex = nil }) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 10))
+                        .font(.system(size: AppFont.pt(9)))
                         .foregroundColor(.secondary.opacity(0.6))
                 }
                 .buttonStyle(PlainButtonStyle())
-                .accessibilityLabel("Dismiss clipboard")
+                .accessibilityLabel("Clear selected action")
             }
-            // Preview: one line collapsed; click to expand with scrollbar.
-            if isQuoteExpanded {
-                ScrollView {
+            .foregroundColor(Color.accentCoral)
+
+            // Quoted clipboard line — only when clipboard text is the input.
+            if hasClipboard {
+                HStack(alignment: .top, spacing: 8) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.accentCoral.opacity(0.6))
+                        .frame(width: 3)
                     Text(viewModel.detectedClipboardText.trimmingCharacters(in: .whitespacesAndNewlines))
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .font(.system(size: AppFont.pt(12)))
+                        .foregroundColor(.primary.opacity(0.85))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
-                .frame(maxHeight: 160)
-            } else {
-                Text(viewModel.detectedClipboardText.trimmingCharacters(in: .whitespacesAndNewlines))
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.easeOut(duration: 0.15)) { isQuoteExpanded.toggle() }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
         .background(Color.primary.opacity(0.04))
-        .cornerRadius(16, corners: [.topLeft, .topRight])
     }
 
-    // MARK: Preset chips row (horizontal scrolling, inside card)
-    private var presetChipsRow: some View {
+    // MARK: Preset chips — horizontal scrolling row above the text input.
+    private var presetList: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                ForEach(Array(viewModel.presets.prefix(9).enumerated()), id: \.offset) { index, preset in
-                    InlinePresetChip(
-                        title: preset.name,
-                        icon: preset.sfSymbol,
-                        action: { viewModel.runPresetWithClipboard(index: index) }
-                    )
+                ForEach(Array(viewModel.presets.enumerated()), id: \.offset) { index, preset in
+                    // Tapping a preset runs it against the clipboard right away.
+                    Button { viewModel.runPresetWithClipboard(index: index) } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: preset.sfSymbol)
+                                .font(.system(size: AppFont.pt(10)))
+                            Text(preset.name)
+                                .font(.system(size: AppFont.pt(12)))
+                                .lineLimit(1)
+                        }
+                        .foregroundColor(.primary.opacity(0.85))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.primary.opacity(0.06))
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
         }
+        .padding(.top, 6)
+        .padding(.bottom, 10)
     }
 
-    // MARK: Text field
+    #if os(iOS)
+    // MARK: Attachment row — photo attach affordance above the input box.
+    // NOTE: UI surface only; the cloud SSE path is text-only, so attached
+    // photos are not yet sent to the model (pending vision support).
+    private var attachmentRow: some View {
+        HStack(spacing: 10) {
+            PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
+                Image(systemName: "paperclip")
+                    .font(.system(size: AppFont.pt(15), weight: .medium))
+                    .foregroundColor(.secondary)
+                    .frame(width: 32, height: 32)
+                    .background(Color.primary.opacity(0.05))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel("Attach photo")
+
+            if hasPhoto {
+                HStack(spacing: 6) {
+                    Image(systemName: "photo")
+                        .font(.system(size: AppFont.pt(12)))
+                    Text("Photo attached")
+                        .font(.system(size: AppFont.pt(12)))
+                    Button {
+                        photoItem = nil
+                        hasPhoto = false
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: AppFont.pt(10)))
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .accessibilityLabel("Remove photo")
+                }
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.primary.opacity(0.05))
+                .clipShape(Capsule())
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+        .onChange(of: photoItem) { _, item in hasPhoto = (item != nil) }
+    }
+    #endif
+
+    // MARK: Text field — multiline, reserves two lines of height so the
+    // composer reads as a roomy input box (Claude desktop style).
     private var textField: some View {
-        TextField("How can I help you today?", text: $inputMessageText, onCommit: send)
-            .font(.system(size: 15))
+        TextField("How can I help you today?", text: $inputMessageText, axis: .vertical)
+            .font(.system(size: AppFont.pt(13.5)))
+            .lineLimit(2...6)
             .textFieldStyle(PlainTextFieldStyle())
             .foregroundColor(.primary)
             .focused($isInputFocused)
-            .padding(.horizontal, 18)
-            .padding(.top, 14)
-            .padding(.bottom, 10)
+            .onSubmit(send)
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 6)
     }
 
-    // MARK: Bottom controls row
+    // MARK: Controls row — "+" quick actions, model badge, send. Docked
+    // INSIDE the input card along its bottom edge.
     private var controlsRow: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
+            plusButton
             Spacer()
-
-            // Mode + model dropdowns sit close together as one cluster, set
-            // apart from the send button.
-            HStack(spacing: 2) {
-                localCloudToggle
-
-                if !viewModel.isLocalModelSelected {
-                    modelPicker
-
-                    // Reasoning effort — only for cloud models that support it.
-                    if viewModel.modelSupportsReasoning {
-                        reasoningEffortPicker
-                    }
-                }
-            }
-            .padding(.trailing, 2)
-
+            modelBadge
             sendButton
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .padding(.bottom, 8)
+        .padding(.top, 2)
     }
 
-    // MARK: Cloud / Local dropdown (Codex-style "Start in" menu)
-    private var localCloudToggle: some View {
+    // MARK: Plus button — quick access to saved Quick Actions.
+    private var plusButton: some View {
         Menu {
-            // Inline Picker gets the native checkmark on the selected row
-            // while keeping each row's own icon.
-            Picker("Inference", selection: $viewModel.isLocalModelSelected) {
-                Label("Cloud", systemImage: "cloud").tag(false)
-                Label(
-                    viewModel.isLocalModelSupported ? "Local · On-device" : "Local · Unavailable",
-                    systemImage: "cpu"
-                ).tag(true)
+            ForEach(Array(viewModel.presets.enumerated()), id: \.offset) { index, preset in
+                Button {
+                    viewModel.selectedPresetIndex = index
+                } label: {
+                    Label(preset.name, systemImage: preset.sfSymbol)
+                }
             }
-            .pickerStyle(.inline)
-            .labelsHidden()
         } label: {
-            HStack(spacing: 5) {
-                Text(viewModel.isLocalModelSelected ? "Local" : "Cloud")
-                    .font(.system(size: 12))
-                Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
-                    .font(.system(size: 10))
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .semibold))
-            }
-            .foregroundColor(.secondary)
+            Image(systemName: "plus")
+                .font(.system(size: AppFont.pt(9), weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(width: 17, height: 17)
+                .background(Color.primary.opacity(0.05))
+                .clipShape(Circle())
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .modifier(MenuTriggerHover())
+        .buttonStyle(PlainButtonStyle())
+        .accessibilityLabel("Quick actions")
+        #if os(macOS)
+        .help("Quick Actions")
+        #endif
+    }
+
+    // MARK: Model badge — compact icon menu combining cloud/local + model + reasoning.
+    private var modelBadge: some View {
+        Menu {
+            Section {
+                Picker("Inference", selection: $viewModel.isLocalModelSelected) {
+                    Label("Cloud", systemImage: "cloud").tag(false)
+                    Label(
+                        viewModel.isLocalModelSupported ? "Local · On-device" : "Local · Unavailable",
+                        systemImage: "cpu"
+                    ).tag(true)
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+            }
+
+            if !viewModel.isLocalModelSelected {
+                Section {
+                    Picker("Model", selection: $viewModel.modelName) {
+                        ForEach(modelOptions, id: \.id) { option in
+                            Label(option.label, systemImage: option.icon).tag(option.id)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                }
+
+                if viewModel.modelSupportsReasoning {
+                    Section {
+                        Picker("Reasoning", selection: $viewModel.reasoningEffort) {
+                            ForEach(ModelCatalog.reasoningEfforts, id: \.self) { effort in
+                                Text(effort.capitalized).tag(effort)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                        .labelsHidden()
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
+                    .font(.system(size: AppFont.pt(9)))
+                    .foregroundColor(.secondary)
+                if !viewModel.isLocalModelSelected {
+                    Text(currentModelLabel)
+                        .font(.system(size: AppFont.pt(10)))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .buttonStyle(PlainButtonStyle())
         #if os(macOS)
         .help(
             viewModel.isLocalModelSelected
-                ? "Using on-device Apple Intelligence (Foundation Models)"
-                : "Using \(URL(string: viewModel.endpointUrl)?.host ?? "cloud") · \(currentModelLabel)"
+                ? "On-device Apple Intelligence"
+                : "\(currentModelLabel) · \(URL(string: viewModel.endpointUrl)?.host ?? "cloud")"
         )
         #endif
     }
 
-    // MARK: Model picker — borderless text menu (no popup chrome)
+    // MARK: Model label helpers (used by modelBadge)
     private var currentModelLabel: String {
         modelOptions.first(where: { $0.id == viewModel.modelName })?.label
             ?? (viewModel.modelName.isEmpty ? "Model" : viewModel.modelName)
@@ -236,69 +349,13 @@ struct ComposerView: View {
         modelOptions.first(where: { $0.id == viewModel.modelName })?.icon ?? "cloud"
     }
 
-    private var modelPicker: some View {
-        Menu {
-            Picker("Model", selection: $viewModel.modelName) {
-                ForEach(modelOptions, id: \.id) { option in
-                    Label(option.label, systemImage: option.icon).tag(option.id)
-                }
-            }
-            .pickerStyle(.inline)
-            .labelsHidden()
-        } label: {
-            HStack(spacing: 5) {
-                Text(currentModelLabel)
-                    .font(.system(size: 12))
-                Image(systemName: currentModelIcon)
-                    .font(.system(size: 10))
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .semibold))
-            }
-            .foregroundColor(.secondary)
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .modifier(MenuTriggerHover())
-    }
-
-    // MARK: Reasoning effort picker (cloud models that support it)
-    private var reasoningEffortPicker: some View {
-        Menu {
-            Picker("Reasoning", selection: $viewModel.reasoningEffort) {
-                ForEach(ModelCatalog.reasoningEfforts, id: \.self) { effort in
-                    Text(effort.capitalized).tag(effort)
-                }
-            }
-            .pickerStyle(.inline)
-            .labelsHidden()
-        } label: {
-            HStack(spacing: 5) {
-                Image(systemName: "brain")
-                    .font(.system(size: 10))
-                Text(viewModel.reasoningEffort.capitalized)
-                    .font(.system(size: 12))
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .semibold))
-            }
-            .foregroundColor(.secondary)
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .modifier(MenuTriggerHover())
-        #if os(macOS)
-        .help("Reasoning effort")
-        #endif
-    }
-
     // MARK: Send button — coral when active
     private var sendButton: some View {
         Button(action: send) {
             Image(systemName: "arrow.up")
-                .font(.system(size: 12, weight: .bold))
+                .font(.system(size: AppFont.pt(10), weight: .bold))
                 .foregroundColor(canSend ? .white : .secondary.opacity(0.4))
-                .frame(width: 30, height: 30)
+                .frame(width: 24, height: 24)
                 .background(canSend ? Color.accentCoral : Color.primary.opacity(0.07))
                 .clipShape(Circle())
         }
@@ -315,16 +372,16 @@ struct ComposerView: View {
     private var localUnavailableNotice: some View {
         HStack(spacing: 6) {
             Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 10))
+                .font(.system(size: AppFont.pt(10)))
                 .foregroundColor(.orange)
             Text(LocalModelClient.shared.availability.unavailableReason ?? "On-device model unavailable.")
-                .font(.system(size: 11))
+                .font(.system(size: AppFont.pt(11)))
                 .foregroundColor(.secondary)
                 .lineLimit(1)
             Spacer()
             Button("Learn more") { showLocalHelp = true }
                 .buttonStyle(PlainButtonStyle())
-                .font(.system(size: 11))
+                .font(.system(size: AppFont.pt(11)))
                 .foregroundColor(.secondary)
                 .popover(isPresented: $showLocalHelp, arrowEdge: .top) {
                     VStack(alignment: .leading, spacing: 10) {
@@ -335,7 +392,7 @@ struct ComposerView: View {
                         AppleIntelligenceAuditView(compact: true)
 
                         Text("Until on-device inference is ready, MinhAgent uses your configured cloud API.")
-                            .font(.system(size: 11))
+                            .font(.system(size: AppFont.pt(11)))
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -347,7 +404,7 @@ struct ComposerView: View {
                 viewModel.isLocalModelSelected = false
             }
             .buttonStyle(PlainButtonStyle())
-            .font(.system(size: 11, weight: .semibold))
+            .font(.system(size: AppFont.pt(11), weight: .semibold))
             .foregroundColor(Color.accentCoral)
         }
         .padding(.horizontal, 16)
@@ -359,17 +416,17 @@ struct ComposerView: View {
     private var missingKeyNotice: some View {
         HStack(spacing: 6) {
             Image(systemName: "key")
-                .font(.system(size: 10))
+                .font(.system(size: AppFont.pt(10)))
                 .foregroundColor(.secondary)
             Text("Add your API key to use cloud models.")
-                .font(.system(size: 11))
+                .font(.system(size: AppFont.pt(11)))
                 .foregroundColor(.secondary)
             Spacer()
             Button("Add API key") {
                 viewModel.openSettings(tab: "cloudmodel")
             }
             .buttonStyle(PlainButtonStyle())
-            .font(.system(size: 11, weight: .semibold))
+            .font(.system(size: AppFont.pt(11), weight: .semibold))
             .foregroundColor(Color.accentCoral)
         }
         .padding(.horizontal, 16)
@@ -378,56 +435,26 @@ struct ComposerView: View {
     }
 
     private var canSend: Bool {
-        !inputMessageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !viewModel.isStreaming
+        guard !viewModel.isStreaming else { return false }
+        if viewModel.selectedPresetIndex != nil && hasClipboard { return true }
+        return !inputMessageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private func send() {
+        guard canSend else { return }
+        // A picked Quick Action runs against the clipboard text on send,
+        // or against the typed text when there is no clipboard.
+        if let sel = viewModel.selectedPresetIndex {
+            if hasClipboard {
+                viewModel.runPresetWithClipboard(index: sel)
+            } else {
+                viewModel.runPresetWithInput(index: sel, content: inputMessageText)
+            }
+            inputMessageText = ""
+            return
+        }
         viewModel.sendMessage(content: inputMessageText)
         inputMessageText = ""
-    }
-}
-
-// MARK: - Inline Preset Chip (inside composer)
-private struct InlinePresetChip: View {
-    let title: String
-    let icon: String
-    let action: () -> Void
-    #if os(macOS)
-    @State private var isHovered = false
-    #endif
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 10))
-                    #if os(macOS)
-                .foregroundColor(isHovered ? Color.accentCoral : .secondary)
-                    #else
-                .foregroundColor(.secondary)
-                    #endif
-                Text(title)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            #if os(macOS)
-            .background(Color.primary.opacity(isHovered ? 0.08 : 0.05))
-            #else
-            .background(Color.primary.opacity(0.05))
-            #endif
-            .overlay(
-                Capsule()
-                    .stroke(Color.hairline, lineWidth: 1)
-            )
-            .clipShape(Capsule())
-        }
-        .buttonStyle(PlainButtonStyle())
-        #if os(macOS)
-        .onHover { h in withAnimation(.easeOut(duration: 0.1)) { isHovered = h } }
-        #endif
     }
 }
 
@@ -497,36 +524,5 @@ extension View {
         } else {
             self.onChange(of: value) { _ in action() }
         }
-    }
-}
-
-// MARK: - Menu trigger hover treatment
-/// Quiet pill highlight + pointing-hand cursor so the borderless dropdown
-/// triggers read as clickable controls.
-private struct MenuTriggerHover: ViewModifier {
-    @State private var isHovered = false
-
-    func body(content: Content) -> some View {
-        content
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(isHovered ? Color.primary.opacity(0.07) : Color.clear)
-            .clipShape(Capsule())
-            .contentShape(Capsule())
-            .onHover { hovering in
-                withAnimation(.easeOut(duration: 0.12)) { isHovered = hovering }
-                #if os(macOS)
-                if hovering {
-                    NSCursor.pointingHand.push()
-                } else {
-                    NSCursor.pop()
-                }
-                #endif
-            }
-            #if os(macOS)
-        .onDisappear {
-            if isHovered { NSCursor.pop() }
-        }
-            #endif
     }
 }

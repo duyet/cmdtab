@@ -26,6 +26,12 @@ mv MinhAgent_iOS MinhAgent_iOS.app/MinhAgent_iOS
 cp Resources/iOS_Info.plist MinhAgent_iOS.app/Info.plist
 cp Resources/PrivacyInfo.xcprivacy MinhAgent_iOS.app/PrivacyInfo.xcprivacy
 
+echo "Compiling app icon..."
+xcrun actool --compile MinhAgent_iOS.app \
+    --app-icon AppIcon --output-partial-info-plist /tmp/minhagent_ios_icon_partial.plist \
+    --platform iphonesimulator --minimum-deployment-target 26.0 \
+    Assets.xcassets > /dev/null
+
 echo "Ad-hoc signing executable and iOS app bundle..."
 codesign -s - --force MinhAgent_iOS.app/MinhAgent_iOS
 codesign -s - --force MinhAgent_iOS.app

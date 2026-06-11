@@ -1,0 +1,88 @@
+{
+  "source": "/Users/duet/project/MinhAgent.app/Sources/Shared/SidebarView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Search chats",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 83
+        }
+      },
+      {
+        "comment": "",
+        "key": "MinhAgent",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your chats live here.\nThey stay in memory and never touch disk.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 175
+        }
+      },
+      {
+        "comment": "",
+        "key": "How to use MinhAgent",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 363
+        }
+      },
+      {
+        "comment": "",
+        "key": "Shown when clipboard text is detected. Drag to reorder.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 457
+        }
+      },
+      {
+        "comment": "",
+        "key": "Action name",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 517
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 528
+        }
+      },
+      {
+        "comment": "",
+        "key": "Conversation name",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 595
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rename",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 584
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 587
+        }
+      }
+    ]
+  },
+  "version": 1
+}

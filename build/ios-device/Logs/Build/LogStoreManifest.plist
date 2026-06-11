@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>logFormatVersion</key>
+	<integer>13</integer>
+	<key>logs</key>
+	<dict>
+		<key>747F922C-6F9C-4ED3-A58C-79778B3071FB</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>747F922C-6F9C-4ED3-A58C-79778B3071FB.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>W</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>1</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>MinhAgent project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>MinhAgent_iOS</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project MinhAgent with scheme MinhAgent_iOS and configuration Release</string>
+			<key>timeStartedRecording</key>
+			<real>802868516.93814898</real>
+			<key>timeStoppedRecording</key>
+			<real>802868523.18948996</real>
+			<key>title</key>
+			<string>Building project MinhAgent with scheme MinhAgent_iOS and configuration Release</string>
+			<key>uniqueIdentifier</key>
+			<string>747F922C-6F9C-4ED3-A58C-79778B3071FB</string>
+		</dict>
+		<key>7F0DCEDC-8CCC-4579-83F5-5E00B626B0FA</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>7F0DCEDC-8CCC-4579-83F5-5E00B626B0FA.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>W</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>12</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>MinhAgent project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>MinhAgent_iOS</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project MinhAgent with scheme MinhAgent_iOS and configuration Release</string>
+			<key>timeStartedRecording</key>
+			<real>802868333.61310005</real>
+			<key>timeStoppedRecording</key>
+			<real>802868345.27944398</real>
+			<key>title</key>
+			<string>Building project MinhAgent with scheme MinhAgent_iOS and configuration Release</string>
+			<key>uniqueIdentifier</key>
+			<string>7F0DCEDC-8CCC-4579-83F5-5E00B626B0FA</string>
+		</dict>
+		<key>94F1B072-CB1F-4F49-A6B0-F61B13F87B75</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>94F1B072-CB1F-4F49-A6B0-F61B13F87B75.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>W</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>1</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>MinhAgent project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>MinhAgent_iOS</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project MinhAgent with scheme MinhAgent_iOS and configuration Release</string>
+			<key>timeStartedRecording</key>
+			<real>802867947.54936004</real>
+			<key>timeStoppedRecording</key>
+			<real>802867951.74033105</real>
+			<key>title</key>
+			<string>Building project MinhAgent with scheme MinhAgent_iOS and configuration Release</string>
+			<key>uniqueIdentifier</key>
+			<string>94F1B072-CB1F-4F49-A6B0-F61B13F87B75</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

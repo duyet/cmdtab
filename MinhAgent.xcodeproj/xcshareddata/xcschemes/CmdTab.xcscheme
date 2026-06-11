@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "3873CC2CA3BCDEE6E629FD20"
-               BuildableName = "CmdTab.app"
+               BuildableName = "MinhAgent.app"
                BlueprintName = "MinhAgent"
-               ReferencedContainer = "container:CmdTab.xcodeproj">
+               ReferencedContainer = "container:MinhAgent.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -46,8 +46,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "3873CC2CA3BCDEE6E629FD20"
-            BuildableName = "CmdTab.app"
-            ReferencedContainer = "container:CmdTab.xcodeproj">
+            BuildableName = "MinhAgent.app"
+            ReferencedContainer = "container:MinhAgent.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "3873CC2CA3BCDEE6E629FD20"
-            BuildableName = "CmdTab.app"
+            BuildableName = "MinhAgent.app"
             BlueprintName = "MinhAgent"
-            ReferencedContainer = "container:CmdTab.xcodeproj">
+            ReferencedContainer = "container:MinhAgent.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

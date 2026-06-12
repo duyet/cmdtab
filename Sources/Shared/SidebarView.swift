@@ -6,7 +6,6 @@ import SwiftUI
 /// No shadows, no card borders — native SF type and quiet grays only.
 struct SidebarView: View {
     @ObservedObject var viewModel: MainViewModel
-    var widthOverride: CGFloat? = nil
     @State private var showHelp = false
     @State private var searchText = ""
     @FocusState private var searchFocused: Bool
@@ -16,9 +15,9 @@ struct SidebarView: View {
             #if os(iOS)
             topToolbarRow
             #else
-            // macOS: spacer to push content below the titlebar row.
-            // The actual toolbar icons are overlaid via the ZStack below.
-            Color.clear.frame(height: 28)
+            // macOS: content starts below the opaque title bar; small
+            // breathing room before the mode tabs.
+            Color.clear.frame(height: 4)
             #endif
 
             // When settings is open, sidebar shows settings navigation.
@@ -40,17 +39,13 @@ struct SidebarView: View {
         }
         .frame(maxHeight: .infinity)
         #if os(macOS)
-        .frame(width: widthOverride ?? viewModel.sidebarWidth)
-        // White sidebar background.
-        .background(Color.white)
-        // Trailing border (gray) to separate from main content
+        .background(Color.windowBackground)
+        // Trailing hairline to separate from main content
         .overlay(alignment: .trailing) {
             Rectangle()
-                .fill(Color.gray.opacity(0.18))
+                .fill(Color.hairline)
                 .frame(width: 1)
-                .ignoresSafeArea(.container, edges: .top)
         }
-        .ignoresSafeArea(.container, edges: .top)
         .onChange(of: viewModel.isSidebarSearchVisible) { _, visible in
             if visible { searchFocused = true } else { searchText = "" }
         }
@@ -140,15 +135,10 @@ struct SidebarView: View {
                 }
             }
             .foregroundColor(isSelected ? .primary : .secondary.opacity(0.7))
-            .frame(maxWidth: isSelected ? .infinity : nil)
-            .padding(.horizontal, isSelected ? 8 : 10)
-            .padding(.vertical, 9)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
             .background(isSelected ? Color.appBackground : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 6))
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .strokeBorder(isSelected ? Color.hairline : Color.clear)
-            )
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())

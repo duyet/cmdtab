@@ -6,14 +6,16 @@ public final class MainWindow: NSWindow {
     public init(contentRect: NSRect) {
         super.init(
             contentRect: contentRect,
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
 
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         self.titleVisibility = .hidden
-        self.titlebarAppearsTransparent = true
+        // Opaque title bar — content scrolls beneath it without bleeding
+        // through toolbar icons.
+        self.titlebarAppearsTransparent = false
         self.backgroundColor = .windowBackgroundColor
         self.isOpaque = true
         self.hasShadow = true

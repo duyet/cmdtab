@@ -5,9 +5,6 @@ import SwiftUI
 struct DetailContentView: View {
     @ObservedObject var viewModel: MainViewModel
 
-    /// Floating sidebar shown when the docked sidebar is hidden and the
-    /// pointer rests on the window's left edge (Claude-app style).
-    @State private var isHoverSidebarVisible = false
     @State private var showRequestInfoDialog = false
 
     var body: some View {
@@ -26,16 +23,11 @@ struct DetailContentView: View {
                 mainContentPane
             }
 
-            hoverSidebarLayer
-
             // Command-palette search overlay
             if viewModel.isSearchPaletteVisible {
                 SearchPaletteView(viewModel: viewModel)
                     .transition(.opacity)
             }
-        }
-        .onChange(of: viewModel.isSidebarVisible) { _, _ in
-            isHoverSidebarVisible = false
         }
         .animation(.easeInOut(duration: 0.18), value: viewModel.isSettingsOpen)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -51,53 +43,12 @@ struct DetailContentView: View {
                 }
                 .padding(.trailing, 16)
                 .padding(.top, 4)
-                .ignoresSafeArea(.container, edges: .top)
             }
         }
         // Sheet modal for Raw Request details
         .sheet(isPresented: $showRequestInfoDialog) {
             RawRequestSheet(viewModel: viewModel, isPresented: $showRequestInfoDialog)
         }
-    }
-
-    @ViewBuilder
-    private var hoverSidebarLayer: some View {
-        if !viewModel.isSidebarVisible && !viewModel.isSettingsOpen {
-            GeometryReader { proxy in
-                let width = hoverSidebarWidth(for: proxy.size.width)
-                ZStack(alignment: .topLeading) {
-                    Color.clear
-                        .frame(width: 12)
-                        .frame(maxHeight: .infinity)
-                        .contentShape(Rectangle())
-                        .onHover { hovering in
-                            if hovering {
-                                withAnimation(.easeOut(duration: 0.18)) {
-                                    isHoverSidebarVisible = true
-                                }
-                            }
-                        }
-
-                    if isHoverSidebarVisible {
-                        SidebarView(viewModel: viewModel, widthOverride: width)
-                            .shadow(color: .black.opacity(0.16), radius: 18, x: 4, y: 6)
-                            .padding(.vertical, 2)
-                            .onHover { hovering in
-                                if !hovering {
-                                    withAnimation(.easeOut(duration: 0.18)) {
-                                        isHoverSidebarVisible = false
-                                    }
-                                }
-                            }
-                            .transition(.move(edge: .leading).combined(with: .opacity))
-                    }
-                }
-            }
-        }
-    }
-
-    private func hoverSidebarWidth(for detailWidth: CGFloat) -> CGFloat {
-        min(max(220, detailWidth - 48), min(viewModel.sidebarWidth, 320))
     }
 
     // MARK: - Main Content Pane

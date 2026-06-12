@@ -343,7 +343,7 @@ struct ComposerView: View {
             }
         } label: {
             Image(systemName: "plus")
-                .font(.system(size: AppFont.pt(11)))
+                .font(.system(size: AppFont.pt(12)))
                 .frame(width: composerIconFrame, height: composerIconFrame)
                 .foregroundColor(.secondary)
         }
@@ -355,7 +355,7 @@ struct ComposerView: View {
         #else
         PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
             Image(systemName: "plus")
-                .font(.system(size: AppFont.pt(11)))
+                .font(.system(size: AppFont.pt(12)))
                 .frame(width: composerIconFrame, height: composerIconFrame)
                 .foregroundColor(.secondary)
         }
@@ -371,7 +371,7 @@ struct ComposerView: View {
                 viewModel.isLocalModelSelected.toggle()
             }) {
                 Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
-                    .font(.system(size: AppFont.pt(11)))
+                    .font(.system(size: AppFont.pt(12)))
                     .frame(width: composerIconFrame, height: composerIconFrame)
                     .foregroundColor(.secondary)
             }
@@ -449,12 +449,12 @@ struct ComposerView: View {
     private func modelMenuLabel(_ title: String) -> some View {
         HStack(spacing: 6) {
             Text(title)
-                .font(.system(size: AppFont.pt(10.5), weight: .medium))
+                .font(.system(size: AppFont.pt(11), weight: .medium))
                 .foregroundColor(.secondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
             Image(systemName: "chevron.down")
-                .font(.system(size: AppFont.pt(7.5), weight: .semibold))
+                .font(.system(size: AppFont.pt(8), weight: .semibold))
                 .foregroundColor(.secondary.opacity(0.65))
                 .frame(width: 9, height: 9)
         }
@@ -466,9 +466,9 @@ struct ComposerView: View {
     private var sendButton: some View {
         Button(action: send) {
             Image(systemName: "arrow.up")
-                .font(.system(size: AppFont.pt(11), weight: .bold))
+                .font(.system(size: AppFont.pt(13), weight: .bold))
                 .foregroundColor(canSend ? .white : .secondary.opacity(0.4))
-                .frame(width: 26, height: 26)
+                .frame(width: 30, height: 30)
                 .background(canSend ? Color.accentCoral : Color.primary.opacity(0.07))
                 .clipShape(Circle())
         }
@@ -626,8 +626,8 @@ struct ComposerView: View {
                 }
             }
         } label: {
-            Image(systemName: "wrench.and.screwdriver")
-                .font(.system(size: AppFont.pt(10), weight: .medium))
+            Image(systemName: "wrench.adjustable")
+                .font(.system(size: AppFont.pt(12)))
                 .frame(width: composerIconFrame, height: composerIconFrame)
                 .foregroundColor(.secondary)
         }

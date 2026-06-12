@@ -104,12 +104,12 @@ private struct CodeBlockView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text(language?.isEmpty == false ? language! : "code")
-                    .font(.system(size: AppFont.pt(10), weight: .medium))
+                    .font(.system(size: AppFont.pt(11), weight: .medium))
                     .foregroundColor(.secondary)
                 Spacer()
                 Button(action: copyCode) {
                     Image(systemName: copied ? "checkmark" : "square.on.square")
-                        .font(.system(size: AppFont.pt(10)))
+                        .font(.system(size: AppFont.pt(11)))
                         .foregroundColor(copied ? Color.accentCoral : .secondary)
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -119,8 +119,8 @@ private struct CodeBlockView: View {
                 #endif
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(Color.primary.opacity(0.04))
+            .padding(.vertical, 8)
+            .background(Color.subtleFill)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(code)
@@ -361,7 +361,7 @@ private struct TableView: View {
                             .padding(.vertical, 6)
                     }
                 }
-                .background(Color.primary.opacity(0.05))
+                .background(Color.subtleFill)
 
                 // Data rows
                 ForEach(Array(rows.dropFirst().enumerated()), id: \.offset) { _, row in

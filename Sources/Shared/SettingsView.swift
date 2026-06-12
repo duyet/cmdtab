@@ -116,21 +116,16 @@ public struct SettingsView: View {
                 .frame(height: 1)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    switch selectedTab {
-                    case "profile":
-                        profileTabContent
-                    case "personalization":
-                        personalizationTabContent
-                    case "cloudmodel":
-                        cloudModelTabContent
-                    default:
-                        generalTabContent
-                    }
+                switch selectedTab {
+                case "profile":
+                    profileTabContent
+                case "personalization":
+                    personalizationTabContent
+                case "cloudmodel":
+                    cloudModelTabContent
+                default:
+                    generalTabContent
                 }
-                .padding(.horizontal, 28)
-                .padding(.vertical, 24)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .background(Color.appBackground)
@@ -199,21 +194,36 @@ public struct SettingsView: View {
 
     // MARK: - General Tab (theme, font, language)
     private var generalTabContent: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            #if os(macOS)
-            settingsSection("APPEARANCE") {
-                Picker("", selection: $viewModel.appearanceMode) {
+        #if os(macOS)
+        Form {
+            Section("Appearance") {
+                Picker("Theme", selection: $viewModel.appearanceMode) {
                     Text("System").tag("system")
                     Text("Light").tag("light")
                     Text("Dark").tag("dark")
                 }
                 .pickerStyle(SegmentedPickerStyle())
-                .labelsHidden()
-                .frame(maxWidth: 240, alignment: .leading)
-            }
-            #endif
 
-            #if os(iOS)
+                Picker("Font Size", selection: $viewModel.fontScale) {
+                    Text("Small").tag(CGFloat(0.9))
+                    Text("Medium").tag(CGFloat(1.0))
+                    Text("Large").tag(CGFloat(1.1))
+                }
+                .pickerStyle(SegmentedPickerStyle())
+            }
+
+            Section("Language") {
+                Picker("Response Language", selection: $viewModel.preferredLanguage) {
+                    ForEach(languages, id: \.self) { lang in
+                        Text(lang).tag(lang)
+                    }
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        #else
+        VStack(alignment: .leading, spacing: 20) {
             // Apple Intelligence status — prominent on iOS
             settingsSection("APPLE INTELLIGENCE") {
                 VStack(alignment: .leading, spacing: 12) {
@@ -223,11 +233,10 @@ public struct SettingsView: View {
                         .background(LocalModelClient.shared.availability.isAvailable
                             ? Color.blue.opacity(0.06) : Color.primary.opacity(0.03))
                         .cornerRadius(10)
-                    
+
                     localModelDetailsView
                 }
             }
-            #endif
 
             settingsSection("FONT SIZE") {
                 Picker("", selection: $viewModel.fontScale) {
@@ -246,19 +255,60 @@ public struct SettingsView: View {
                         Text(lang).tag(lang)
                     }
                 }
-                #if os(macOS)
-                .pickerStyle(PopUpButtonPickerStyle())
-                #else
                 .pickerStyle(MenuPickerStyle())
-                #endif
                 .labelsHidden()
                 .frame(maxWidth: 220, alignment: .leading)
             }
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        #endif
     }
 
     // MARK: - Profile Tab (name + activity)
     private var profileTabContent: some View {
+        #if os(macOS)
+        Form {
+            Section {
+                HStack(spacing: 14) {
+                    AvatarCircle(
+                        initials: profileInitials,
+                        diameter: 48,
+                        color: Color.accentCoral
+                    )
+                    VStack(alignment: .leading, spacing: 4) {
+                        TextField("Your name", text: $viewModel.userName)
+                            .textFieldStyle(PlainTextFieldStyle())
+                            .font(.system(size: AppFont.pt(17), weight: .semibold))
+                        Text("Used in the welcome headline")
+                            .font(.system(size: AppFont.pt(11)))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+
+            Section(
+                header: Text("Activity"),
+                footer: Text("Conversations are stored locally on this device and never leave it.")
+                    .font(.system(size: AppFont.pt(11)))
+            ) {
+                HStack(spacing: 0) {
+                    profileStat(value: "\(viewModel.conversations.count)", label: "Conversations")
+                    Divider().frame(height: 32)
+                    profileStat(
+                        value: "\(viewModel.conversations.reduce(0) { $0 + $1.messages.count })",
+                        label: "Messages")
+                    Divider().frame(height: 32)
+                    profileStat(value: "\(viewModel.presets.count)", label: "Actions")
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
+        }
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        #else
         VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 14) {
                 AvatarCircle(
@@ -297,10 +347,13 @@ public struct SettingsView: View {
                 .cornerRadius(10)
             }
 
-            Text("Conversations are kept in memory only and reset when the app quits.")
+            Text("Conversations are stored locally on this device and never leave it.")
                 .font(.caption)
                 .foregroundColor(.secondary.opacity(0.8))
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        #endif
     }
 
     private var profileInitials: String {
@@ -323,6 +376,51 @@ public struct SettingsView: View {
 
     // MARK: - Personalization Tab
     private var personalizationTabContent: some View {
+        #if os(macOS)
+        Form {
+            Section("Personality") {
+                Picker("Style", selection: $viewModel.personality) {
+                    ForEach(MainViewModel.personalityOptions, id: \.id) { option in
+                        Text(option.label).tag(option.id)
+                    }
+                }
+            }
+
+            Section(
+                header: Text("System Prompt"),
+                footer: Text("Overrides the built-in system instructions.")
+                    .font(.system(size: AppFont.pt(11)))
+            ) {
+                TextEditor(text: $viewModel.systemPrompt)
+                    .font(.system(size: AppFont.pt(12)))
+                    .frame(minHeight: 80)
+                Button("Reset to Default") {
+                    viewModel.systemPrompt = MainViewModel.defaultSystemPrompt
+                }
+                .foregroundColor(.accentCoral)
+            }
+
+            Section(
+                header: Text("Custom Instructions"),
+                footer: Text("Added to every conversation's system prompt.")
+                    .font(.system(size: AppFont.pt(11)))
+            ) {
+                TextEditor(text: $viewModel.customInstructions)
+                    .font(.system(size: AppFont.pt(12)))
+                    .frame(minHeight: 100)
+            }
+
+            Section("Memories") {
+                Toggle("Enable memories", isOn: $viewModel.memoriesEnabled)
+                    .disabled(true)
+                Text("Let MinhAgent remember facts across conversations. Coming soon.")
+                    .font(.system(size: AppFont.pt(11)))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        #else
         VStack(alignment: .leading, spacing: 20) {
             settingsSection("SYSTEM PROMPT") {
                 TextEditor(text: $viewModel.systemPrompt)
@@ -348,11 +446,7 @@ public struct SettingsView: View {
                         Text(option.label).tag(option.id)
                     }
                 }
-                #if os(macOS)
-                .pickerStyle(PopUpButtonPickerStyle())
-                #else
                 .pickerStyle(MenuPickerStyle())
-                #endif
                 .labelsHidden()
                 .frame(maxWidth: 220, alignment: .leading)
             }
@@ -387,10 +481,105 @@ public struct SettingsView: View {
                 .disabled(true)
             }
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        #endif
     }
 
     // MARK: - Cloud Model Tab (provider, endpoint, key, model)
     private var cloudModelTabContent: some View {
+        #if os(macOS)
+        Form {
+            Section("Active Runtime") {
+                modelRuntimeSummaryView
+                    .listRowInsets(EdgeInsets())
+            }
+
+            Section("API Provider") {
+                Picker("Provider", selection: $viewModel.apiProvider) {
+                    Text("anyrouter.dev").tag("anyrouter")
+                    Text("Local Ollama").tag("ollama")
+                    Text("OpenRouter").tag("openrouter")
+                    Text("Google Gemini").tag("gemini")
+                    Text("OpenAI").tag("openai")
+                    Text("Custom").tag("custom")
+                }
+                .onProviderChange(of: viewModel.apiProvider) { newValue in
+                    switch newValue {
+                    case "anyrouter":
+                        viewModel.endpointUrl = "https://anyrouter.dev/api/v1"
+                        viewModel.modelName = MainViewModel.defaultModelId
+                    case "ollama":
+                        viewModel.endpointUrl = "http://localhost:11434/v1"
+                        viewModel.modelName = "llama3"
+                    case "openrouter":
+                        viewModel.endpointUrl = "https://openrouter.ai/api/v1"
+                        viewModel.modelName = "google/gemini-flash-1.5"
+                    case "openai":
+                        viewModel.endpointUrl = "https://api.openai.com/v1"
+                        viewModel.modelName = "gpt-4o"
+                    case "gemini":
+                        viewModel.endpointUrl = "https://generativelanguage.googleapis.com/v1beta/openai"
+                        viewModel.modelName = "gemini-1.5-flash"
+                    default:
+                        break
+                    }
+                }
+
+                TextField("Endpoint URL", text: $viewModel.endpointUrl)
+                    .font(.system(size: AppFont.pt(13)))
+            }
+
+            Section(
+                header: Text("API Key"),
+                footer: Text("Stored securely in Keychain — service: minhagent.app, account: token.")
+                    .font(.system(size: AppFont.pt(11)))
+            ) {
+                HStack(spacing: 8) {
+                    Image(systemName: viewModel.apiKey.isEmpty ? "key.slash" : "key.fill")
+                        .font(.system(size: AppFont.pt(12), weight: .semibold))
+                        .foregroundColor(viewModel.apiKey.isEmpty ? .secondary : .green)
+                        .frame(width: 16, height: 16)
+                    Text(viewModel.apiKey.isEmpty ? "No cloud key loaded" : "Cloud key loaded")
+                        .font(.system(size: AppFont.pt(12.5)))
+                        .foregroundColor(viewModel.apiKey.isEmpty ? .secondary : .primary)
+                    Spacer(minLength: 0)
+                }
+
+                SecureField("Enter API Token…", text: $viewModel.apiKey)
+                    .font(.system(size: AppFont.pt(13)))
+            }
+
+            Section("Cloud Model") {
+                Picker("Model", selection: $viewModel.modelName) {
+                    ForEach(ModelCatalog.entries) { entry in
+                        Text(entry.displayName).tag(entry.id)
+                    }
+                    if !ModelCatalog.entries.contains(where: { $0.id == viewModel.modelName })
+                        && !viewModel.modelName.isEmpty
+                    {
+                        Text(viewModel.modelName).tag(viewModel.modelName)
+                    }
+                }
+
+                cloudModelDetailsView
+                    .listRowInsets(EdgeInsets())
+            }
+
+            Section("On-Device Model") {
+                AppleIntelligenceAuditView()
+                    .padding(.vertical, 4)
+                localModelDetailsView
+                    .listRowInsets(EdgeInsets())
+            }
+
+            Section("Local Tools") {
+                localToolDetailsView
+            }
+        }
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        #else
         VStack(alignment: .leading, spacing: 20) {
             settingsSection("ACTIVE RUNTIME") {
                 modelRuntimeSummaryView
@@ -405,11 +594,7 @@ public struct SettingsView: View {
                     Text("OpenAI").tag("openai")
                     Text("Custom").tag("custom")
                 }
-                #if os(macOS)
-                .pickerStyle(PopUpButtonPickerStyle())
-                #else
                 .pickerStyle(MenuPickerStyle())
-                #endif
                 .labelsHidden()
                 .frame(maxWidth: 220, alignment: .leading)
                 .onProviderChange(of: viewModel.apiProvider) { newValue in
@@ -475,11 +660,7 @@ public struct SettingsView: View {
                         Text(viewModel.modelName).tag(viewModel.modelName)
                     }
                 }
-                #if os(macOS)
-                .pickerStyle(PopUpButtonPickerStyle())
-                #else
                 .pickerStyle(MenuPickerStyle())
-                #endif
                 .labelsHidden()
                 .frame(maxWidth: 220, alignment: .leading)
 
@@ -494,7 +675,7 @@ public struct SettingsView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(Color.primary.opacity(0.03))
                         .cornerRadius(10)
-                    
+
                     localModelDetailsView
                 }
             }
@@ -503,6 +684,9 @@ public struct SettingsView: View {
                 localToolDetailsView
             }
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        #endif
     }
 
     // MARK: - Section helper

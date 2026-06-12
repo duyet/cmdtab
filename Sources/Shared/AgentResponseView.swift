@@ -14,7 +14,7 @@ struct AgentResponseView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             ForEach(blocks) { block in
                 blockView(block)
             }

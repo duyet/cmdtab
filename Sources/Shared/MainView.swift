@@ -419,11 +419,14 @@ struct MessageRow: View {
                     }
                 }
 
-                // Meta row: timestamp + copy
+                // Meta row: timestamp + metrics + copy
                 HStack(spacing: 8) {
                     Text(message.timestamp, style: .time)
                         .font(.system(size: AppFont.pt(10)))
                         .foregroundColor(.secondary.opacity(0.7))
+                    if !isUser, let metrics = message.inferenceMetrics {
+                        MetricsChips(metrics: metrics)
+                    }
                     Button(action: copyMessage) {
                         Image(systemName: copied ? "checkmark" : "square.on.square")
                             .font(.system(size: AppFont.pt(10)))
@@ -559,6 +562,55 @@ struct StreamingCursor: View {
                 value: isVisible
             )
             .onAppear { isVisible = false }
+    }
+}
+
+// MARK: - Inference Metrics Chips
+
+/// Compact metrics display shown in the assistant message meta row.
+/// Shows model name, TTFT, TPS, token counts, reasoning tokens.
+struct MetricsChips: View {
+    let metrics: InferenceMetrics
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if let model = metrics.model {
+                Text(shortModelName(model))
+                    .font(.system(size: AppFont.pt(9), weight: .medium))
+                    .foregroundColor(.secondary.opacity(0.6))
+            }
+            if let ttft = metrics.ttftMs {
+                Text("\(ttft)ms ttft")
+                    .metricChipStyle()
+            }
+            if let tps = metrics.tps {
+                Text(String(format: "%.1f t/s", tps))
+                    .metricChipStyle()
+            }
+            if let out = metrics.outputTokens {
+                Text("~\(out) tok")
+                    .metricChipStyle()
+            }
+            if let reason = metrics.reasoningTokens, reason > 0 {
+                Text("+\(reason) reason")
+                    .metricChipStyle()
+            }
+        }
+    }
+
+    /// Strip provider prefix: "anthropic/claude-sonnet-4.6" → "claude-sonnet-4.6"
+    private func shortModelName(_ id: String) -> String {
+        if let slash = id.lastIndex(of: "/") {
+            return String(id[id.index(after: slash)...])
+        }
+        return id
+    }
+}
+
+private extension View {
+    func metricChipStyle() -> some View {
+        font(.system(size: AppFont.pt(9), design: .monospaced))
+            .foregroundColor(.secondary.opacity(0.55))
     }
 }
 

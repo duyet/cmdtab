@@ -1,10 +1,41 @@
 import Foundation
 
+// MARK: - Stream Types
+
+/// Element yielded by inference adapter streams.
+/// Carries both incremental text and usage metadata through the same async stream.
+public enum StreamChunk: Sendable, Equatable {
+    /// Incremental text delta to append to the message.
+    case delta(String)
+    /// Usage metadata from the final stream chunk (cloud only).
+    case usage(StreamUsage)
+}
+
+/// Token usage data reported by the cloud API in the final SSE chunk.
+public struct StreamUsage: Codable, Equatable, Sendable {
+    public var model: String?
+    public var promptTokens: Int?
+    public var completionTokens: Int?
+    public var reasoningTokens: Int?
+
+    public init(
+        model: String? = nil,
+        promptTokens: Int? = nil,
+        completionTokens: Int? = nil,
+        reasoningTokens: Int? = nil
+    ) {
+        self.model = model
+        self.promptTokens = promptTokens
+        self.completionTokens = completionTokens
+        self.reasoningTokens = reasoningTokens
+    }
+}
+
+// MARK: - Protocol
+
 /// Uniform inference surface shared by the cloud (AnyRouter) and on-device
-/// (Foundation Models) backends. Both produce an `AsyncThrowingStream<String, Error>`
-/// of **incremental text deltas** so `MainViewModel` can append chunks identically
-/// regardless of which backend is active. Cancellation propagates through the
-/// returned stream's terminating task (see each adapter).
+/// (Foundation Models) backends. Both produce an `AsyncThrowingStream<StreamChunk, Error>`
+/// so `MainViewModel` can handle text deltas and usage data uniformly.
 public protocol InferenceAdapter: Sendable {
     /// Stable identifier for the backend (e.g. "anyrouter", "local").
     var id: String { get }
@@ -18,18 +49,14 @@ public protocol InferenceAdapter: Sendable {
     /// Reason the backend can't serve a request, or `nil` when available.
     var unavailableReason: String? { get }
 
-    /// Streams a completion as incremental text deltas.
-    ///
-    /// - Parameters:
-    ///   - instructions: System instructions guiding behaviour.
-    ///   - history: Ordered prior conversation turns (user/assistant), excluding
-    ///     the placeholder assistant message being filled.
-    /// - Returns: A delta stream; finishes when generation completes.
+    /// Streams a completion as typed chunks (text deltas + usage metadata).
     func streamResponse(
         instructions: String,
         history: [ChatMessage]
-    ) async throws -> AsyncThrowingStream<String, Error>
+    ) async throws -> AsyncThrowingStream<StreamChunk, Error>
 }
+
+// MARK: - Cloud Adapter
 
 /// Cloud adapter: wraps the OpenAI-compatible SSE path in `APIClient` against AnyRouter.
 public struct AnyRouterAdapter: InferenceAdapter {
@@ -76,7 +103,7 @@ public struct AnyRouterAdapter: InferenceAdapter {
     public func streamResponse(
         instructions: String,
         history: [ChatMessage]
-    ) async throws -> AsyncThrowingStream<String, Error> {
+    ) async throws -> AsyncThrowingStream<StreamChunk, Error> {
         let formatted = Self.formatMessages(
             instructions: instructions,
             history: history.map { (role: $0.role, content: $0.content) }
@@ -92,11 +119,13 @@ public struct AnyRouterAdapter: InferenceAdapter {
     }
 }
 
+// MARK: - Local Adapter
+
 /// Local adapter: wraps `LocalModelClient` (Apple Foundation Models).
 public struct LocalModelAdapter: InferenceAdapter {
     public let id = "local"
     public let displayName = "Local (Apple Intelligence)"
-    
+
     private let enabledTools: Set<String>
 
     public init(enabledTools: Set<String> = []) {
@@ -109,27 +138,51 @@ public struct LocalModelAdapter: InferenceAdapter {
         LocalModelClient.shared.availability.unavailableReason
     }
 
+    // MARK: - InferenceAdapter conformance
+
     public func streamResponse(
         instructions: String,
         history: [ChatMessage]
-    ) async throws -> AsyncThrowingStream<String, Error> {
-        // Inject conversation history into instructions so the local model
-        // has multi-turn context. Foundation Models' LanguageModelSession is
-        // single-prompt, so prior turns are formatted as context.
-        var enrichedInstructions = instructions
-        let priorTurns = history.dropLast()  // exclude the current user message
-        if !priorTurns.isEmpty {
-            enrichedInstructions += "\n\nConversation history:"
-            for msg in priorTurns {
-                let label = msg.role == "user" ? "User" : "Assistant"
-                enrichedInstructions += "\n\(label): \(msg.content)"
+    ) async throws -> AsyncThrowingStream<StreamChunk, Error> {
+        try await streamResponse(instructions: instructions, history: history, transcriptEntries: nil)
+    }
+
+    /// Extended call with pre-serialized transcript entries for exact context restoration.
+    public func streamResponse(
+        instructions: String,
+        history: [ChatMessage],
+        transcriptEntries: [TranscriptEntryData]?
+    ) async throws -> AsyncThrowingStream<StreamChunk, Error> {
+        let prompt = history.last(where: { $0.role == "user" })?.content ?? ""
+        // Use pre-serialized entries when available (preserves exact context),
+        // otherwise build from ChatMessage history (first call in a conversation).
+        let entries: [TranscriptEntryData]
+        if let stored = transcriptEntries, !stored.isEmpty {
+            entries = stored
+        } else {
+            entries = history.dropLast().map {
+                TranscriptEntryData(role: $0.role, content: $0.content)
             }
         }
-        let prompt = history.last(where: { $0.role == "user" })?.content ?? ""
-        return try LocalModelClient.shared.streamResponse(
-            instructions: enrichedInstructions,
+        // Wrap the string-based local stream into StreamChunk.delta values.
+        let rawStream = try LocalModelClient.shared.streamResponse(
+            instructions: instructions,
             prompt: prompt,
+            transcriptEntries: entries,
             enabledTools: enabledTools
         )
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    for try await text in rawStream {
+                        continuation.yield(.delta(text))
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { @Sendable _ in task.cancel() }
+        }
     }
 }

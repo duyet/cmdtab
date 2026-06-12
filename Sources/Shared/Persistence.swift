@@ -54,6 +54,8 @@ final class PersistedMessage {
     var content: String
     var timestamp: Date
     var isError: Bool
+    /// Encoded `InferenceMetrics` JSON. nil for old messages without metrics.
+    var metricsData: Data?
 
     var conversation: PersistedConversation?
 
@@ -62,13 +64,15 @@ final class PersistedMessage {
         role: String,
         content: String,
         timestamp: Date = Date(),
-        isError: Bool = false
+        isError: Bool = false,
+        metricsData: Data? = nil
     ) {
         self.id = id
         self.role = role
         self.content = content
         self.timestamp = timestamp
         self.isError = isError
+        self.metricsData = metricsData
     }
 }
 
@@ -114,7 +118,8 @@ extension PersistedMessage {
             role: message.role,
             content: message.content,
             timestamp: message.timestamp,
-            isError: message.isError
+            isError: message.isError,
+            metricsData: message.inferenceMetrics.flatMap { try? JSONEncoder().encode($0) }
         )
     }
 
@@ -125,7 +130,8 @@ extension PersistedMessage {
             role: role,
             content: content,
             timestamp: timestamp,
-            isError: isError
+            isError: isError,
+            inferenceMetrics: metricsData.flatMap { try? JSONDecoder().decode(InferenceMetrics.self, from: $0) }
         )
     }
 }

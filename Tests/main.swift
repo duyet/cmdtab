@@ -141,12 +141,16 @@ func testSSEParsingErrorFrameStops() {
 
 func testSSEParsingIgnoresNonPayloadLines() {
     print("Testing SSE non-payload lines are ignored...")
-    // WHY: usage-only chunks (stream_options.include_usage) carry empty choices
-    // and MUST NOT yield text, or a stray token would leak into the answer.
-    let usageOnly = "data: {\"choices\":[],\"usage\":{\"total_tokens\":42}}"
-    assert(
-        SSEParser.parseLine(usageOnly) == .ignore,
-        "Usage-only chunks must be ignored, not yielded as text")
+    // WHY: usage-only chunks (stream_options.include_usage) carry token counts
+    // and MUST be captured as .usage, not yielded as text.
+    let usageOnly = "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":42}}"
+    let usageResult = SSEParser.parseLine(usageOnly)
+    if case .usage(let u) = usageResult {
+        assert(u.promptTokens == 10, "Usage must capture prompt_tokens")
+        assert(u.completionTokens == 42, "Usage must capture completion_tokens")
+    } else {
+        assert(false, "Usage-only chunks must be captured as .usage, got \(usageResult)")
+    }
 
     // WHY: blank lines, SSE comments, and non-data fields are framing noise.
     assert(SSEParser.parseLine("") == .ignore, "Blank lines must be ignored")

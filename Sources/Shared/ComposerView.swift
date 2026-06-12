@@ -334,6 +334,7 @@ struct ComposerView: View {
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: AppFont.pt(11)))
+                .frame(width: 22, height: 22)
                 .foregroundColor(.secondary)
         }
         .menuStyle(.borderlessButton)
@@ -345,6 +346,7 @@ struct ComposerView: View {
         PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
             Image(systemName: "plus")
                 .font(.system(size: AppFont.pt(11)))
+                .frame(width: 22, height: 22)
                 .foregroundColor(.secondary)
         }
         .buttonStyle(PlainButtonStyle())
@@ -360,6 +362,7 @@ struct ComposerView: View {
             }) {
                 Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
                     .font(.system(size: AppFont.pt(11)))
+                    .frame(width: 22, height: 22)
                     .foregroundColor(.secondary)
             }
             .buttonStyle(PlainButtonStyle())
@@ -457,7 +460,7 @@ struct ComposerView: View {
             Image(systemName: "arrow.up")
                 .font(.system(size: AppFont.pt(9), weight: .bold))
                 .foregroundColor(canSend ? .white : .secondary.opacity(0.4))
-                .frame(width: 20, height: 20)
+                .frame(width: 22, height: 22)
                 .background(canSend ? Color.accentCoral : Color.primary.opacity(0.07))
                 .clipShape(Circle())
         }
@@ -617,6 +620,7 @@ struct ComposerView: View {
         } label: {
             Image(systemName: "wrench.and.screwdriver")
                 .font(.system(size: AppFont.pt(11)))
+                .frame(width: 22, height: 22)
                 .foregroundColor(.secondary)
         }
         .menuStyle(.borderlessButton)

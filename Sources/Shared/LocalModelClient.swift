@@ -79,21 +79,24 @@ public final class LocalModelClient: Sendable {
     /// Streams an on-device completion for `prompt` as incremental text deltas.
     ///
     /// - Parameters:
-    ///   - instructions: System instructions guiding model behaviour (priority over the prompt).
+    ///   - instructions: System instructions guiding model behaviour.
     ///   - prompt: The user prompt to respond to.
+    ///   - transcriptEntries: Pre-serialized prior turns (restored from `Conversation.localTranscriptEntries`).
+    ///         When non-empty, used directly — no rebuild from `ChatMessage` needed.
     ///   - enabledTools: Set of active on-device tools to attach to the session.
     /// - Returns: A stream yielding text deltas; finishes when generation completes.
     /// - Throws: `LocalModelError` if the model is unavailable.
     public func streamResponse(
         instructions: String,
         prompt: String,
+        transcriptEntries: [TranscriptEntryData] = [],
         enabledTools: Set<String> = []
     ) throws -> AsyncThrowingStream<String, Error> {
         let availability = self.availability
         guard availability == .available else {
             throw LocalModelError(availability.unavailableReason ?? "On-device model is unavailable.")
         }
- 
+
         #if DISABLE_NATIVE_LLM
         throw LocalModelError(LocalModelAvailability.compiledOut.unavailableReason!)
         #else
@@ -107,12 +110,37 @@ public final class LocalModelClient: Sendable {
         if enabledTools.contains("system_clock") {
             tools.append(ClockTool())
         }
-        let session = LanguageModelSession(tools: tools, instructions: instructions)
+
+        // Build transcript from serialized entries — no reconstruction needed.
+        // On first call in a conversation, entries are built from messages by the adapter.
+        // On subsequent calls, the restored entries preserve exact context.
+        var entries: [Transcript.Entry] = []
+        entries.append(.instructions(
+            Transcript.Instructions(
+                segments: [.text(Transcript.TextSegment(content: instructions))],
+                toolDefinitions: []
+            )
+        ))
+        for entry in transcriptEntries {
+            if entry.role == "user" {
+                entries.append(.prompt(
+                    Transcript.Prompt(segments: [.text(Transcript.TextSegment(content: entry.content))])
+                ))
+            } else {
+                entries.append(.response(
+                    Transcript.Response(
+                        assetIDs: [],
+                        segments: [.text(Transcript.TextSegment(content: entry.content))]
+                    )
+                ))
+            }
+        }
+        let transcript = Transcript(entries: entries)
+        let session = LanguageModelSession(tools: tools, transcript: transcript)
+
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    // Plain-text streaming yields cumulative snapshots; convert to deltas
-                    // so consumers can append uniformly with the cloud (SSE) path.
                     var emitted = ""
                     let stream = session.streamResponse(to: prompt)
                     for try await snapshot in stream {
@@ -122,7 +150,6 @@ public final class LocalModelClient: Sendable {
                             continuation.yield(String(full.dropFirst(emitted.count)))
                             emitted = full
                         } else if full != emitted {
-                            // Non-monotonic snapshot (rare); re-emit the full text.
                             continuation.yield(full)
                             emitted = full
                         }

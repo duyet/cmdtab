@@ -57,8 +57,9 @@ public enum SSEEvent: Equatable {
     case done
     /// A mid-stream error frame; generation must stop and surface `message`.
     case error(message: String)
-    /// A line with no actionable payload (blank line, comment, usage-only
-    /// chunk with empty `choices`, or a non-`data:` field). Skip and continue.
+    /// Usage metadata from the final chunk (token counts, model name).
+    case usage(StreamUsage)
+    /// A line with no actionable payload (blank line, comment, or a non-`data:` field).
     case ignore
 }
 
@@ -93,13 +94,31 @@ public enum SSEParser {
             return .error(message: message)
         }
 
-        // Usage-only chunk (stream_options.include_usage) has empty `choices`.
+        // Text delta from choices[0].delta.content.
         if let choices = json["choices"] as? [[String: Any]],
             let firstChoice = choices.first,
             let delta = firstChoice["delta"] as? [String: Any],
             let content = delta["content"] as? String
         {
             return .delta(content)
+        }
+
+        // Usage-only chunk (stream_options.include_usage) — extract token counts.
+        if let usage = json["usage"] as? [String: Any] {
+            let model = json["model"] as? String
+            let promptTokens = usage["prompt_tokens"] as? Int
+            let completionTokens = usage["completion_tokens"] as? Int
+            // OpenAI nested detail: completion_tokens_details.reasoning_tokens
+            var reasoningTokens: Int?
+            if let details = usage["completion_tokens_details"] as? [String: Any] {
+                reasoningTokens = details["reasoning_tokens"] as? Int
+            }
+            return .usage(StreamUsage(
+                model: model,
+                promptTokens: promptTokens,
+                completionTokens: completionTokens,
+                reasoningTokens: reasoningTokens
+            ))
         }
 
         return .ignore
@@ -205,7 +224,7 @@ public final class APIClient: Sendable {
         model: String,
         messages: [[String: String]],
         reasoningEffort: String? = nil
-    ) async throws -> AsyncThrowingStream<String, Error> {
+    ) async throws -> AsyncThrowingStream<StreamChunk, Error> {
 
         let request = try AnyRouterRequestFactory.makeRequest(
             endpointUrl: endpointUrl,
@@ -238,7 +257,9 @@ public final class APIClient: Sendable {
                     for try await line in bytes.lines {
                         switch SSEParser.parseLine(line) {
                         case .delta(let content):
-                            continuation.yield(content)
+                            continuation.yield(.delta(content))
+                        case .usage(let usage):
+                            continuation.yield(.usage(usage))
                         case .done:
                             continuation.finish()
                             return

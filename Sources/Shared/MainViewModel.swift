@@ -757,6 +757,7 @@ public final class MainViewModel: ObservableObject {
         let rawRequestDetails: String
         if isLocalModelSelected {
             let prompt = historyMessages.last(where: { $0.role == "user" })?.content ?? ""
+            let priorTurns = historyMessages.dropLast()
             var toolsArray: [[String: String]] = []
             if enabledLocalTools.contains("calculator") {
                 toolsArray.append(["name": "calculator", "description": "Evaluate simple mathematical expressions"])
@@ -771,13 +772,18 @@ public final class MainViewModel: ObservableObject {
             if !toolsArray.isEmpty {
                 parameters["tools"] = toolsArray
             }
+            let messagesArray: [[String: String]] = priorTurns.map { [
+                "role": $0.role,
+                "content": String($0.content.prefix(200))
+            ] }
             let localRequest: [String: Any] = [
                 "model": "Apple Foundation Models (On-Device)",
                 "target_url": "local://on-device-inference",
                 "parameters": parameters,
                 "system_instructions": systemInstructions,
                 "prompt": prompt,
-                "history_messages": historyMessages.count
+                "history_turns": priorTurns.count,
+                "messages": messagesArray
             ]
             if let data = try? JSONSerialization.data(withJSONObject: localRequest, options: [.prettyPrinted, .sortedKeys]),
                let jsonStr = String(data: data, encoding: .utf8) {
@@ -813,17 +819,80 @@ public final class MainViewModel: ObservableObject {
         }
         conversations[activeIndex].lastRawRequestDetails = rawRequestDetails
 
+        // Capture serialized transcript entries for local model (if any).
+        let storedEntries = isLocalModelSelected
+            ? conversations[activeIndex].localTranscriptEntries ?? []
+            : []
+        let userPrompt = historyMessages.last(where: { $0.role == "user" })?.content ?? ""
+
         currentTask = Task { [weak self] in
             do {
-                // Both backends conform to InferenceAdapter and yield text deltas,
-                // so consumption is identical regardless of which is active.
-                let stream = try await adapter.streamResponse(
-                    instructions: systemInstructions,
-                    history: historyMessages
-                )
+                let stream: AsyncThrowingStream<StreamChunk, Error>
+                if let localAdapter = adapter as? LocalModelAdapter {
+                    stream = try await localAdapter.streamResponse(
+                        instructions: systemInstructions,
+                        history: historyMessages,
+                        transcriptEntries: storedEntries
+                    )
+                } else {
+                    stream = try await adapter.streamResponse(
+                        instructions: systemInstructions,
+                        history: historyMessages
+                    )
+                }
+
+                let startTime = ContinuousClock.now
+                var firstChunkTime: ContinuousClock.Instant?
+                var capturedUsage: StreamUsage?
+
                 for try await chunk in stream {
                     guard !Task.isCancelled else { break }
-                    self?.appendChunk(chunk: chunk, to: conversationId, messageId: assistantMsgId)
+                    switch chunk {
+                    case .delta(let text):
+                        if firstChunkTime == nil { firstChunkTime = ContinuousClock.now }
+                        self?.appendChunk(chunk: text, to: conversationId, messageId: assistantMsgId)
+                    case .usage(let usage):
+                        capturedUsage = usage
+                    }
+                }
+
+                // Assemble inference metrics.
+                let endTime = ContinuousClock.now
+                let totalMs = Self.durationMs(endTime - startTime)
+                let ttftMs = firstChunkTime.map { Self.durationMs($0 - startTime) }
+
+                var metrics = InferenceMetrics()
+                metrics.model = capturedUsage?.model
+                    ?? (self?.isLocalModelSelected == true ? "Apple Foundation Models" : self?.modelName)
+                metrics.ttftMs = ttftMs
+                metrics.totalMs = totalMs > 0 ? totalMs : nil
+
+                if let usage = capturedUsage {
+                    metrics.inputTokens = usage.promptTokens
+                    metrics.outputTokens = usage.completionTokens
+                    metrics.reasoningTokens = usage.reasoningTokens
+                } else if let convIdx = self?.conversations.firstIndex(where: { $0.id == conversationId }),
+                    let content = self?.conversations[convIdx]
+                        .messages.first(where: { $0.id == assistantMsgId })?.content {
+                    // Local model: estimate tokens from content length.
+                    metrics.outputTokens = UsageStats.estimateTokens(content)
+                }
+
+                // Write metrics to the message.
+                if let convIdx = self?.conversations.firstIndex(where: { $0.id == conversationId }),
+                   let msgIdx = self?.conversations[convIdx].messages.firstIndex(where: { $0.id == assistantMsgId }) {
+                    self?.conversations[convIdx].messages[msgIdx].inferenceMetrics = metrics
+                }
+
+                // Update serialized transcript entries for the next local model call.
+                if self?.isLocalModelSelected == true,
+                   let idx = self?.conversations.firstIndex(where: { $0.id == conversationId }) {
+                    var updated = storedEntries
+                    updated.append(TranscriptEntryData(role: "user", content: userPrompt))
+                    let assistantContent = self?.conversations[idx]
+                        .messages.first(where: { $0.id == assistantMsgId })?.content ?? ""
+                    updated.append(TranscriptEntryData(role: "assistant", content: assistantContent))
+                    self?.conversations[idx].localTranscriptEntries = updated
                 }
 
                 self?.finalizeAssistantUsage(conversationId: conversationId, messageId: assistantMsgId)
@@ -1095,5 +1164,11 @@ public final class MainViewModel: ObservableObject {
                     "Explain the input clearly and illustrate it with a diagram. First give a brief plain-language explanation (2-4 sentences or short bullets). Then choose the most fitting Mermaid diagram type — flowchart for processes, sequenceDiagram for interactions, classDiagram for structure, stateDiagram-v2 for state, mindmap for concepts — and output exactly one valid, syntactically correct diagram in a fenced ```mermaid code block. Keep node labels concise, avoid unsupported syntax, and make sure the diagram reflects the explanation."
             ),
         ]
+    }
+
+    /// Convert a Swift `Duration` to whole milliseconds.
+    private static func durationMs(_ duration: Duration) -> Int {
+        let comps = duration.components
+        return Int(comps.seconds) * 1000 + Int(comps.attoseconds / 1_000_000_000_000)
     }
 }

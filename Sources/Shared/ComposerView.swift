@@ -306,9 +306,7 @@ struct ComposerView: View {
         HStack(spacing: 10) {
             plusButton
             Spacer()
-            if viewModel.isLocalModelSelected {
-                toolsDropdown
-            }
+            toolsDropdown
             modelBadge
             sendButton
         }

@@ -467,9 +467,9 @@ struct ComposerView: View {
     private var sendButton: some View {
         Button(action: send) {
             Image(systemName: "arrow.up")
-                .font(.system(size: AppFont.pt(9), weight: .bold))
+                .font(.system(size: AppFont.pt(10), weight: .bold))
                 .foregroundColor(canSend ? .white : .secondary.opacity(0.4))
-                .frame(width: 22, height: 22)
+                .frame(width: 26, height: 26)
                 .background(canSend ? Color.accentCoral : Color.primary.opacity(0.07))
                 .clipShape(Circle())
         }
@@ -628,7 +628,7 @@ struct ComposerView: View {
             }
         } label: {
             Image(systemName: "wrench.and.screwdriver")
-                .font(.system(size: AppFont.pt(10)))
+                .font(.system(size: AppFont.pt(9)))
                 .frame(width: 22, height: 22)
                 .foregroundColor(.secondary)
         }

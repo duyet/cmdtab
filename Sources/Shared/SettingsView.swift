@@ -324,6 +324,24 @@ public struct SettingsView: View {
     // MARK: - Personalization Tab
     private var personalizationTabContent: some View {
         VStack(alignment: .leading, spacing: 20) {
+            settingsSection("SYSTEM PROMPT") {
+                TextEditor(text: $viewModel.systemPrompt)
+                    .font(.system(size: AppFont.pt(12)))
+                    .frame(height: 80)
+                    .padding(6)
+                    .background(Color.primary.opacity(0.04))
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+                    )
+                Button("Reset to default") {
+                    viewModel.systemPrompt = MainViewModel.defaultSystemPrompt
+                }
+                .font(.caption)
+                .foregroundColor(.accentCoral)
+            }
+
             settingsSection("PERSONALITY") {
                 Picker("", selection: $viewModel.personality) {
                     ForEach(MainViewModel.personalityOptions, id: \.id) { option in

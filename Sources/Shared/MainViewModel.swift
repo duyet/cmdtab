@@ -60,6 +60,13 @@ public final class MainViewModel: ObservableObject {
         didSet { UserDefaults.standard.set(customInstructions, forKey: "customInstructions") }
     }
 
+    /// Base system prompt. Editable in Settings, persisted to UserDefaults.
+    @Published public var systemPrompt: String = MainViewModel.defaultSystemPrompt {
+        didSet { UserDefaults.standard.set(systemPrompt, forKey: "systemPrompt") }
+    }
+
+    public static let defaultSystemPrompt = "You are a helpful engineering assistant. Respond concisely using markdown."
+
     /// Memories toggle (no memory store yet — UX surface for the upcoming feature).
     @Published public var memoriesEnabled: Bool = false {
         didSet { UserDefaults.standard.set(memoriesEnabled, forKey: "memoriesEnabled") }
@@ -277,6 +284,7 @@ public final class MainViewModel: ObservableObject {
         if storedWidth >= 220 && storedWidth <= 400 { self.sidebarWidth = CGFloat(storedWidth) }
         self.personality = UserDefaults.standard.string(forKey: "personality") ?? "default"
         self.customInstructions = UserDefaults.standard.string(forKey: "customInstructions") ?? ""
+        self.systemPrompt = UserDefaults.standard.string(forKey: "systemPrompt") ?? MainViewModel.defaultSystemPrompt
         self.memoriesEnabled = UserDefaults.standard.bool(forKey: "memoriesEnabled")
         self.sidebarMode = UserDefaults.standard.string(forKey: "sidebarMode") ?? "chat"
         self.isLocalModelSelected = UserDefaults.standard.bool(forKey: "isLocalModelSelected")
@@ -714,7 +722,7 @@ public final class MainViewModel: ObservableObject {
         let conversation = conversations[activeIndex]
 
         // Find instructions based on presetId (not title — avoids fragile string matching)
-        var base = "You are a helpful engineering assistant. Respond concisely using markdown."
+        var base = systemPrompt
         if let pid = conversation.presetId,
             let matchedPreset = presets.first(where: { $0.id == pid })
         {

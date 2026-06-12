@@ -294,7 +294,18 @@ struct ComposerView: View {
             .textFieldStyle(PlainTextFieldStyle())
             .foregroundColor(.primary)
             .focused($isInputFocused)
+            #if os(macOS)
+            .onKeyPress(.return) {
+                // Plain Enter sends; Shift+Enter inserts newline (default behavior).
+                if NSEvent.modifierFlags.contains(.shift) {
+                    return .ignored
+                }
+                send()
+                return .handled
+            }
+            #else
             .onSubmit(send)
+            #endif
             .padding(.horizontal, 14)
             .padding(.top, 12)
             .padding(.bottom, 6)

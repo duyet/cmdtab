@@ -5,7 +5,6 @@ import SwiftUI
 @MainActor
 final class SplitViewController: NSSplitViewController {
     let viewModel: MainViewModel
-    private let autoHideSidebarWidth: CGFloat = 760
     private var sidebarSplitItem: NSSplitViewItem!
     private var detailSplitItem: NSSplitViewItem!
     private var cancellables = Set<AnyCancellable>()
@@ -28,8 +27,14 @@ final class SplitViewController: NSSplitViewController {
         let detailHC = NSHostingController(
             rootView: DetailContentView(viewModel: viewModel)
         )
+        // SwiftUI content must never drive the window's size — otherwise the
+        // window resizes itself when switching tabs/pages.
+        sidebarHC.sizingOptions = []
+        detailHC.sizingOptions = []
 
-        sidebarSplitItem = NSSplitViewItem(sidebarWithViewController: sidebarHC)
+        // Plain item (not sidebarWithViewController): avoids the vibrancy
+        // material layer — SidebarView paints its own opaque background.
+        sidebarSplitItem = NSSplitViewItem(viewController: sidebarHC)
         sidebarSplitItem.canCollapse = true
         // Minimum readable width — dragging below it collapses the sidebar
         // (canCollapse), where the hover-on-left-edge floating mode takes over.
@@ -73,11 +78,6 @@ final class SplitViewController: NSSplitViewController {
         super.splitViewDidResizeSubviews(notification)
 
         guard let sidebarSplitItem else { return }
-
-        if splitView.bounds.width < autoHideSidebarWidth, !sidebarSplitItem.isCollapsed {
-            viewModel.isSidebarVisible = false
-            return
-        }
 
         // Read actual sidebar width from the view controller's view rather than
         // indexing splitView.subviews, which is fragile across AppKit internals.

@@ -26,12 +26,9 @@ public final class MainViewModel: ObservableObject {
     /// Keychain is only touched after this flips true (lazy, prompt-free launch).
     public private(set) var hasLoadedApiKey: Bool = false
 
-    // Collapsible Sidebar Visibility
-    @Published public var isSidebarVisible: Bool = true {
-        didSet {
-            UserDefaults.standard.set(isSidebarVisible, forKey: "isSidebarVisible")
-        }
-    }
+    // Collapsible Sidebar Visibility — always starts visible; the user
+    // hides it per-session via the sidebar icon / ⌘B.
+    @Published public var isSidebarVisible: Bool = true
 
     /// User-resizable sidebar width (drag the divider). Persisted UI state.
     @Published public var sidebarWidth: CGFloat = 260 {
@@ -280,7 +277,6 @@ public final class MainViewModel: ObservableObject {
     }
 
     private func loadSettings() {
-        self.isSidebarVisible = UserDefaults.standard.object(forKey: "isSidebarVisible") as? Bool ?? true
         self.settingsTab = UserDefaults.standard.string(forKey: "settingsTab") ?? "general"
         self.userName = UserDefaults.standard.string(forKey: "userName") ?? ""
         let storedWidth = UserDefaults.standard.double(forKey: "sidebarWidth")

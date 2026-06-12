@@ -19,7 +19,7 @@ struct PlainCardSurface: ViewModifier {
             .background(Color.cardSurface)
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.hairline.opacity(0.5), lineWidth: 1)
+                    .stroke(Color.hairline, lineWidth: 1)
             )
             .clipShape(.rect(cornerRadius: cornerRadius))
             .shadow(color: Color.black.opacity(0.03), radius: 2, y: 1)

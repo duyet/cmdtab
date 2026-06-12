@@ -55,6 +55,51 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         setupActivationObserver()
         DispatchQueue.main.async { [weak self] in
             self?.showWindow()
+            self?.runSnapshotModeIfRequested()
+        }
+    }
+
+    // MARK: - Snapshot mode (UI verification harness)
+    /// When MINHAGENT_SNAPSHOT_DIR is set, renders the live window through a
+    /// sequence of UI states to PNG files and exits. In-process rendering —
+    /// no Screen Recording permission needed. Dev/test harness only.
+    private func runSnapshotModeIfRequested() {
+        guard let dir = ProcessInfo.processInfo.environment["MINHAGENT_SNAPSHOT_DIR"],
+            let window = windowController?.window, let vm = viewModel
+        else { return }
+        let outDir = URL(fileURLWithPath: dir, isDirectory: true)
+        try? FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
+
+        func snap(_ name: String) {
+            // The frame view (contentView's superview) includes the title bar.
+            guard let frameView = window.contentView?.superview,
+                let rep = frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds)
+            else { return }
+            frameView.cacheDisplay(in: frameView.bounds, to: rep)
+            if let data = rep.representation(using: .png, properties: [:]) {
+                try? data.write(to: outDir.appendingPathComponent("\(name).png"))
+            }
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            snap("01-main")
+            vm.isSidebarVisible = false
+            try? await Task.sleep(for: .milliseconds(700))
+            snap("02-sidebar-hidden")
+            vm.isSidebarVisible = true
+            try? await Task.sleep(for: .milliseconds(700))
+            snap("03-sidebar-restored")
+            vm.isSettingsOpen = true
+            vm.settingsTab = "general"
+            try? await Task.sleep(for: .milliseconds(700))
+            snap("04-settings-general")
+            vm.settingsTab = "cloudmodel"
+            try? await Task.sleep(for: .milliseconds(500))
+            snap("05-settings-cloudmodel")
+            vm.isSettingsOpen = false
+            try? await Task.sleep(for: .milliseconds(300))
+            NSApp.terminate(nil)
         }
     }
 

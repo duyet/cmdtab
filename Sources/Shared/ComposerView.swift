@@ -347,7 +347,6 @@ struct ComposerView: View {
                 .frame(width: composerIconFrame, height: composerIconFrame)
                 .foregroundColor(.secondary)
         }
-        .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .buttonStyle(PlainButtonStyle())
         .accessibilityLabel("Attach file or photo")
@@ -393,7 +392,6 @@ struct ComposerView: View {
                 } label: {
                     modelMenuLabel(viewModel.localModelMode == "on-device" ? "On-Device" : "Private Cloud")
                 }
-                .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .buttonStyle(PlainButtonStyle())
                 #if os(macOS)
@@ -426,7 +424,6 @@ struct ComposerView: View {
                 } label: {
                     modelMenuLabel(currentModelLabel)
                 }
-                .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .buttonStyle(PlainButtonStyle())
                 #if os(macOS)
@@ -631,7 +628,6 @@ struct ComposerView: View {
                 .frame(width: composerIconFrame, height: composerIconFrame)
                 .foregroundColor(.secondary)
         }
-        .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .buttonStyle(PlainButtonStyle())
         #if os(macOS)

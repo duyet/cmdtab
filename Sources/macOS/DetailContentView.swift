@@ -87,31 +87,7 @@ struct DetailContentView: View {
         }
         // Sheet modal for Raw Request details
         .sheet(isPresented: $showRequestInfoDialog) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Raw Model Request Details")
-                        .font(.headline)
-                    Spacer()
-                    Button("Close") {
-                        showRequestInfoDialog = false
-                    }
-                    .keyboardShortcut(.cancelAction)
-                }
-                .padding(.bottom, 4)
-                
-                ScrollView {
-                    Text(viewModel.getRawRequestDetails())
-                        .font(.system(.body, design: .monospaced))
-                        .textSelection(.enabled)
-                        .padding(8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.subtleFill)
-                        .clipShape(.rect(cornerRadius: 6))
-                }
-                .frame(maxHeight: 400)
-            }
-            .padding(16)
-            .frame(width: 500, height: 480)
+            RawRequestSheet(viewModel: viewModel, isPresented: $showRequestInfoDialog)
         }
     }
 
@@ -472,5 +448,55 @@ private struct ActivityCalendarView: View {
         case 15...39: return accentColor(0.75)
         default: return accentColor(1.0)
         }
+    }
+}
+
+// MARK: - Raw Request Sheet
+/// Displays the full request payload sent to the model, with structured
+/// JSON sections for system instructions, tools, parameters, and messages.
+private struct RawRequestSheet: View {
+    @ObservedObject var viewModel: MainViewModel
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Text("Raw Model Request Details")
+                    .font(.headline)
+                Spacer()
+                Button("Close") { isPresented = false }
+                    .keyboardShortcut(.cancelAction)
+            }
+            .padding(.bottom, 12)
+
+            // JSON content
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(prettyJSON)
+                        .font(.system(.body, design: .monospaced))
+                        .textSelection(.enabled)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .background(Color.subtleFill)
+                .clipShape(.rect(cornerRadius: 8))
+            }
+        }
+        .padding(16)
+        .frame(width: 560, height: 520)
+    }
+
+    private var prettyJSON: String {
+        let raw = viewModel.getRawRequestDetails()
+        // Re-format with sorted keys for consistency
+        guard let data = raw.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data),
+              let formatted = try? JSONSerialization.data(
+                withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
+              let str = String(data: formatted, encoding: .utf8) else {
+            return raw
+        }
+        return str
     }
 }

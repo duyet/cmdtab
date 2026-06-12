@@ -61,6 +61,11 @@ struct ComposerView: View {
                     localUnavailableNotice
                 }
 
+                // Private Cloud Compute placeholder notice
+                if viewModel.isLocalModelSelected && viewModel.localModelMode == "private-cloud" {
+                    privateCloudNotice
+                }
+
                 // Missing API key CTA (cloud mode, key checked lazily)
                 if !viewModel.isLocalModelSelected && viewModel.hasLoadedApiKey && viewModel.apiKey.isEmpty {
                     missingKeyNotice
@@ -359,19 +364,9 @@ struct ComposerView: View {
             Button(action: {
                 viewModel.isLocalModelSelected.toggle()
             }) {
-                HStack(spacing: 4) {
-                    Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
-                        .font(.system(size: AppFont.pt(11)))
-                    if viewModel.isLocalModelSelected {
-                        Text("Foundation Models")
-                            .font(.system(size: AppFont.pt(10)))
-                    }
-                }
-                .foregroundColor(.secondary)
-                .padding(.horizontal, viewModel.isLocalModelSelected ? 8 : 0)
-                .padding(.vertical, viewModel.isLocalModelSelected ? 4 : 0)
-                .background(viewModel.isLocalModelSelected ? Color.primary.opacity(0.04) : Color.clear)
-                .cornerRadius(viewModel.isLocalModelSelected ? 6 : 0)
+                Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
+                    .font(.system(size: AppFont.pt(11)))
+                    .foregroundColor(.secondary)
             }
             .buttonStyle(PlainButtonStyle())
             .accessibilityLabel(viewModel.isLocalModelSelected ? "Switch to Cloud model" : "Switch to Local model")
@@ -379,7 +374,35 @@ struct ComposerView: View {
             .help(viewModel.isLocalModelSelected ? "Switch to Cloud Model" : "Switch to Local On-device Model")
             #endif
 
-            if !viewModel.isLocalModelSelected {
+            if viewModel.isLocalModelSelected {
+                // Local model picker: On-Device / Private Cloud Compute
+                Menu {
+                    Picker("Local Model", selection: $viewModel.localModelMode) {
+                        Label("On-Device", systemImage: "cpu").tag("on-device")
+                        Label("Private Cloud Compute", systemImage: "cloud").tag("private-cloud")
+                    }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                } label: {
+                    HStack(spacing: 2) {
+                        Text(viewModel.localModelMode == "on-device" ? "On-Device" : "Private Cloud")
+                            .font(.system(size: AppFont.pt(10)))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: AppFont.pt(7)))
+                            .foregroundColor(.secondary.opacity(0.7))
+                    }
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .buttonStyle(PlainButtonStyle())
+                #if os(macOS)
+                .help("Select local model backend")
+                #endif
+            } else {
+                // Cloud model picker
                 Menu {
                     Section {
                         Picker("Model", selection: $viewModel.modelName) {
@@ -472,10 +495,7 @@ struct ComposerView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("On-device model (Apple Foundation Models)")
                             .font(.headline)
-
-                        // Live readiness audit with one-click fixes.
                         AppleIntelligenceAuditView(compact: true)
-
                         Text("Until on-device inference is ready, MinhAgent uses your configured cloud API.")
                             .font(.system(size: AppFont.pt(11)))
                             .foregroundColor(.secondary)
@@ -484,7 +504,6 @@ struct ComposerView: View {
                     .padding(16)
                     .frame(width: 360)
                 }
-
             Button("Use Cloud") {
                 viewModel.isLocalModelSelected = false
             }
@@ -495,6 +514,29 @@ struct ComposerView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 7)
         .background(Color.orange.opacity(0.06))
+    }
+
+    // MARK: Private Cloud Compute placeholder notice
+    private var privateCloudNotice: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "cloud")
+                .font(.system(size: AppFont.pt(10)))
+                .foregroundColor(.secondary)
+            Text("Private Cloud Compute is not available yet. Using on-device model.")
+                .font(.system(size: AppFont.pt(11)))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+            Spacer()
+            Button("Use On-Device") {
+                viewModel.localModelMode = "on-device"
+            }
+            .buttonStyle(PlainButtonStyle())
+            .font(.system(size: AppFont.pt(11), weight: .semibold))
+            .foregroundColor(Color.accentCoral)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 7)
+        .background(Color.primary.opacity(0.03))
     }
 
     // MARK: Missing API key notice — routes to Settings → Cloud Model
@@ -571,48 +613,34 @@ struct ComposerView: View {
     private var toolsDropdown: some View {
         Menu {
             Section("Available Tools") {
-                Button(action: { toggleTool("calculator") }) {
-                    HStack {
-                        Image(systemName: viewModel.enabledLocalTools.contains("calculator") ? "checkmark" : "")
-                        Text("Calculator (Math)")
-                        Spacer()
-                        Image(systemName: "plus.forwardslash.minus")
-                    }
+                Toggle(isOn: toolBinding("calculator")) {
+                    Label("Calculator", systemImage: "plus.forwardslash.minus")
                 }
-                
-                Button(action: { toggleTool("system_clock") }) {
-                    HStack {
-                        Image(systemName: viewModel.enabledLocalTools.contains("system_clock") ? "checkmark" : "")
-                        Text("System Clock (Date/Time)")
-                        Spacer()
-                        Image(systemName: "clock")
-                    }
+                Toggle(isOn: toolBinding("system_clock")) {
+                    Label("System Clock", systemImage: "clock")
                 }
             }
         } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "wrench.and.screwdriver")
-                    .font(.system(size: AppFont.pt(10)))
-                    .foregroundColor(.secondary)
-                Text("Tools (\(viewModel.enabledLocalTools.count))")
-                    .font(.system(size: AppFont.pt(10)))
-                    .foregroundColor(.secondary)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: AppFont.pt(7)))
-                    .foregroundColor(.secondary.opacity(0.7))
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(Color.primary.opacity(0.04))
-            .cornerRadius(6)
+            Image(systemName: "wrench.and.screwdriver")
+                .font(.system(size: AppFont.pt(10), weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(width: 17, height: 17)
+                .background(Color.primary.opacity(0.05))
+                .clipShape(Circle())
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
-        .fixedSize()
         .buttonStyle(PlainButtonStyle())
         #if os(macOS)
         .help("Enable or disable on-device tools")
         #endif
+    }
+
+    private func toolBinding(_ name: String) -> Binding<Bool> {
+        Binding<Bool>(
+            get: { viewModel.enabledLocalTools.contains(name) },
+            set: { _ in toggleTool(name) }
+        )
     }
     
     private func toggleTool(_ name: String) {

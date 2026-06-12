@@ -137,6 +137,11 @@ public final class MainViewModel: ObservableObject {
             updateStatusMessage()
         }
     }
+
+    /// Which local model backend: "on-device" (FoundationModels) or "private-cloud" (placeholder).
+    @Published public var localModelMode: String = "on-device" {
+        didSet { UserDefaults.standard.set(localModelMode, forKey: "localModelMode") }
+    }
     @Published public var apiProvider: String = "anyrouter" {
         didSet {
             UserDefaults.standard.set(apiProvider, forKey: "apiProvider")
@@ -752,15 +757,27 @@ public final class MainViewModel: ObservableObject {
         let rawRequestDetails: String
         if isLocalModelSelected {
             let prompt = historyMessages.last(where: { $0.role == "user" })?.content ?? ""
+            var toolsArray: [[String: String]] = []
+            if enabledLocalTools.contains("calculator") {
+                toolsArray.append(["name": "calculator", "description": "Evaluate simple mathematical expressions"])
+            }
+            if enabledLocalTools.contains("system_clock") {
+                toolsArray.append(["name": "system_clock", "description": "Get the current system date and time"])
+            }
+            var parameters: [String: Any] = [
+                "framework": "FoundationModels (macOS 26)",
+                "stream": true
+            ]
+            if !toolsArray.isEmpty {
+                parameters["tools"] = toolsArray
+            }
             let localRequest: [String: Any] = [
                 "model": "Apple Foundation Models (On-Device)",
                 "target_url": "local://on-device-inference",
-                "parameters": [
-                    "framework": "FoundationModels (macOS 26)",
-                    "stream": true
-                ],
+                "parameters": parameters,
                 "system_instructions": systemInstructions,
-                "prompt": prompt
+                "prompt": prompt,
+                "history_messages": historyMessages.count
             ]
             if let data = try? JSONSerialization.data(withJSONObject: localRequest, options: [.prettyPrinted, .sortedKeys]),
                let jsonStr = String(data: data, encoding: .utf8) {

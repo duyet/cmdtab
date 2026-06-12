@@ -617,7 +617,7 @@ struct ComposerView: View {
             }
         } label: {
             Image(systemName: "wrench.and.screwdriver")
-                .font(.system(size: AppFont.pt(11)))
+                .font(.system(size: AppFont.pt(10)))
                 .frame(width: 22, height: 22)
                 .foregroundColor(.secondary)
         }

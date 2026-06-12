@@ -419,11 +419,12 @@ struct MessageRow: View {
                     }
                 }
 
-                // Meta row: copy + timestamp + metrics
+                // Meta row: copy + timestamp + metrics + retry
                 HStack(spacing: 8) {
                     Button(action: copyMessage) {
                         Image(systemName: copied ? "checkmark" : "square.on.square")
                             .font(.system(size: AppFont.pt(10)))
+                            .frame(width: 16, height: 16)
                             .foregroundColor(copied ? Color.accentCoral : .secondary.opacity(0.7))
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -443,6 +444,7 @@ struct MessageRow: View {
                         } label: {
                             Image(systemName: "arrow.clockwise")
                                 .font(.system(size: AppFont.pt(10)))
+                                .frame(width: 16, height: 16)
                                 .foregroundColor(.secondary.opacity(0.7))
                         }
                         .buttonStyle(PlainButtonStyle())

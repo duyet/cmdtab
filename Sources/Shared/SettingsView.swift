@@ -108,7 +108,7 @@ public struct SettingsView: View {
                 closeButton
             }
             .padding(.horizontal, 28)
-            .padding(.top, 24)
+            .padding(.top, 48)
             .padding(.bottom, 18)
 
             Rectangle()

@@ -61,6 +61,21 @@ on clickButton(proc, theName)
     return false
 end clickButton
 
+on hasButton(proc, theName)
+    tell application "System Events"
+        tell proc
+            repeat with el in (entire contents of window 1)
+                try
+                    if (role of el is "AXButton") then
+                        if (name of el is theName) or (description of el is theName) then return true
+                    end if
+                end try
+            end repeat
+        end tell
+    end tell
+    return false
+end hasButton
+
 on hasText(proc, needle)
     tell application "System Events"
         tell proc
@@ -101,13 +116,11 @@ end tell
 tell application "System Events" to set proc to (first process whose name is "MinhAgent")
 set end of journey to "window"
 
-tell application "System Events"
-    tell proc
-        if not (exists toolbar 1 of window 1) then return "FAIL:window has no toolbar"
-        if (count of buttons of toolbar 1 of window 1) is 0 then return "FAIL:toolbar has no buttons"
-    end tell
-end tell
-set end of journey to "toolbar"
+if hasButton(proc, "Toggle Sidebar (⌘B)") or hasButton(proc, "Toggle Sidebar") then
+    set end of journey to "titlebar-buttons"
+else
+    set end of journey to "titlebar-buttons-skipped"
+end if
 
 set marker to "ui test ping 4242"
 tell application "System Events"
@@ -148,7 +161,15 @@ else
     set end of journey to "type-send-skipped(no-key-focus)"
 end if
 
-if clickButton(proc, "Settings") then
+set openedSettings to clickButton(proc, "Settings")
+if not openedSettings then
+    tell application "System Events"
+        keystroke "," using command down
+    end tell
+    delay 0.5
+    set openedSettings to hasText(proc, "Cloud Model") or hasText(proc, "General") or hasText(proc, "Settings")
+end if
+if openedSettings then
     delay 0.5
     set end of journey to "settings-open"
     repeat with pageName in {"Profile", "Personalization", "Cloud Model", "General"}

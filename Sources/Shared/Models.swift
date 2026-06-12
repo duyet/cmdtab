@@ -64,11 +64,15 @@ public struct ChatMessage: Codable, Identifiable, Equatable, Sendable {
     public var isQuote: Bool
     /// Inference metrics (TTFT, TPS, tokens, model) captured during streaming.
     public var inferenceMetrics: InferenceMetrics?
+    /// Typed render blocks derived from assistant content. `content` remains the
+    /// canonical plain-text/markdown fallback for old data, copy, retry, and prompts.
+    public var renderBlocks: [AgentResponseBlock]?
 
     public init(
         id: UUID = UUID(), role: String, content: String, timestamp: Date = Date(),
         isError: Bool = false, actionLabel: String? = nil, isQuote: Bool = false,
-        inferenceMetrics: InferenceMetrics? = nil
+        inferenceMetrics: InferenceMetrics? = nil,
+        renderBlocks: [AgentResponseBlock]? = nil
     ) {
         self.id = id
         self.role = role
@@ -78,11 +82,12 @@ public struct ChatMessage: Codable, Identifiable, Equatable, Sendable {
         self.actionLabel = actionLabel
         self.isQuote = isQuote
         self.inferenceMetrics = inferenceMetrics
+        self.renderBlocks = renderBlocks
     }
 
     // MARK: Codable — backward-compat with persisted data that has no inferenceMetrics key
     enum CodingKeys: String, CodingKey {
-        case id, role, content, timestamp, isError, actionLabel, isQuote, inferenceMetrics
+        case id, role, content, timestamp, isError, actionLabel, isQuote, inferenceMetrics, renderBlocks
     }
 
     public init(from decoder: Decoder) throws {
@@ -95,6 +100,7 @@ public struct ChatMessage: Codable, Identifiable, Equatable, Sendable {
         actionLabel = try? c.decode(String.self, forKey: .actionLabel)
         isQuote = (try? c.decode(Bool.self, forKey: .isQuote)) ?? false
         inferenceMetrics = try? c.decode(InferenceMetrics.self, forKey: .inferenceMetrics)
+        renderBlocks = try? c.decode([AgentResponseBlock].self, forKey: .renderBlocks)
     }
 }
 

@@ -392,6 +392,10 @@ public struct SettingsView: View {
     // MARK: - Cloud Model Tab (provider, endpoint, key, model)
     private var cloudModelTabContent: some View {
         VStack(alignment: .leading, spacing: 20) {
+            settingsSection("ACTIVE RUNTIME") {
+                modelRuntimeSummaryView
+            }
+
             settingsSection("API PROVIDER") {
                 Picker("", selection: $viewModel.apiProvider) {
                     Text("anyrouter.dev").tag("anyrouter")
@@ -445,6 +449,9 @@ public struct SettingsView: View {
             }
 
             settingsSection("API KEY / TOKEN (Keychain Protected)") {
+                keychainStatusView
+                    .padding(.bottom, 2)
+
                 SecureField("Enter API Token...", text: $viewModel.apiKey)
                     .font(.system(size: AppFont.pt(13)))
                     .textFieldStyle(PlainTextFieldStyle())
@@ -475,6 +482,9 @@ public struct SettingsView: View {
                 #endif
                 .labelsHidden()
                 .frame(maxWidth: 220, alignment: .leading)
+
+                cloudModelDetailsView
+                    .padding(.top, 6)
             }
 
             settingsSection("ON-DEVICE MODEL") {
@@ -487,6 +497,10 @@ public struct SettingsView: View {
                     
                     localModelDetailsView
                 }
+            }
+
+            settingsSection("LOCAL TOOLS") {
+                localToolDetailsView
             }
         }
     }
@@ -527,6 +541,153 @@ public struct SettingsView: View {
         }
     }
 
+    private var modelRuntimeSummaryView: some View {
+        VStack(spacing: 0) {
+            metadataRow(
+                label: "Active Mode",
+                value: viewModel.isLocalModelSelected ? "Local" : "Cloud"
+            )
+            Divider()
+            metadataRow(
+                label: "Cloud Provider",
+                value: providerDisplayName
+            )
+            Divider()
+            metadataRow(
+                label: "Endpoint Host",
+                value: endpointHost
+            )
+            Divider()
+            metadataRow(
+                label: "Selected Model",
+                value: viewModel.isLocalModelSelected ? localModelDisplayName : currentCloudModelDisplayName
+            )
+        }
+        .background(Color.cardSurface)
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.hairline.opacity(0.5), lineWidth: 1)
+        )
+    }
+
+    private var keychainStatusView: some View {
+        HStack(spacing: 8) {
+            Image(systemName: viewModel.apiKey.isEmpty ? "key.slash" : "key.fill")
+                .font(.system(size: AppFont.pt(12), weight: .semibold))
+                .foregroundColor(viewModel.apiKey.isEmpty ? .secondary : .green)
+                .frame(width: 18, height: 18)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(viewModel.apiKey.isEmpty ? "No cloud key loaded" : "Cloud key loaded")
+                    .font(.system(size: AppFont.pt(12), weight: .semibold))
+                Text("Saved with Keychain service minhagent.app and account token.")
+                    .font(.system(size: AppFont.pt(11)))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(Color.primary.opacity(0.03))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.hairline.opacity(0.5), lineWidth: 1))
+    }
+
+    private var cloudModelDetailsView: some View {
+        VStack(spacing: 0) {
+            metadataRow(label: "Model ID", value: viewModel.modelName)
+            Divider()
+            metadataRow(label: "Display Name", value: currentCloudModelDisplayName)
+            Divider()
+            metadataRow(
+                label: "Reasoning",
+                value: viewModel.modelSupportsReasoning ? viewModel.reasoningEffort.capitalized : "Not supported"
+            )
+        }
+        .background(Color.cardSurface)
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.hairline.opacity(0.5), lineWidth: 1)
+        )
+    }
+
+    private var localToolDetailsView: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(isOn: localToolBinding("calculator")) {
+                settingsToggleLabel(
+                    title: "Calculator",
+                    detail: "Evaluate simple arithmetic expressions when local tool calling is available.",
+                    icon: "plus.forwardslash.minus"
+                )
+            }
+            Toggle(isOn: localToolBinding("system_clock")) {
+                settingsToggleLabel(
+                    title: "System Clock",
+                    detail: "Read the current system date and time for local model answers.",
+                    icon: "clock"
+                )
+            }
+            Text("Tools are attached only to the local FoundationModels path. Cloud models receive normal OpenAI-compatible chat messages.")
+                .font(.system(size: AppFont.pt(11)))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func settingsToggleLabel(title: String, detail: String, icon: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: AppFont.pt(12), weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(width: 18, height: 18)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: AppFont.pt(12.5), weight: .semibold))
+                Text(detail)
+                    .font(.system(size: AppFont.pt(11)))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func localToolBinding(_ name: String) -> Binding<Bool> {
+        Binding(
+            get: { viewModel.enabledLocalTools.contains(name) },
+            set: { enabled in
+                if enabled {
+                    viewModel.enabledLocalTools.insert(name)
+                } else {
+                    viewModel.enabledLocalTools.remove(name)
+                }
+            }
+        )
+    }
+
+    private var providerDisplayName: String {
+        switch viewModel.apiProvider {
+        case "anyrouter": return "AnyRouter"
+        case "ollama": return "Local Ollama"
+        case "openrouter": return "OpenRouter"
+        case "gemini": return "Google Gemini"
+        case "openai": return "OpenAI"
+        default: return "Custom"
+        }
+    }
+
+    private var endpointHost: String {
+        URL(string: viewModel.endpointUrl)?.host ?? viewModel.endpointUrl
+    }
+
+    private var currentCloudModelDisplayName: String {
+        ModelCatalog.entry(for: viewModel.modelName)?.displayName ?? viewModel.modelName
+    }
+
+    private var localModelDisplayName: String {
+        viewModel.localModelMode == "on-device" ? "Apple Foundation Models" : "Private Cloud Compute"
+    }
+
     private func metadataRow(label: String, value: String) -> some View {
         HStack {
             Text(label)
@@ -536,6 +697,9 @@ public struct SettingsView: View {
             Text(value)
                 .font(.system(size: AppFont.pt(11.5), weight: .medium))
                 .foregroundColor(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.trailing)
+                .textSelection(.enabled)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

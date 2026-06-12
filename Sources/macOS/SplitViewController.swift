@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 final class SplitViewController: NSSplitViewController {
     let viewModel: MainViewModel
+    private let autoHideSidebarWidth: CGFloat = 760
     private var sidebarSplitItem: NSSplitViewItem!
     private var detailSplitItem: NSSplitViewItem!
     private var cancellables = Set<AnyCancellable>()
@@ -72,6 +73,11 @@ final class SplitViewController: NSSplitViewController {
         super.splitViewDidResizeSubviews(notification)
 
         guard let sidebarSplitItem else { return }
+
+        if splitView.bounds.width < autoHideSidebarWidth, !sidebarSplitItem.isCollapsed {
+            viewModel.isSidebarVisible = false
+            return
+        }
 
         // Read actual sidebar width from the view controller's view rather than
         // indexing splitView.subviews, which is fragile across AppKit internals.

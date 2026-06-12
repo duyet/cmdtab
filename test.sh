@@ -10,6 +10,7 @@ xcrun -sdk macosx swiftc -target arm64-apple-macosx14.0 -D DISABLE_NATIVE_LLM -o
   Sources/Shared/APIClient.swift \
   Sources/Shared/EnvFile.swift \
   Sources/Shared/MarkdownBlocks.swift \
+  Sources/Shared/AgentResponseBlocks.swift \
   Sources/Shared/LocalModelClient.swift \
   Sources/Shared/AppleIntelligenceAudit.swift \
   Sources/Shared/InferenceAdapter.swift \

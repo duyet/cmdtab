@@ -467,6 +467,40 @@ func testMarkdownNestedMixedListStaysOneBlock() {
     }
 }
 
+func testAgentResponseBlockParsing() {
+    print("Testing agent response block parsing...")
+    let content = """
+    I will calculate it.
+
+    ```tool
+    name: calculator
+    status: completed
+    input: 2+2
+    output: 4
+    ```
+
+    ![Result chart](https://example.com/chart.png)
+
+    ```chart
+    title: Counts
+    Apples: 3
+    Bananas: 5
+    ```
+    """
+    let blocks = AgentResponseBlock.parse(content)
+    assert(blocks.map(\.kind) == [.text, .tool, .image, .chart], "typed blocks must split text/tool/image/chart")
+    assert(blocks[1].metadata["name"] == "calculator", "tool metadata must include name")
+    assert(blocks[1].metadata["output"] == "4", "tool metadata must include output")
+    assert(blocks[2].imageAlt == "Result chart", "image alt must be extracted")
+    assert(blocks[3].title == "Counts", "chart title must be extracted")
+
+    let toolNameBlocks = AgentResponseBlock.parse("```calculator\n4\n```")
+    assert(toolNameBlocks.count == 1, "single tool-name fence must produce one block")
+    assert(toolNameBlocks[0].kind == .tool, "known tool-name fence must render as a tool block")
+    assert(toolNameBlocks[0].title == "Calculator", "known tool-name fence must title from language")
+    print("✓ Agent response block parsing passed")
+}
+
 func testEnvFileParsing() {
     let parsed = EnvFile.parse(
         contents: "# comment\nANYROUTER_API_KEY=sk-test\n"
@@ -551,6 +585,7 @@ func runAllTests() {
     testMarkdownHashWithoutSpaceIsNotHeading()
     testMarkdownImageBlock()
     testMarkdownNestedMixedListStaysOneBlock()
+    testAgentResponseBlockParsing()
     testEnvFileParsing()
     testClipboardSanitization()
     testKeychainCRUD()

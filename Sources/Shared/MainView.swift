@@ -410,8 +410,10 @@ struct MessageRow: View {
                     errorCard
                 } else {
                     HStack(alignment: .top, spacing: 0) {
-                        MessageMarkdownView(
-                            content: message.content, fontScale: viewModel.fontScale)
+                        AgentResponseView(
+                            content: message.content,
+                            renderBlocks: message.renderBlocks,
+                            fontScale: viewModel.fontScale)
                         // Blinking cursor while streaming
                         if viewModel.isStreaming {
                             StreamingCursor()
@@ -481,7 +483,7 @@ struct MessageRow: View {
                 .font(.system(size: AppFont.pt(12)))
                 .foregroundColor(.red.opacity(0.85))
             Text(message.content)
-                .font(.system(size: AppFont.pt(13) * viewModel.fontScale))
+                .font(.system(size: AppFont.pt(13)))
                 .foregroundColor(.primary.opacity(0.85))
                 .textSelection(.enabled)
         }
@@ -498,7 +500,7 @@ struct MessageRow: View {
     /// Native markdown rendering (inline syntax: bold, italic, code, links).
     private var markdownText: some View {
         Text(attributedContent)
-            .font(.system(size: AppFont.pt(13) * viewModel.fontScale))
+            .font(.system(size: AppFont.pt(13)))
             .foregroundColor(.primary)
             .lineSpacing(4)
             .textSelection(.enabled)

@@ -56,6 +56,8 @@ final class PersistedMessage {
     var isError: Bool
     /// Encoded `InferenceMetrics` JSON. nil for old messages without metrics.
     var metricsData: Data?
+    /// Encoded `[AgentResponseBlock]` JSON. nil for old text-only messages.
+    var renderBlocksData: Data?
 
     var conversation: PersistedConversation?
 
@@ -65,7 +67,8 @@ final class PersistedMessage {
         content: String,
         timestamp: Date = Date(),
         isError: Bool = false,
-        metricsData: Data? = nil
+        metricsData: Data? = nil,
+        renderBlocksData: Data? = nil
     ) {
         self.id = id
         self.role = role
@@ -73,6 +76,7 @@ final class PersistedMessage {
         self.timestamp = timestamp
         self.isError = isError
         self.metricsData = metricsData
+        self.renderBlocksData = renderBlocksData
     }
 }
 
@@ -119,7 +123,8 @@ extension PersistedMessage {
             content: message.content,
             timestamp: message.timestamp,
             isError: message.isError,
-            metricsData: message.inferenceMetrics.flatMap { try? JSONEncoder().encode($0) }
+            metricsData: message.inferenceMetrics.flatMap { try? JSONEncoder().encode($0) },
+            renderBlocksData: message.renderBlocks.flatMap { try? JSONEncoder().encode($0) }
         )
     }
 
@@ -131,7 +136,10 @@ extension PersistedMessage {
             content: content,
             timestamp: timestamp,
             isError: isError,
-            inferenceMetrics: metricsData.flatMap { try? JSONDecoder().decode(InferenceMetrics.self, from: $0) }
+            inferenceMetrics: metricsData.flatMap { try? JSONDecoder().decode(InferenceMetrics.self, from: $0) },
+            renderBlocks: renderBlocksData.flatMap {
+                try? JSONDecoder().decode([AgentResponseBlock].self, from: $0)
+            }
         )
     }
 }

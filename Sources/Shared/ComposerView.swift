@@ -24,6 +24,7 @@ struct ComposerView: View {
     @State private var attachedFileData: Data? = nil
     @State private var attachedFileType: String? = nil
     #endif
+    private let composerIconFrame: CGFloat = 24
 
     private var modelOptions: [(id: String, label: String, icon: String)] {
         ModelCatalog.entries.map { (id: $0.id, label: $0.displayName, icon: $0.sfSymbol) }
@@ -343,7 +344,7 @@ struct ComposerView: View {
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: AppFont.pt(11)))
-                .frame(width: 22, height: 22)
+                .frame(width: composerIconFrame, height: composerIconFrame)
                 .foregroundColor(.secondary)
         }
         .menuStyle(.borderlessButton)
@@ -355,7 +356,7 @@ struct ComposerView: View {
         PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
             Image(systemName: "plus")
                 .font(.system(size: AppFont.pt(11)))
-                .frame(width: 22, height: 22)
+                .frame(width: composerIconFrame, height: composerIconFrame)
                 .foregroundColor(.secondary)
         }
         .buttonStyle(PlainButtonStyle())
@@ -371,7 +372,7 @@ struct ComposerView: View {
             }) {
                 Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
                     .font(.system(size: AppFont.pt(11)))
-                    .frame(width: 22, height: 22)
+                    .frame(width: composerIconFrame, height: composerIconFrame)
                     .foregroundColor(.secondary)
             }
             .buttonStyle(PlainButtonStyle())
@@ -390,19 +391,10 @@ struct ComposerView: View {
                     .pickerStyle(.inline)
                     .labelsHidden()
                 } label: {
-                    HStack(spacing: 2) {
-                        Text(viewModel.localModelMode == "on-device" ? "On-Device" : "Private Cloud")
-                            .font(.system(size: AppFont.pt(10)))
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: AppFont.pt(7)))
-                            .foregroundColor(.secondary.opacity(0.7))
-                    }
+                    modelMenuLabel(viewModel.localModelMode == "on-device" ? "On-Device" : "Private Cloud")
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
-                .fixedSize()
                 .buttonStyle(PlainButtonStyle())
                 #if os(macOS)
                 .help("Select local model backend")
@@ -432,19 +424,10 @@ struct ComposerView: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: 2) {
-                        Text(currentModelLabel)
-                            .font(.system(size: AppFont.pt(10)))
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: AppFont.pt(7)))
-                            .foregroundColor(.secondary.opacity(0.7))
-                    }
+                    modelMenuLabel(currentModelLabel)
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
-                .fixedSize()
                 .buttonStyle(PlainButtonStyle())
                 #if os(macOS)
                 .help("\(currentModelLabel) · \(URL(string: viewModel.endpointUrl)?.host ?? "cloud")")
@@ -463,11 +446,27 @@ struct ComposerView: View {
         modelOptions.first(where: { $0.id == viewModel.modelName })?.icon ?? "cloud"
     }
 
+    private func modelMenuLabel(_ title: String) -> some View {
+        HStack(spacing: 6) {
+            Text(title)
+                .font(.system(size: AppFont.pt(10.5), weight: .medium))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Image(systemName: "chevron.down")
+                .font(.system(size: AppFont.pt(7.5), weight: .semibold))
+                .foregroundColor(.secondary.opacity(0.65))
+                .frame(width: 9, height: 9)
+        }
+        .frame(minWidth: 76, maxWidth: 148, minHeight: composerIconFrame, alignment: .trailing)
+        .contentShape(Rectangle())
+    }
+
     // MARK: Send button — coral when active
     private var sendButton: some View {
         Button(action: send) {
             Image(systemName: "arrow.up")
-                .font(.system(size: AppFont.pt(10), weight: .bold))
+                .font(.system(size: AppFont.pt(11), weight: .bold))
                 .foregroundColor(canSend ? .white : .secondary.opacity(0.4))
                 .frame(width: 26, height: 26)
                 .background(canSend ? Color.accentCoral : Color.primary.opacity(0.07))
@@ -628,8 +627,8 @@ struct ComposerView: View {
             }
         } label: {
             Image(systemName: "wrench.and.screwdriver")
-                .font(.system(size: AppFont.pt(9)))
-                .frame(width: 22, height: 22)
+                .font(.system(size: AppFont.pt(10), weight: .medium))
+                .frame(width: composerIconFrame, height: composerIconFrame)
                 .foregroundColor(.secondary)
         }
         .menuStyle(.borderlessButton)

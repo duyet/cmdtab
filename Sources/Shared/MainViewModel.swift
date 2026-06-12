@@ -65,7 +65,10 @@ public final class MainViewModel: ObservableObject {
         didSet { UserDefaults.standard.set(systemPrompt, forKey: "systemPrompt") }
     }
 
-    public static let defaultSystemPrompt = "You are a helpful engineering assistant. Respond concisely using markdown."
+    public static let defaultSystemPrompt =
+        "You are a helpful engineering assistant. Respond concisely using markdown. "
+        + "When useful, emit fenced `tool` blocks with name/status/input/output fields, "
+        + "fenced `chart` blocks with title and label:value rows, and markdown images."
 
     /// Memories toggle (no memory store yet — UX surface for the upcoming feature).
     @Published public var memoriesEnabled: Bool = false {
@@ -898,6 +901,8 @@ public final class MainViewModel: ObservableObject {
                 if let convIdx = self?.conversations.firstIndex(where: { $0.id == conversationId }),
                    let msgIdx = self?.conversations[convIdx].messages.firstIndex(where: { $0.id == assistantMsgId }) {
                     self?.conversations[convIdx].messages[msgIdx].inferenceMetrics = metrics
+                    self?.conversations[convIdx].messages[msgIdx].renderBlocks = AgentResponseBlock.parse(
+                        self?.conversations[convIdx].messages[msgIdx].content ?? "")
                 }
 
                 // Update serialized transcript entries for the next local model call.

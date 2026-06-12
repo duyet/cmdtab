@@ -58,13 +58,13 @@ struct MessageMarkdownView: View {
             }
         case .heading(let level):
             Text(inlineMarkdown(block.text))
-                .font(.system(size: headingSize(level) * fontScale, weight: .semibold))
+                .font(.system(size: headingSize(level), weight: .semibold))
                 .foregroundColor(.primary)
                 .textSelection(.enabled)
                 .multilineTextAlignment(alignment)
         case .paragraph:
             Text(inlineMarkdown(block.text))
-                .font(.system(size: AppFont.pt(13) * fontScale))
+                .font(.system(size: AppFont.pt(13)))
                 .foregroundColor(.primary)
                 .lineSpacing(4)
                 .textSelection(.enabled)
@@ -84,11 +84,11 @@ struct MessageMarkdownView: View {
         }
     }
 
-    private func headingSize(_ level: Int) -> Double {
+    private func headingSize(_ level: Int) -> CGFloat {
         switch level {
-        case 1: return 19
-        case 2: return 16.5
-        default: return 14.5
+        case 1: return AppFont.pt(19)
+        case 2: return AppFont.pt(16.5)
+        default: return AppFont.pt(14.5)
         }
     }
 }
@@ -104,7 +104,7 @@ private struct CodeBlockView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text(language?.isEmpty == false ? language! : "code")
-                    .font(.system(size: AppFont.pt(10) * fontScale, weight: .medium))
+                    .font(.system(size: AppFont.pt(10), weight: .medium))
                     .foregroundColor(.secondary)
                 Spacer()
                 Button(action: copyCode) {
@@ -124,7 +124,7 @@ private struct CodeBlockView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 Text(code)
-                    .font(.system(size: AppFont.pt(12) * fontScale, design: .monospaced))
+                    .font(.system(size: AppFont.pt(12), design: .monospaced))
                     .foregroundColor(.primary)
                     .lineSpacing(3)
                     .textSelection(.enabled)
@@ -182,7 +182,7 @@ private struct ListBlockView: View {
                 HStack(alignment: .top, spacing: 8) {
                     markerView(item)
                     Text(inlineMarkdown(item.content))
-                        .font(.system(size: AppFont.pt(13) * fontScale))
+                        .font(.system(size: AppFont.pt(13)))
                         .foregroundColor(.primary)
                         .lineSpacing(4)
                         .textSelection(.enabled)
@@ -197,17 +197,17 @@ private struct ListBlockView: View {
         switch item.marker {
         case .bullet:
             Text(bulletSymbol(for: item.level))
-                .font(.system(size: AppFont.pt(13) * fontScale))
+                .font(.system(size: AppFont.pt(13)))
                 .foregroundColor(.secondary)
                 .frame(width: 14, alignment: .center)
         case .number(let n):
             Text("\(n).")
-                .font(.system(size: AppFont.pt(13) * fontScale, weight: .medium))
+                .font(.system(size: AppFont.pt(13), weight: .medium))
                 .foregroundColor(.secondary)
                 .frame(minWidth: 20, alignment: .trailing)
         case .checkbox(let checked):
             Image(systemName: checked ? "checkmark.square.fill" : "square")
-                .font(.system(size: AppFont.pt(12) * fontScale))
+                .font(.system(size: AppFont.pt(12)))
                 .foregroundColor(checked ? Color.accentCoral : .secondary)
                 .frame(width: 14, alignment: .center)
                 .padding(.top, 1)
@@ -286,7 +286,7 @@ private struct MarkdownImageView: View {
             .accessibilityLabel(parts.alt.isEmpty ? "Image" : parts.alt)
         } else {
             Text(line)
-                .font(.system(size: AppFont.pt(13) * fontScale))
+                .font(.system(size: AppFont.pt(13)))
                 .foregroundColor(.primary)
         }
     }
@@ -297,7 +297,7 @@ private struct MarkdownImageView: View {
                 .font(.system(size: AppFont.pt(11)))
                 .foregroundColor(.secondary)
             Text(alt.isEmpty ? "Image unavailable" : alt)
-                .font(.system(size: AppFont.pt(12) * fontScale))
+                .font(.system(size: AppFont.pt(12)))
                 .foregroundColor(.secondary)
                 .lineLimit(2)
         }
@@ -322,7 +322,7 @@ private struct BlockquoteView: View {
                 .frame(width: 3)
 
             Text(inlineMarkdown(text))
-                .font(.system(size: AppFont.pt(13) * fontScale))
+                .font(.system(size: AppFont.pt(13)))
                 .foregroundColor(.primary.opacity(0.85))
                 .lineSpacing(4)
                 .textSelection(.enabled)
@@ -354,7 +354,7 @@ private struct TableView: View {
                 HStack(spacing: 0) {
                     ForEach(Array(header.enumerated()), id: \.offset) { _, cell in
                         Text(cell)
-                            .font(.system(size: AppFont.pt(11) * fontScale, weight: .semibold))
+                            .font(.system(size: AppFont.pt(11), weight: .semibold))
                             .foregroundColor(.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 8)
@@ -368,7 +368,7 @@ private struct TableView: View {
                     HStack(spacing: 0) {
                         ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
                             Text(inlineMarkdown(cell))
-                                .font(.system(size: AppFont.pt(12) * fontScale))
+                                .font(.system(size: AppFont.pt(12)))
                                 .foregroundColor(.primary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 8)

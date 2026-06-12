@@ -15,7 +15,7 @@ struct MermaidView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("diagram")
-                    .font(.system(size: AppFont.pt(10) * fontScale, weight: .medium))
+                    .font(.system(size: AppFont.pt(10), weight: .medium))
                     .foregroundColor(.secondary)
                 Spacer()
                 Button(action: { showSource.toggle() }) {
@@ -36,7 +36,7 @@ struct MermaidView: View {
             if showSource {
                 ScrollView(.horizontal, showsIndicators: false) {
                     Text(source)
-                        .font(.system(size: AppFont.pt(12) * fontScale, design: .monospaced))
+                        .font(.system(size: AppFont.pt(12), design: .monospaced))
                         .foregroundColor(.primary)
                         .textSelection(.enabled)
                         .padding(12)

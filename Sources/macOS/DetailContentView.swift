@@ -26,38 +26,7 @@ struct DetailContentView: View {
                 mainContentPane
             }
 
-            if !viewModel.isSidebarVisible && !viewModel.isSettingsOpen {
-                // Invisible 10pt strip along the left edge that summons the
-                // floating sidebar on hover.
-                Color.clear
-                    .frame(width: 10)
-                    .frame(maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                    .onHover { hovering in
-                        if hovering {
-                            withAnimation(.easeOut(duration: 0.18)) {
-                                isHoverSidebarVisible = true
-                            }
-                        }
-                    }
-
-                if isHoverSidebarVisible {
-                    // SidebarView styles itself as a floating card; only add
-                    // the heavier hover shadow here.
-                    SidebarView(viewModel: viewModel)
-                        .frame(width: 280)
-                        .shadow(color: .black.opacity(0.16), radius: 18, x: 4, y: 6)
-                        .padding(.vertical, 2)
-                        .onHover { hovering in
-                            if !hovering {
-                                withAnimation(.easeOut(duration: 0.18)) {
-                                    isHoverSidebarVisible = false
-                                }
-                            }
-                        }
-                        .transition(.move(edge: .leading).combined(with: .opacity))
-                }
-            }
+            hoverSidebarLayer
 
             // Command-palette search overlay
             if viewModel.isSearchPaletteVisible {
@@ -89,6 +58,46 @@ struct DetailContentView: View {
         .sheet(isPresented: $showRequestInfoDialog) {
             RawRequestSheet(viewModel: viewModel, isPresented: $showRequestInfoDialog)
         }
+    }
+
+    @ViewBuilder
+    private var hoverSidebarLayer: some View {
+        if !viewModel.isSidebarVisible && !viewModel.isSettingsOpen {
+            GeometryReader { proxy in
+                let width = hoverSidebarWidth(for: proxy.size.width)
+                ZStack(alignment: .topLeading) {
+                    Color.clear
+                        .frame(width: 12)
+                        .frame(maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                        .onHover { hovering in
+                            if hovering {
+                                withAnimation(.easeOut(duration: 0.18)) {
+                                    isHoverSidebarVisible = true
+                                }
+                            }
+                        }
+
+                    if isHoverSidebarVisible {
+                        SidebarView(viewModel: viewModel, widthOverride: width)
+                            .shadow(color: .black.opacity(0.16), radius: 18, x: 4, y: 6)
+                            .padding(.vertical, 2)
+                            .onHover { hovering in
+                                if !hovering {
+                                    withAnimation(.easeOut(duration: 0.18)) {
+                                        isHoverSidebarVisible = false
+                                    }
+                                }
+                            }
+                            .transition(.move(edge: .leading).combined(with: .opacity))
+                    }
+                }
+            }
+        }
+    }
+
+    private func hoverSidebarWidth(for detailWidth: CGFloat) -> CGFloat {
+        min(max(220, detailWidth - 48), min(viewModel.sidebarWidth, 320))
     }
 
     // MARK: - Main Content Pane

@@ -52,7 +52,7 @@ struct PlainIconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: size))
+                .font(.system(size: AppFont.pt(size), weight: .medium))
                 .foregroundColor(disabled ? .secondary.opacity(0.35) : .secondary)
                 .frame(width: 22, height: 22)
                 .contentShape(Rectangle())

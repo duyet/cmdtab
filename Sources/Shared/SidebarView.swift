@@ -6,6 +6,7 @@ import SwiftUI
 /// No shadows, no card borders — native SF type and quiet grays only.
 struct SidebarView: View {
     @ObservedObject var viewModel: MainViewModel
+    var widthOverride: CGFloat? = nil
     @State private var showHelp = false
     @State private var searchText = ""
     @FocusState private var searchFocused: Bool
@@ -39,7 +40,7 @@ struct SidebarView: View {
         }
         .frame(maxHeight: .infinity)
         #if os(macOS)
-        .frame(width: viewModel.sidebarWidth)
+        .frame(width: widthOverride ?? viewModel.sidebarWidth)
         // White sidebar background.
         .background(Color.white)
         // Trailing border (gray) to separate from main content
@@ -559,6 +560,7 @@ private struct ActionsPane: View {
                     )
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 1, leading: 10, bottom: 1, trailing: 10))
                 }
                 .onMove { viewModel.movePresets(from: $0, to: $1) }
             }
@@ -568,6 +570,7 @@ private struct ActionsPane: View {
             SidebarRow(icon: "plus", label: "Add action") {
                 viewModel.addPreset()
             }
+            .padding(.horizontal, 10)
             .padding(.bottom, 4)
         }
     }

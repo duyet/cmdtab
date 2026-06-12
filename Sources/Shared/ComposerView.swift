@@ -14,6 +14,7 @@ struct ComposerView: View {
     @State private var inputMessageText: String = ""
     @FocusState private var isInputFocused: Bool
     @State private var showLocalHelp: Bool = false
+    @State private var isQuoteExpanded: Bool = false
     #if os(iOS)
     @State private var photoItem: PhotosPickerItem?
     @State private var hasPhoto: Bool = false
@@ -81,19 +82,32 @@ struct ComposerView: View {
         }
     }
 
-    // MARK: Clipboard quote — single-line preview with quote glyph.
+    // MARK: Clipboard quote — expandable preview with quote glyph.
     private var clipboardQuoteBlock: some View {
         HStack(spacing: 8) {
             Image(systemName: "quote.opening")
                 .font(.system(size: AppFont.pt(11)))
                 .foregroundColor(.secondary.opacity(0.5))
 
-            Text(viewModel.detectedClipboardText.trimmingCharacters(in: .whitespacesAndNewlines))
-                .font(.system(size: AppFont.pt(12)))
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                withAnimation(.easeOut(duration: 0.15)) {
+                    isQuoteExpanded.toggle()
+                }
+            } label: {
+                Text(viewModel.detectedClipboardText.trimmingCharacters(in: .whitespacesAndNewlines))
+                    .font(.system(size: AppFont.pt(12)))
+                    .foregroundColor(.secondary)
+                    .lineLimit(isQuoteExpanded ? nil : 1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel("Toggle clipboard quote")
+
+            Image(systemName: isQuoteExpanded ? "chevron.up" : "chevron.down")
+                .font(.system(size: AppFont.pt(8)))
+                .foregroundColor(.secondary.opacity(0.4))
 
             Button(action: { viewModel.dismissClipboardBanner() }) {
                 Image(systemName: "xmark")
@@ -133,11 +147,19 @@ struct ComposerView: View {
                     RoundedRectangle(cornerRadius: 2)
                         .fill(Color.accentCoral.opacity(0.6))
                         .frame(width: 3)
-                    Text(viewModel.detectedClipboardText.trimmingCharacters(in: .whitespacesAndNewlines))
-                        .font(.system(size: AppFont.pt(12)))
-                        .foregroundColor(.primary.opacity(0.85))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                    Button {
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            isQuoteExpanded.toggle()
+                        }
+                    } label: {
+                        Text(viewModel.detectedClipboardText.trimmingCharacters(in: .whitespacesAndNewlines))
+                            .font(.system(size: AppFont.pt(12)))
+                            .foregroundColor(.primary.opacity(0.85))
+                            .lineLimit(isQuoteExpanded ? nil : 1)
+                            .truncationMode(.tail)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
         }
@@ -176,22 +198,21 @@ struct ComposerView: View {
     }
 
     #if os(macOS)
-    private func selectFileOrImage() {
+    private func selectFileOrImage(imagesOnly: Bool = false) {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
-        panel.allowedContentTypes = [.item, .image, .data]
-        
+        if imagesOnly {
+            panel.allowedContentTypes = [.image]
+        } else {
+            panel.allowedContentTypes = [.item, .image, .data]
+        }
+
         if panel.runModal() == .OK, let url = panel.url {
             attachedFileName = url.lastPathComponent
-            // Check if it's an image
             if let type = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType {
-                if type.conforms(to: .image) {
-                    attachedFileType = "image"
-                } else {
-                    attachedFileType = "file"
-                }
+                attachedFileType = type.conforms(to: .image) ? "image" : "file"
             } else {
                 attachedFileType = "file"
             }
@@ -291,10 +312,21 @@ struct ComposerView: View {
         .padding(.top, 2)
     }
 
-    // MARK: Plus button — quick access to upload file or image.
+    // MARK: Plus button — dropdown to attach file or photo.
     private var plusButton: some View {
         #if os(macOS)
-        Button(action: selectFileOrImage) {
+        Menu {
+            Button {
+                selectFileOrImage(imagesOnly: false)
+            } label: {
+                Label("Attach File…", systemImage: "doc")
+            }
+            Button {
+                selectFileOrImage(imagesOnly: true)
+            } label: {
+                Label("Attach Photo…", systemImage: "photo")
+            }
+        } label: {
             Image(systemName: "plus")
                 .font(.system(size: AppFont.pt(10), weight: .medium))
                 .foregroundColor(.secondary)
@@ -302,9 +334,11 @@ struct ComposerView: View {
                 .background(Color.primary.opacity(0.05))
                 .clipShape(Circle())
         }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
         .buttonStyle(PlainButtonStyle())
-        .accessibilityLabel("Upload file or image")
-        .help("Upload file or image")
+        .accessibilityLabel("Attach file or photo")
+        .help("Attach file or photo")
         #else
         PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
             Image(systemName: "plus")

@@ -92,6 +92,9 @@ public final class MainViewModel: ObservableObject {
     /// search item (next to the sidebar toggle).
     @Published public var isSidebarSearchVisible: Bool = false
 
+    /// Floating command-palette search overlay (Spotlight / ⌘K style).
+    @Published public var isSearchPaletteVisible: Bool = false
+
     /// Per-day usage counters (sessions / messages / token estimates) for the
     /// welcome activity calendar. Counts only — content never persists.
     @Published public var usageByDay: [String: DayUsage] = UsageStats.load()
@@ -434,11 +437,20 @@ public final class MainViewModel: ObservableObject {
     /// Toggle the sidebar search field from the window toolbar. Makes sure the
     /// sidebar is visible and on the Chat tab so the field can actually appear.
     public func toggleSidebarSearch() {
-        if !isSidebarSearchVisible {
-            isSidebarVisible = true
-            sidebarMode = "chat"
+        // Now opens the floating command palette instead of inline sidebar search.
+        if isSearchPaletteVisible {
+            hideSearchPalette()
+        } else {
+            showSearchPalette()
         }
-        isSidebarSearchVisible.toggle()
+    }
+
+    public func showSearchPalette() {
+        isSearchPaletteVisible = true
+    }
+
+    public func hideSearchPalette() {
+        isSearchPaletteVisible = false
     }
 
     /// Mutate today's usage bucket and persist the counters.

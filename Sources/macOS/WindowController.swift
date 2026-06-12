@@ -126,10 +126,10 @@ final class WindowController: NSWindowController {
             return false
         }
 
-        // 6. ⌘K → Clear conversation
+        // 6. ⌘K → Open search palette
         if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "k" {
-            if !vm.isSettingsOpen && vm.selectedConversationId != nil {
-                vm.clearConversation()
+            if !vm.isSettingsOpen {
+                vm.showSearchPalette()
                 return true
             }
         }

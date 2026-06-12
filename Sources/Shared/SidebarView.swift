@@ -151,6 +151,7 @@ struct SidebarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
+        .focusable(false)
         .accessibilityLabel(label)
     }
 

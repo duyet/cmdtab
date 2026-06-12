@@ -58,6 +58,12 @@ struct DetailContentView: View {
                         .transition(.move(edge: .leading).combined(with: .opacity))
                 }
             }
+
+            // Command-palette search overlay
+            if viewModel.isSearchPaletteVisible {
+                SearchPaletteView(viewModel: viewModel)
+                    .transition(.opacity)
+            }
         }
         .onChange(of: viewModel.isSidebarVisible) { _, _ in
             isHoverSidebarVisible = false

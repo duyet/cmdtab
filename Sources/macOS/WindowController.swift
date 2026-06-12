@@ -9,9 +9,9 @@ final class WindowController: NSWindowController {
     init(viewModel: MainViewModel) {
         self.viewModel = viewModel
 
-        // Default size — compact utility window
+        // Default size — compact utility window, wider than tall
         let windowWidth: CGFloat = 780
-        let windowHeight: CGFloat = 500
+        let windowHeight: CGFloat = 460
         let screenFrame =
             NSScreen.main?.visibleFrame
             ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
@@ -23,7 +23,7 @@ final class WindowController: NSWindowController {
         )
 
         let window = MainWindow(contentRect: rect)
-        window.minSize = NSSize(width: 680, height: 480)
+        window.minSize = NSSize(width: 680, height: 420)
         window.setFrameAutosaveName("MinhAgentMainWindow")
 
         let splitVC = SplitViewController(viewModel: viewModel)
@@ -37,9 +37,9 @@ final class WindowController: NSWindowController {
         window.contentView?.wantsLayer = true
         window.delegate = self
 
-        // Native toolbar for the main window controls.
-        let toolbar = MainWindowToolbar.create(viewModel: viewModel, windowController: self)
-        window.toolbar = toolbar
+        // Toolbar removed — sidebar toggle + search live inline in the sidebar
+        // next to the traffic lights (Claude Code style).
+        window.toolbar = nil
 
         // Wire key events through MainWindow
         window.onKeyPress = { [weak self] event in

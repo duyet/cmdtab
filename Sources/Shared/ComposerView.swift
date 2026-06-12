@@ -2,6 +2,7 @@ import SwiftUI
 #if canImport(PhotosUI)
 import PhotosUI
 #endif
+import UniformTypeIdentifiers
 
 // MARK: - Composer View
 /// Hero rounded card: optional clipboard quote block + preset chips row (when clipboard
@@ -16,6 +17,11 @@ struct ComposerView: View {
     #if os(iOS)
     @State private var photoItem: PhotosPickerItem?
     @State private var hasPhoto: Bool = false
+    #endif
+    #if os(macOS)
+    @State private var attachedFileName: String? = nil
+    @State private var attachedFileData: Data? = nil
+    @State private var attachedFileType: String? = nil
     #endif
 
     private var modelOptions: [(id: String, label: String, icon: String)] {
@@ -45,9 +51,7 @@ struct ComposerView: View {
             // 2. Input card: text field on top, controls docked inside at the
             //    bottom ("+", model badge, send).
             VStack(spacing: 0) {
-                #if os(iOS)
                 attachmentRow
-                #endif
 
                 textField
 
@@ -171,23 +175,58 @@ struct ComposerView: View {
         .padding(.bottom, 10)
     }
 
-    #if os(iOS)
-    // MARK: Attachment row — photo attach affordance above the input box.
-    // NOTE: UI surface only; the cloud SSE path is text-only, so attached
-    // photos are not yet sent to the model (pending vision support).
+    #if os(macOS)
+    private func selectFileOrImage() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = [.item, .image, .data]
+        
+        if panel.runModal() == .OK, let url = panel.url {
+            attachedFileName = url.lastPathComponent
+            // Check if it's an image
+            if let type = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType {
+                if type.conforms(to: .image) {
+                    attachedFileType = "image"
+                } else {
+                    attachedFileType = "file"
+                }
+            } else {
+                attachedFileType = "file"
+            }
+            attachedFileData = try? Data(contentsOf: url)
+        }
+    }
+    #endif
+
     private var attachmentRow: some View {
         HStack(spacing: 10) {
-            PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
-                Image(systemName: "paperclip")
-                    .font(.system(size: AppFont.pt(15), weight: .medium))
-                    .foregroundColor(.secondary)
-                    .frame(width: 32, height: 32)
-                    .background(Color.primary.opacity(0.05))
-                    .clipShape(Circle())
+            #if os(macOS)
+            if let fileName = attachedFileName {
+                HStack(spacing: 6) {
+                    Image(systemName: attachedFileType == "image" ? "photo" : "doc")
+                        .font(.system(size: AppFont.pt(12)))
+                    Text(fileName)
+                        .font(.system(size: AppFont.pt(12)))
+                    Button {
+                        attachedFileName = nil
+                        attachedFileData = nil
+                        attachedFileType = nil
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: AppFont.pt(10)))
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .accessibilityLabel("Remove file")
+                }
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.primary.opacity(0.05))
+                .clipShape(Capsule())
             }
-            .buttonStyle(PlainButtonStyle())
-            .accessibilityLabel("Attach photo")
-
+            #else
             if hasPhoto {
                 HStack(spacing: 6) {
                     Image(systemName: "photo")
@@ -210,13 +249,15 @@ struct ComposerView: View {
                 .background(Color.primary.opacity(0.05))
                 .clipShape(Capsule())
             }
+            #endif
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
         .padding(.top, 8)
+        #if os(iOS)
         .onChange(of: photoItem) { _, item in hasPhoto = (item != nil) }
+        #endif
     }
-    #endif
 
     // MARK: Text field — multiline, reserves two lines of height so the
     // composer reads as a roomy input box (Claude desktop style).
@@ -247,96 +288,95 @@ struct ComposerView: View {
         .padding(.top, 2)
     }
 
-    // MARK: Plus button — quick access to saved Quick Actions.
+    // MARK: Plus button — quick access to upload file or image.
     private var plusButton: some View {
-        Menu {
-            ForEach(Array(viewModel.presets.enumerated()), id: \.offset) { index, preset in
-                Button {
-                    viewModel.selectedPresetIndex = index
-                } label: {
-                    Label(preset.name, systemImage: preset.sfSymbol)
-                }
-            }
-        } label: {
+        #if os(macOS)
+        Button(action: selectFileOrImage) {
             Image(systemName: "plus")
-                .font(.system(size: AppFont.pt(9), weight: .medium))
+                .font(.system(size: AppFont.pt(10), weight: .medium))
                 .foregroundColor(.secondary)
                 .frame(width: 17, height: 17)
                 .background(Color.primary.opacity(0.05))
                 .clipShape(Circle())
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
         .buttonStyle(PlainButtonStyle())
-        .accessibilityLabel("Quick actions")
-        #if os(macOS)
-        .help("Quick Actions")
+        .accessibilityLabel("Upload file or image")
+        .help("Upload file or image")
+        #else
+        PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
+            Image(systemName: "plus")
+                .font(.system(size: AppFont.pt(10), weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(width: 17, height: 17)
+                .background(Color.primary.opacity(0.05))
+                .clipShape(Circle())
+        }
+        .buttonStyle(PlainButtonStyle())
+        .accessibilityLabel("Upload photo")
         #endif
     }
 
-    // MARK: Model badge — compact icon menu combining cloud/local + model + reasoning.
+    // MARK: Model badge — compact switch for local/cloud + model dropdown menu.
     private var modelBadge: some View {
-        Menu {
-            Section {
-                Picker("Inference", selection: $viewModel.isLocalModelSelected) {
-                    Label("Cloud", systemImage: "cloud").tag(false)
-                    Label(
-                        viewModel.isLocalModelSupported ? "Local · On-device" : "Local · Unavailable",
-                        systemImage: "cpu"
-                    ).tag(true)
-                }
-                .pickerStyle(.inline)
-                .labelsHidden()
+        HStack(spacing: 6) {
+            Button(action: {
+                viewModel.isLocalModelSelected.toggle()
+            }) {
+                Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
+                    .font(.system(size: AppFont.pt(11)))
+                    .foregroundColor(.secondary)
+                    .frame(width: 18, height: 18)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(PlainButtonStyle())
+            .accessibilityLabel(viewModel.isLocalModelSelected ? "Switch to Cloud model" : "Switch to Local model")
+            #if os(macOS)
+            .help(viewModel.isLocalModelSelected ? "Switch to Cloud Model" : "Switch to Local On-device Model")
+            #endif
 
             if !viewModel.isLocalModelSelected {
-                Section {
-                    Picker("Model", selection: $viewModel.modelName) {
-                        ForEach(modelOptions, id: \.id) { option in
-                            Label(option.label, systemImage: option.icon).tag(option.id)
-                        }
-                    }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
-                }
-
-                if viewModel.modelSupportsReasoning {
+                Menu {
                     Section {
-                        Picker("Reasoning", selection: $viewModel.reasoningEffort) {
-                            ForEach(ModelCatalog.reasoningEfforts, id: \.self) { effort in
-                                Text(effort.capitalized).tag(effort)
+                        Picker("Model", selection: $viewModel.modelName) {
+                            ForEach(modelOptions, id: \.id) { option in
+                                Label(option.label, systemImage: option.icon).tag(option.id)
                             }
                         }
                         .pickerStyle(.inline)
                         .labelsHidden()
                     }
+
+                    if viewModel.modelSupportsReasoning {
+                        Section {
+                            Picker("Reasoning", selection: $viewModel.reasoningEffort) {
+                                ForEach(ModelCatalog.reasoningEfforts, id: \.self) { effort in
+                                    Text(effort.capitalized).tag(effort)
+                                }
+                            }
+                            .pickerStyle(.inline)
+                            .labelsHidden()
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 2) {
+                        Text(currentModelLabel)
+                            .font(.system(size: AppFont.pt(10)))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: AppFont.pt(7)))
+                            .foregroundColor(.secondary.opacity(0.7))
+                    }
                 }
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
-                    .font(.system(size: AppFont.pt(9)))
-                    .foregroundColor(.secondary)
-                if !viewModel.isLocalModelSelected {
-                    Text(currentModelLabel)
-                        .font(.system(size: AppFont.pt(10)))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .buttonStyle(PlainButtonStyle())
+                #if os(macOS)
+                .help("\(currentModelLabel) · \(URL(string: viewModel.endpointUrl)?.host ?? "cloud")")
+                #endif
             }
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .buttonStyle(PlainButtonStyle())
-        #if os(macOS)
-        .help(
-            viewModel.isLocalModelSelected
-                ? "On-device Apple Intelligence"
-                : "\(currentModelLabel) · \(URL(string: viewModel.endpointUrl)?.host ?? "cloud")"
-        )
-        #endif
     }
 
     // MARK: Model label helpers (used by modelBadge)
@@ -437,6 +477,11 @@ struct ComposerView: View {
     private var canSend: Bool {
         guard !viewModel.isStreaming else { return false }
         if viewModel.selectedPresetIndex != nil && hasClipboard { return true }
+        #if os(macOS)
+        if attachedFileName != nil { return true }
+        #else
+        if hasPhoto { return true }
+        #endif
         return !inputMessageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
@@ -453,7 +498,28 @@ struct ComposerView: View {
             inputMessageText = ""
             return
         }
-        viewModel.sendMessage(content: inputMessageText)
+        
+        #if os(macOS)
+        var textToSend = inputMessageText
+        if let fileName = attachedFileName {
+            textToSend += "\n\n[Attached \(attachedFileType == "image" ? "image" : "file"): \(fileName)]"
+        }
+        viewModel.sendMessage(content: textToSend)
+        // Clear attachment
+        attachedFileName = nil
+        attachedFileData = nil
+        attachedFileType = nil
+        #else
+        var textToSend = inputMessageText
+        if hasPhoto {
+            textToSend += "\n\n[Attached photo]"
+        }
+        viewModel.sendMessage(content: textToSend)
+        // Clear attachment
+        photoItem = nil
+        hasPhoto = false
+        #endif
+        
         inputMessageText = ""
     }
 }

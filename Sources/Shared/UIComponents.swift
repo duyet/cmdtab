@@ -17,7 +17,7 @@ struct KeycapBadge: View {
                 RoundedRectangle(cornerRadius: 5)
                     .stroke(Color.cardStroke, lineWidth: emphasized ? 1 : 0)
             )
-            .cornerRadius(5)
+            .clipShape(.rect(cornerRadius: 5))
     }
 }
 
@@ -36,7 +36,7 @@ struct NumberKeycap: View {
                 RoundedRectangle(cornerRadius: 5)
                     .stroke(Color.cardStroke, lineWidth: 1)
             )
-            .cornerRadius(5)
+            .clipShape(.rect(cornerRadius: 5))
     }
 }
 

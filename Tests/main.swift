@@ -471,25 +471,32 @@ func testWelcomeHeadlineUsesSettingsName() {
 
 func testSystemPromptInjectsCustomInstruction() {
     print("Testing system-prompt assembly injects the custom instruction…")
+    let testDate = Date(timeIntervalSince1970: 1772184000) // specific test date: Monday, Feb 16, 2026
     let prompt = SystemPromptBuilder.assemble(
         base: "You are helpful.",
         preferredLanguage: "English",
         personalityPrompt: "Be concise.",
         customInstructions: "  Always cite sources.  ",
-        contextSummary: "Earlier: discussed Swift.")
+        userName: "Duyet",
+        contextSummary: "Earlier: discussed Swift.",
+        currentDate: testDate)
     // WHY: the custom instruction is the user's override — it must reach the model
     // verbatim (trimmed) or their personalization silently does nothing.
     assert(
-        prompt.contains("User instructions: Always cite sources."),
+        prompt.contains("[Custom Instructions]\nAlways cite sources."),
         "custom instruction must be injected: \(prompt)")
     assert(prompt.contains("All responses must be in English."), "language directive present")
     assert(prompt.contains("Be concise."), "personality prompt present")
-    assert(prompt.contains("[Earlier conversation context]"), "context summary present")
+    assert(prompt.contains("[Earlier Conversation Context]\nEarlier: discussed Swift."), "context summary present")
+    assert(prompt.contains("[User Information]\nName: Duyet"), "user name must be injected")
+    assert(prompt.contains("[Current Date & Time]"), "datetime must be injected")
+    
     // WHY: an empty custom field must add nothing, not a dangling label.
     let bare = SystemPromptBuilder.assemble(
         base: "B", preferredLanguage: "English", personalityPrompt: nil,
-        customInstructions: "   ", contextSummary: nil)
-    assert(!bare.contains("User instructions:"), "blank custom field must inject nothing")
+        customInstructions: "   ", userName: "", contextSummary: nil)
+    assert(!bare.contains("[Custom Instructions]"), "blank custom field must inject nothing")
+    assert(!bare.contains("[User Information]"), "blank user name must inject nothing")
 }
 
 func runAllTests() {

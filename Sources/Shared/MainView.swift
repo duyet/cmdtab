@@ -335,6 +335,7 @@ struct StarterCard: View {
             .contentShape(Capsule())
         }
         .buttonStyle(PlainButtonStyle())
+        .focusable(false)
         #if os(macOS)
         .onHover { h in withAnimation(.easeOut(duration: 0.12)) { isHovered = h } }
         #endif

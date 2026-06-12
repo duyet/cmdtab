@@ -79,7 +79,7 @@ extension View {
     @ViewBuilder
     public func platformFrame() -> some View {
         #if os(macOS)
-        self.frame(minWidth: 680, maxWidth: .infinity, minHeight: 480, maxHeight: .infinity)
+        self.frame(minWidth: 680, maxWidth: .infinity, minHeight: 420, maxHeight: .infinity)
         #else
         self.frame(maxWidth: .infinity, maxHeight: .infinity)
         #endif

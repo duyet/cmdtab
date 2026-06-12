@@ -21,7 +21,7 @@ struct PlainCardSurface: ViewModifier {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .stroke(Color.hairline.opacity(0.5), lineWidth: 1)
             )
-            .cornerRadius(cornerRadius)
+            .clipShape(.rect(cornerRadius: cornerRadius))
             .shadow(color: Color.black.opacity(0.03), radius: 2, y: 1)
     }
 }

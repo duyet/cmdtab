@@ -14,19 +14,17 @@ struct SidebarView: View {
         VStack(spacing: 0) {
             #if os(iOS)
             topToolbarRow
+            #else
+            // macOS: spacer to push content below the titlebar row.
+            // The actual toolbar icons are overlaid via the ZStack below.
+            Color.clear.frame(height: 28)
             #endif
 
             // When settings is open, sidebar shows settings navigation.
             if viewModel.isSettingsOpen {
                 settingsNavigation
-                    #if os(macOS)
-                    .padding(.top, 12)
-                    #endif
             } else {
                 primaryNavigation
-                    #if os(macOS)
-                .padding(.top, 12)
-                    #endif
 
                 if viewModel.isSidebarSearchVisible && viewModel.sidebarMode == "chat" {
                     searchField
@@ -41,14 +39,32 @@ struct SidebarView: View {
         }
         .frame(maxHeight: .infinity)
         #if os(macOS)
-        .background(
-            Color.windowBackground.ignoresSafeArea(.container, edges: .top)
-        )
+        .frame(width: viewModel.sidebarWidth)
+        // White sidebar background.
+        .background(Color.white)
+        // Trailing border (gray) to separate from main content
         .overlay(alignment: .trailing) {
-            Color.hairline
+            Rectangle()
+                .fill(Color.gray.opacity(0.18))
                 .frame(width: 1)
-                .ignoresSafeArea(.container, edges: .vertical)
+                .ignoresSafeArea(.container, edges: .top)
         }
+        // Overlay toolbar icons onto the titlebar row — this sits above the
+        // safe area, right next to the traffic light buttons.
+        .overlay(alignment: .topLeading) {
+            HStack(spacing: 6) {
+                Spacer().frame(width: 76)  // clear traffic lights
+                PlainIconButton(systemName: "sidebar.left", size: 12, help: "Toggle Sidebar (⌘B)") {
+                    withAnimation { viewModel.isSidebarVisible.toggle() }
+                }
+                PlainIconButton(systemName: "magnifyingglass", size: 12, help: "Search Chats") {
+                    viewModel.toggleSidebarSearch()
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.top, 4) // move icons up a bit
+        }
+        .ignoresSafeArea(.container, edges: .top)
         .onChange(of: viewModel.isSidebarSearchVisible) { _, visible in
             if visible { searchFocused = true } else { searchText = "" }
         }
@@ -110,17 +126,21 @@ struct SidebarView: View {
             tabButton(mode: "actions", icon: "bolt", label: "Preset")
             tabButton(mode: "automations", icon: "gearshape", label: "Auto")
         }
-        .padding(3)
+        .padding(4)
         .background(Color.primary.opacity(0.04))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .padding(.horizontal, 10)
+        .padding(.top, 8) // move tabs down a bit
         .padding(.bottom, 8)
+        .animation(.easeOut(duration: 0.1), value: viewModel.sidebarMode)
     }
 
     private func tabButton(mode: String, icon: String, label: String) -> some View {
         let isSelected = viewModel.sidebarMode == mode
         return Button {
-            viewModel.sidebarMode = mode
+            withAnimation(.easeOut(duration: 0.1)) {
+                viewModel.sidebarMode = mode
+            }
             if mode != "chat" { viewModel.isSidebarSearchVisible = false }
         } label: {
             HStack(spacing: 4) {
@@ -130,12 +150,13 @@ struct SidebarView: View {
                     Text(label)
                         .font(.system(size: AppFont.pt(11)))
                         .lineLimit(1)
+                        .transition(.opacity)
                 }
             }
             .foregroundColor(isSelected ? .primary : .secondary.opacity(0.7))
             .frame(maxWidth: isSelected ? .infinity : nil)
             .padding(.horizontal, isSelected ? 8 : 10)
-            .padding(.vertical, 5)
+            .padding(.vertical, 9)
             .background(isSelected ? Color.appBackground : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 6))
             .overlay(
@@ -161,7 +182,7 @@ struct SidebarView: View {
         .padding(.horizontal, 8)
         .frame(height: 30)
         .background(Color.primary.opacity(0.05))
-        .cornerRadius(8)
+        .clipShape(.rect(cornerRadius: 8))
         .padding(.horizontal, 10)
     }
 
@@ -220,6 +241,14 @@ struct SidebarView: View {
             #endif
 
             if !viewModel.conversations.isEmpty {
+                // Batch delete bar when multi-selected
+                if viewModel.isMultiSelect {
+                    batchDeleteBar
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 4)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 1) {
                         ForEach(filteredGroupedConversations, id: \.0) { group, conversations in
@@ -234,8 +263,11 @@ struct SidebarView: View {
                             ForEach(conversations) { conv in
                                 ConversationRow(
                                     title: conv.title,
-                                    isSelected: viewModel.selectedConversationId == conv.id,
-                                    onSelect: { viewModel.selectConversation(id: conv.id) },
+                                    isSelected: viewModel.selectedConversationIds.contains(conv.id),
+                                    isInMultiSelect: viewModel.isMultiSelect,
+                                    onSelect: { shift, cmd in
+                                        viewModel.selectConversation(id: conv.id, shift: shift, cmd: cmd)
+                                    },
                                     onRename: { viewModel.renameConversation(id: conv.id, to: $0) },
                                     onDelete: { viewModel.deleteConversation(id: conv.id) }
                                 )
@@ -265,13 +297,60 @@ struct SidebarView: View {
         .padding(.horizontal, 0)
     }
 
+    /// Batch action bar shown when multiple conversations are selected.
+    private var batchDeleteBar: some View {
+        HStack(spacing: 8) {
+            Text("\(viewModel.selectedConversationIds.count) selected")
+                .font(.system(size: AppFont.pt(11)))
+                .foregroundColor(.secondary)
+
+            Spacer(minLength: 0)
+
+            Button {
+                viewModel.deleteSelectedConversations()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "trash")
+                        .font(.system(size: AppFont.pt(10)))
+                    Text("Delete")
+                        .font(.system(size: AppFont.pt(11)))
+                }
+                .foregroundColor(.red)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.red.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(PlainButtonStyle())
+
+            Button {
+                viewModel.selectedConversationIds = []
+                if let id = viewModel.selectedConversationId {
+                    viewModel.selectedConversationIds = [id]
+                }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: AppFont.pt(9)))
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color.primary.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
     /// History buckets in display order. Only non-empty groups are returned;
-    /// conversations stay in their existing (most-recent-first) order.
+    /// conversations with no messages are hidden UNLESS they are the currently
+    /// selected conversation (shown as a temporary "New chat" row).
     private var groupedConversations: [(String, [Conversation])] {
         let calendar = Calendar.current
         let now = Date()
         var buckets: [String: [Conversation]] = [:]
         for conv in viewModel.conversations {
+            let isActive = conv.id == viewModel.selectedConversationId
+            guard !conv.messages.isEmpty || isActive else { continue }
             let key: String
             let days =
                 calendar.dateComponents(
@@ -581,7 +660,7 @@ private struct ActionRow: View {
                         .frame(height: 80)
                         .padding(6)
                         .background(Color.primary.opacity(0.04))
-                        .cornerRadius(6)
+                        .clipShape(.rect(cornerRadius: 6))
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
                                 .stroke(Color.hairline.opacity(0.5), lineWidth: 1)
@@ -615,11 +694,13 @@ private struct ActionRow: View {
 
 // MARK: - Conversation Row
 /// Click selects; clicking the already-selected row (or Rename in the context
-/// menu) starts inline renaming. Enter commits, Esc cancels.
+/// menu) starts inline renaming. Shift/Cmd click for multi-select on macOS.
+/// Enter commits, Esc cancels.
 private struct ConversationRow: View {
     let title: String
     let isSelected: Bool
-    let onSelect: () -> Void
+    let isInMultiSelect: Bool
+    let onSelect: (Bool, Bool) -> Void  // (shift, cmd)
     let onRename: (String) -> Void
     let onDelete: () -> Void
     #if os(macOS)
@@ -636,30 +717,52 @@ private struct ConversationRow: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(Color.primary.opacity(0.06))
-                    .cornerRadius(8)
+                    .clipShape(.rect(cornerRadius: 8))
             } else {
                 Button(action: {
                     #if os(macOS)
-                    isSelected ? beginEditing() : onSelect()
+                    isSelected && !isInMultiSelect ? beginEditing() : onSelect(false, false)
                     #else
-                    onSelect()
+                    onSelect(false, false)
                     #endif
                 }) {
-                    Text(title)
-                        .font(.system(size: AppFont.pt(12)))
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 6)
-                        .background(rowBackground)
-                        .cornerRadius(8)
-                        .contentShape(Rectangle())
+                    HStack(spacing: 6) {
+                        #if os(macOS)
+                        if isInMultiSelect {
+                            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: AppFont.pt(10)))
+                                .foregroundColor(isSelected ? .accentColor : .secondary.opacity(0.4))
+                        }
+                        #endif
+                        Text(title)
+                            .font(.system(size: AppFont.pt(12)))
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(rowBackground)
+                    .clipShape(.rect(cornerRadius: 8))
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
                 #if os(macOS)
                 .onHover { h in isHovered = h }
+                .onTapGesture {
+                    // handled by Button
+                }
+                .simultaneousGesture(
+                    TapGesture().modifiers(.shift).onEnded { _ in
+                        onSelect(true, false)
+                    }
+                )
+                .simultaneousGesture(
+                    TapGesture().modifiers(.command).onEnded { _ in
+                        onSelect(false, true)
+                    }
+                )
                 #endif
                 .contextMenu {
                     Button(action: beginEditing) {

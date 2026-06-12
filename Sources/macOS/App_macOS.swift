@@ -1,6 +1,9 @@
 #if os(macOS)
 import SwiftUI
 import AppKit
+#if canImport(SwiftData)
+import SwiftData
+#endif
 
 @main
 struct MinhAgentApp: App {
@@ -19,6 +22,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     var windowController: WindowController?
     public var viewModel: MainViewModel?
     private var hasPositionedOnce = false
+    #if canImport(SwiftData)
+    private var modelContainer: ModelContainer?
+    #endif
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
         // .regular: normal windowed app with Dock icon + Cmd+Tab presence.
@@ -26,6 +32,16 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let vm = MainViewModel()
         self.viewModel = vm
+
+        #if canImport(SwiftData)
+        do {
+            let container = try ModelContainer(for: PersistedConversation.self, PersistedMessage.self)
+            self.modelContainer = container
+            vm.configurePersistence(container.mainContext)
+        } catch {
+            print("Failed to initialize SwiftData: \(error)")
+        }
+        #endif
 
         // Apply persisted appearance preference before the window appears.
         vm.applyAppearance()

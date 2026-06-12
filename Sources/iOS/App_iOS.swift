@@ -1,12 +1,18 @@
 #if os(iOS)
 import UIKit
 import SwiftUI
+#if canImport(SwiftData)
+import SwiftData
+#endif
 
 // MARK: - App Entry Point (UIKit lifecycle)
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var viewModel: MainViewModel?
+    #if canImport(SwiftData)
+    private var modelContainer: ModelContainer?
+    #endif
 
     func application(
         _ application: UIApplication,
@@ -14,6 +20,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     ) -> Bool {
         let vm = MainViewModel()
         self.viewModel = vm
+        #if canImport(SwiftData)
+        do {
+            let container = try ModelContainer(for: PersistedConversation.self, PersistedMessage.self)
+            self.modelContainer = container
+            vm.configurePersistence(container.mainContext)
+        } catch {
+            print("Failed to initialize SwiftData: \(error)")
+        }
+        #endif
         return true
     }
 

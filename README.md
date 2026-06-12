@@ -9,7 +9,7 @@ Native macOS/iOS AI chat workspace with clipboard Quick Actions and dual inferen
 - **Clipboard Quick Actions** — copy any text, MinhAgent offers instant AI presets (⌥1–⌥9)
 - **Dual Inference** — on-device via FoundationModels (macOS 26+) or cloud via AnyRouter / OpenAI / Gemini / Ollama
 - **Sidebar workspace** — collapsible sidebar with chat history, preset management, and settings navigation
-- **Zero persistence** — conversations stay in RAM; quit to purge
+- **Local persistence** — conversations are stored in a local SQLite database (via SwiftData) or fallback JSON file under Application Support
 - **Keychain-only secrets** — API keys in macOS Keychain, never plaintext
 
 ---

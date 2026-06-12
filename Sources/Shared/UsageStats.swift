@@ -2,8 +2,8 @@ import Foundation
 
 // MARK: - Usage Stats
 /// Per-day usage counters backing the welcome-screen activity calendar.
-/// Only numbers are persisted (UserDefaults) — never conversation content,
-/// which stays strictly in RAM.
+/// Only numbers are persisted (UserDefaults) for usage counters; conversation content
+/// is persisted separately as a local JSON file under Application Support.
 public struct DayUsage: Codable, Equatable {
     public var sessions: Int = 0
     public var messages: Int = 0

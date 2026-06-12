@@ -30,7 +30,7 @@ Always run `./test.sh` and `./test_launch.sh` after changes.
 ## Key Architecture
 
 - **MVVM**: `MainViewModel` (`@MainActor`) is the single source of truth.
-- **Volatile conversations**: RAM only — never persist to disk.
+- **Conversation persistence**: Saved locally via SwiftData (SQLite database) or a fallback JSON file under Application Support.
 - **Dual inference**: Cloud via `APIClient.swift` (SSE streaming). Local via `LocalModelClient.swift`, guarded `#available(macOS 26, iOS 26, *)`.
 - **Platform split**: `Sources/Shared/` (cross-platform), `Sources/macOS/`, `Sources/iOS/`.
 - **Semantic colors**: `Color.textBackground`, `Color.windowBackground` from `Theme.swift`.

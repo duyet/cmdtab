@@ -1,12 +1,17 @@
 import Combine
 import SwiftUI
 import os
+#if canImport(SwiftData)
+import SwiftData
+#endif
 
 @MainActor
 public final class MainViewModel: ObservableObject {
     private static let logger = Logger(subsystem: "app.minhagent", category: "ViewModel")
     @Published public var conversations: [Conversation] = []
     @Published public var selectedConversationId: UUID? = nil
+    @Published public var selectedConversationIds: Set<UUID> = []
+    @Published public var lastSelectedConversationId: UUID? = nil
     @Published public var presets: [Preset] = []
     @Published public var isStreaming: Bool = false
     @Published public var statusMessage: String = ""
@@ -231,6 +236,7 @@ public final class MainViewModel: ObservableObject {
     public init() {
         loadSettings()
         setupClipboardMonitor()
+        loadConversations()
 
         // Prefer the on-device model by default when it's actually available
         // and the user hasn't made an explicit choice yet.
@@ -395,9 +401,16 @@ public final class MainViewModel: ObservableObject {
     }
 
     public func startNewConversation(title: String, presetId: UUID? = nil) {
+        // Clean up any old empty conversations (not the one we're about to create).
+        conversations.removeAll { conv in
+            conv.messages.isEmpty && conv.id != selectedConversationId
+        }
+
         let newConv = Conversation(title: title, presetId: presetId)
         self.conversations.insert(newConv, at: 0)
         self.selectedConversationId = newConv.id
+        selectedConversationIds = [newConv.id]
+        lastSelectedConversationId = newConv.id
         clearConversation()
         composerFocusTick += 1
         recordUsage { $0.sessions += 1 }
@@ -424,7 +437,70 @@ public final class MainViewModel: ObservableObject {
 
     public func selectConversation(id: UUID) {
         selectedConversationId = id
+        selectedConversationIds = [id]
+        lastSelectedConversationId = id
         clearConversation()
+    }
+
+    /// Multi-select with shift (range) and cmd (toggle) support.
+    public func selectConversation(id: UUID, shift: Bool, cmd: Bool) {
+        if shift, let lastId = lastSelectedConversationId {
+            // Range select from last selected to clicked
+            let ids = conversations.map(\.id)
+            guard let fromIdx = ids.firstIndex(of: lastId),
+                  let toIdx = ids.firstIndex(of: id) else { return }
+            let range = min(fromIdx, toIdx)...max(fromIdx, toIdx)
+            selectedConversationIds = Set(ids[range])
+            selectedConversationId = id
+        } else if cmd {
+            // Toggle individual item
+            if selectedConversationIds.contains(id) {
+                selectedConversationIds.remove(id)
+                if selectedConversationId == id {
+                    selectedConversationId = selectedConversationIds.first ?? conversations.first?.id
+                }
+            } else {
+                selectedConversationIds.insert(id)
+                selectedConversationId = id
+            }
+            lastSelectedConversationId = id
+        } else {
+            // Normal click — single select
+            selectedConversationIds = [id]
+            selectedConversationId = id
+            lastSelectedConversationId = id
+        }
+    }
+
+    public func deleteSelectedConversations() {
+        guard !selectedConversationIds.isEmpty else { return }
+        // Cancel streaming if active conversation is being deleted
+        if let activeId = selectedConversationId, selectedConversationIds.contains(activeId) {
+            currentTask?.cancel()
+            currentTask = nil
+            isStreaming = false
+            clearStreamingIndices()
+        }
+        #if canImport(SwiftData)
+        if modelContext != nil {
+            for id in selectedConversationIds {
+                deletePersistedConversation(id: id)
+            }
+        }
+        #endif
+        conversations.removeAll(where: { selectedConversationIds.contains($0.id) })
+        selectedConversationIds = []
+        lastSelectedConversationId = nil
+        selectedConversationId = conversations.first?.id
+        if conversations.isEmpty {
+            startNewConversation(title: "General Chat")
+        } else {
+            saveConversations()
+        }
+    }
+
+    public var isMultiSelect: Bool {
+        selectedConversationIds.count > 1
     }
 
     /// Run a saved Quick Action on explicit text. Used by App Intents / Shortcuts
@@ -441,6 +517,7 @@ public final class MainViewModel: ObservableObject {
             let index = conversations.firstIndex(where: { $0.id == id })
         else { return }
         conversations[index].title = trimmed
+        saveConversations()
     }
 
     public func deleteConversation(id: UUID) {
@@ -451,12 +528,19 @@ public final class MainViewModel: ObservableObject {
             isStreaming = false
             clearStreamingIndices()
         }
+        #if canImport(SwiftData)
+        if modelContext != nil {
+            deletePersistedConversation(id: id)
+        }
+        #endif
         conversations.removeAll(where: { $0.id == id })
         if selectedConversationId == id {
             selectedConversationId = conversations.first?.id
         }
         if conversations.isEmpty {
             startNewConversation(title: "General Chat")
+        } else {
+            saveConversations()
         }
     }
 
@@ -477,6 +561,16 @@ public final class MainViewModel: ObservableObject {
 
         let userMsg = ChatMessage(role: "user", content: content)
         conversations[activeIndex].messages.append(userMsg)
+
+        // Auto-title: use the first user message to generate a conversation title.
+        if conversations[activeIndex].messages.filter({ $0.role == "user" }).count == 1 {
+            let firstLine = content
+                .split(separator: "\n", omittingEmptySubsequences: true).first
+                .map(String.init) ?? content
+            let trimmed = firstLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            conversations[activeIndex].title = String(trimmed.prefix(50))
+        }
+
         lastActivityDate = Date()
         recordUsage {
             $0.messages += 1
@@ -485,6 +579,7 @@ public final class MainViewModel: ObservableObject {
 
         isClipboardBannerVisible = false
         startLLMResponse(for: activeId)
+        saveConversations()
     }
 
     /// Pick a Quick Action by index (⌘1-9). With clipboard text present this
@@ -546,6 +641,7 @@ public final class MainViewModel: ObservableObject {
         // banner for content already acted on.
         detectedClipboardText = ""
         startLLMResponse(for: activeId)
+        saveConversations()
     }
 
     public func dismissClipboardBanner() {
@@ -597,6 +693,7 @@ public final class MainViewModel: ObservableObject {
             preferredLanguage: preferredLanguage,
             personalityPrompt: personalityPrompt,
             customInstructions: customInstructions,
+            userName: userName,
             contextSummary: conversation.compactedSummary)
 
         currentTask?.cancel()
@@ -621,6 +718,54 @@ public final class MainViewModel: ObservableObject {
                 endpointUrl: endpointUrl, apiKey: apiKey, model: modelName,
                 reasoningEffort: modelSupportsReasoning ? reasoningEffort : nil)
         let historyMessages = Array(conversations[activeIndex].messages.dropLast())  // all except placeholder
+        
+        // Generate and store raw request details for this conversation
+        let rawRequestDetails: String
+        if isLocalModelSelected {
+            let prompt = historyMessages.last(where: { $0.role == "user" })?.content ?? ""
+            let localRequest: [String: Any] = [
+                "model": "Apple Foundation Models (On-Device)",
+                "target_url": "local://on-device-inference",
+                "parameters": [
+                    "framework": "FoundationModels (macOS 26)",
+                    "stream": true
+                ],
+                "system_instructions": systemInstructions,
+                "prompt": prompt
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: localRequest, options: [.prettyPrinted, .sortedKeys]),
+               let jsonStr = String(data: data, encoding: .utf8) {
+                rawRequestDetails = jsonStr
+            } else {
+                rawRequestDetails = "{ \"error\": \"Failed to serialize request info.\" }"
+            }
+        } else {
+            let formatted = AnyRouterAdapter.formatMessages(
+                instructions: systemInstructions,
+                history: historyMessages.map { (role: $0.role, content: $0.content) }
+            )
+            var params: [String: Any] = [
+                "stream": true,
+                "stream_options": ["include_usage": true]
+            ]
+            if modelSupportsReasoning {
+                params["reasoning_effort"] = reasoningEffort
+            }
+            let targetUrl = AnyRouterRequestFactory.normalizedURLString(from: endpointUrl)
+            let cloudRequest: [String: Any] = [
+                "model": modelName,
+                "target_url": targetUrl,
+                "parameters": params,
+                "messages": formatted
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: cloudRequest, options: [.prettyPrinted, .sortedKeys]),
+               let jsonStr = String(data: data, encoding: .utf8) {
+                rawRequestDetails = jsonStr
+            } else {
+                rawRequestDetails = "{ \"error\": \"Failed to serialize request info.\" }"
+            }
+        }
+        conversations[activeIndex].lastRawRequestDetails = rawRequestDetails
 
         currentTask = Task { [weak self] in
             do {
@@ -638,6 +783,7 @@ public final class MainViewModel: ObservableObject {
                 self?.finalizeAssistantUsage(conversationId: conversationId, messageId: assistantMsgId)
                 self?.isStreaming = false
                 self?.clearStreamingIndices()
+                self?.saveConversations()
             } catch {
                 guard !Task.isCancelled else { return }
                 let text = (error as? APIError)?.userMessage ?? error.localizedDescription
@@ -645,6 +791,7 @@ public final class MainViewModel: ObservableObject {
                 self?.markMessageAsError(conversationId: conversationId, messageId: assistantMsgId)
                 self?.isStreaming = false
                 self?.clearStreamingIndices()
+                self?.saveConversations()
             }
         }
     }
@@ -717,12 +864,127 @@ public final class MainViewModel: ObservableObject {
         {
             conversations[idx].messages.removeAll { $0.role == "assistant" && $0.content.isEmpty }
         }
+        saveConversations()
+    }
+
+    public func getRawRequestDetails() -> String {
+        guard let activeId = selectedConversationId,
+              let activeIndex = conversations.firstIndex(where: { $0.id == activeId }) else {
+            return "{ \"error\": \"No active conversation selected.\" }"
+        }
+        
+        let conversation = conversations[activeIndex]
+        if let savedDetails = conversation.lastRawRequestDetails {
+            return savedDetails
+        }
+        return "{ \"info\": \"No request has been sent yet in this conversation.\" }"
     }
 
     private func clearStreamingIndices() {
         streamingConversationIndex = nil
         streamingMessageIndex = nil
     }
+
+    private func conversationsFileUrl() -> URL? {
+        let fm = FileManager.default
+        guard let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        let appDir = appSupport.appendingPathComponent("MinhAgent", isDirectory: true)
+        if !fm.fileExists(atPath: appDir.path) {
+            try? fm.createDirectory(at: appDir, withIntermediateDirectories: true, attributes: nil)
+        }
+        return appDir.appendingPathComponent("conversations.json")
+    }
+
+    public func saveConversations() {
+        #if canImport(SwiftData)
+        if modelContext != nil {
+            for conversation in conversations {
+                saveConversation(conversation)
+            }
+            return
+        }
+        #endif
+
+        guard let url = conversationsFileUrl() else { return }
+        do {
+            let data = try JSONEncoder().encode(conversations)
+            try data.write(to: url, options: .atomic)
+        } catch {
+            Self.logger.error("Failed to save conversations: \(error.localizedDescription)")
+        }
+    }
+
+    private func loadConversations() {
+        #if canImport(SwiftData)
+        if modelContext != nil {
+            loadPersistedConversations()
+            return
+        }
+        #endif
+
+        guard let url = conversationsFileUrl() else { return }
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        do {
+            let data = try Data(contentsOf: url)
+            let decoded = try JSONDecoder().decode([Conversation].self, from: data)
+            self.conversations = decoded
+            if let firstConv = decoded.first {
+                self.selectedConversationId = firstConv.id
+                self.selectedConversationIds = [firstConv.id]
+            }
+        } catch {
+            Self.logger.error("Failed to load conversations: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - SwiftData Database Helpers
+    #if canImport(SwiftData)
+    var modelContext: ModelContext?
+
+    public func configurePersistence(_ context: ModelContext) {
+        self.modelContext = context
+        loadPersistedConversations()
+    }
+
+    private func loadPersistedConversations() {
+        guard let modelContext else { return }
+        let descriptor = FetchDescriptor<PersistedConversation>(
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        guard let persisted = try? modelContext.fetch(descriptor) else { return }
+        let loaded = persisted.map { $0.toVolatile() }
+        guard !loaded.isEmpty else { return }
+        self.conversations = loaded
+        if let firstConv = loaded.first {
+            self.selectedConversationId = firstConv.id
+            self.selectedConversationIds = [firstConv.id]
+        }
+    }
+
+    private func saveConversation(_ conversation: Conversation) {
+        guard let modelContext else { return }
+        let id = conversation.id
+        if let existing = try? modelContext.fetch(
+            FetchDescriptor<PersistedConversation>(predicate: #Predicate { $0.id == id })
+        ).first {
+            modelContext.delete(existing)
+        }
+        modelContext.insert(PersistedConversation(from: conversation))
+        try? modelContext.save()
+    }
+
+    private func deletePersistedConversation(id: UUID) {
+        guard let modelContext else { return }
+        if let existing = try? modelContext.fetch(
+            FetchDescriptor<PersistedConversation>(predicate: #Predicate { $0.id == id })
+        ).first {
+            modelContext.delete(existing)
+            try? modelContext.save()
+        }
+    }
+    #endif
 
     public static func defaultPresets() -> [Preset] {
         return [

@@ -8,6 +8,7 @@ struct DetailContentView: View {
     /// Floating sidebar shown when the docked sidebar is hidden and the
     /// pointer rests on the window's left edge (Claude-app style).
     @State private var isHoverSidebarVisible = false
+    @State private var showRequestInfoDialog = false
 
     var body: some View {
         // Settings presents as a window-modal sheet — slides over the chat
@@ -63,6 +64,64 @@ struct DetailContentView: View {
         .background(Color.creamBackground)
         .tint(.primary)
         .textSelection(.enabled)
+        // Overlay toggle and search buttons at top-left when sidebar is hidden
+        .overlay(alignment: .topLeading) {
+            #if os(macOS)
+            if !viewModel.isSidebarVisible && !isHoverSidebarVisible {
+                HStack(spacing: 6) {
+                    Spacer().frame(width: 76)  // clear traffic lights
+                    PlainIconButton(systemName: "sidebar.left", size: 12, help: "Toggle Sidebar (⌘B)") {
+                        withAnimation { viewModel.isSidebarVisible.toggle() }
+                    }
+                    PlainIconButton(systemName: "magnifyingglass", size: 12, help: "Search Chats") {
+                        viewModel.toggleSidebarSearch()
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, 4)
+                .ignoresSafeArea(.container, edges: .top)
+            }
+            #endif
+        }
+        // Overlay info button at the top-right of the chat (in the title bar)
+        .overlay(alignment: .topTrailing) {
+            if !viewModel.isSettingsOpen && viewModel.selectedConversationId != nil {
+                PlainIconButton(systemName: "info.circle", size: 13, help: "Show Raw Request / System Prompt") {
+                    showRequestInfoDialog = true
+                }
+                .padding(.trailing, 16)
+                .padding(.top, 4)
+                .ignoresSafeArea(.container, edges: .top)
+            }
+        }
+        // Sheet modal for Raw Request details
+        .sheet(isPresented: $showRequestInfoDialog) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Raw Model Request Details")
+                        .font(.headline)
+                    Spacer()
+                    Button("Close") {
+                        showRequestInfoDialog = false
+                    }
+                    .keyboardShortcut(.cancelAction)
+                }
+                .padding(.bottom, 4)
+                
+                ScrollView {
+                    Text(viewModel.getRawRequestDetails())
+                        .font(.system(.body, design: .monospaced))
+                        .textSelection(.enabled)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.subtleFill)
+                        .clipShape(.rect(cornerRadius: 6))
+                }
+                .frame(maxHeight: 400)
+            }
+            .padding(16)
+            .frame(width: 500, height: 480)
+        }
     }
 
     // MARK: - Main Content Pane
@@ -215,7 +274,7 @@ struct DetailContentView: View {
             ActivityCalendarView(usageByDay: viewModel.usageByDay)
         }
         .padding(14)
-        .frame(maxWidth: 560, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.primary.opacity(0.03))
         .overlay(
             RoundedRectangle(cornerRadius: 10)
@@ -246,58 +305,181 @@ struct DetailContentView: View {
 }
 
 // MARK: - Activity Calendar
-/// GitHub-style contribution grid: one column per week, one cell per day,
-/// shaded by that day's message count.
+/// GitHub-style contribution grid with month labels, day-of-week labels,
+/// and a colour legend. One column per week, one cell per day, shaded by
+/// that day's message count.
 private struct ActivityCalendarView: View {
     let usageByDay: [String: DayUsage]
 
     private static let weeksShown = 17
-    private let cell: CGFloat = 9
-    private let gap: CGFloat = 2.5
+    private let cellSize: CGFloat = 11
+    private let gap: CGFloat = 2
 
-    /// Day-grid as week columns, oldest → newest. `nil` marks future days
-    /// in the current (partial) week.
+    private let dayLabels = ["Mon", "", "Wed", "", "Fri", "", ""]
+
+    /// Day-grid as week columns, oldest → newest. Future months are `nil`.
     private var weeks: [[Date?]] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
-        let weekday = cal.component(.weekday, from: today)  // 1 = Sunday
+        
+        // Find the last day of the current month to show the full month
+        guard let range = cal.range(of: .day, in: .month, for: today),
+              let lastDayOfCurrentMonth = cal.date(bySetting: .day, value: range.count, of: today) else {
+            return []
+        }
+        let endOfCurrentMonth = cal.startOfDay(for: lastDayOfCurrentMonth)
+        
+        // Adjust so columns start on Monday (weekday 2) relative to the end of the month
+        let weekday = cal.component(.weekday, from: endOfCurrentMonth)
+        let mondayOffset = weekday == 1 ? 6 : weekday - 2  // Sun→6, Mon→0, Tue→1, …
+        
         var columns: [[Date?]] = []
         for w in (0..<Self.weeksShown).reversed() {
             var column: [Date?] = []
             for d in 0..<7 {
-                let offset = -(w * 7) - (weekday - 1) + d
-                let date = cal.date(byAdding: .day, value: offset, to: today)!
-                column.append(date > today ? nil : date)
+                let offset = -(w * 7) - mondayOffset + d
+                let date = cal.date(byAdding: .day, value: offset, to: endOfCurrentMonth)!
+                
+                // Keep the date if it is in the past/today, or belongs to the current month (for future days in this month)
+                let isCurrentMonth = cal.isDate(date, equalTo: today, toGranularity: .month)
+                if date <= today || isCurrentMonth {
+                    column.append(date)
+                } else {
+                    column.append(nil) // future months are transparent
+                }
             }
             columns.append(column)
         }
         return columns
     }
 
+    private struct MonthGroup: Identifiable {
+        let id = UUID()
+        let name: String
+        let weeks: [[Date?]]
+    }
+
+    private var monthGroups: [MonthGroup] {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM"
+        
+        var groups: [MonthGroup] = []
+        var currentWeeks: [[Date?]] = []
+        var currentMonthName: String = ""
+        
+        for week in weeks {
+            if let firstDay = week.compactMap({ $0 }).first {
+                let monthName = fmt.string(from: firstDay)
+                if monthName != currentMonthName {
+                    if !currentWeeks.isEmpty {
+                        groups.append(MonthGroup(name: currentMonthName, weeks: currentWeeks))
+                    }
+                    currentWeeks = [week]
+                    currentMonthName = monthName
+                } else {
+                    currentWeeks.append(week)
+                }
+            } else {
+                currentWeeks.append(week)
+            }
+        }
+        if !currentWeeks.isEmpty {
+            groups.append(MonthGroup(name: currentMonthName, weeks: currentWeeks))
+        }
+        return groups
+    }
+
     var body: some View {
-        HStack(alignment: .top, spacing: gap) {
-            ForEach(Array(weeks.enumerated()), id: \.offset) { _, week in
-                VStack(spacing: gap) {
-                    ForEach(Array(week.enumerated()), id: \.offset) { _, day in
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(color(for: day))
-                            .frame(width: cell, height: cell)
+        VStack(alignment: .leading, spacing: 4) {
+            // Main grid: day labels + segmented months
+            HStack(alignment: .top, spacing: 8) {
+                // Day-of-week labels
+                VStack(alignment: .trailing, spacing: gap) {
+                    // Spacer to match the height of the month labels (12) and their spacing (2)
+                    Spacer()
+                        .frame(height: 12 + 2)
+                    
+                    ForEach(0..<7, id: \.self) { row in
+                        Text(dayLabels[row])
+                            .font(.system(size: 9))
+                            .foregroundColor(.secondary.opacity(0.6))
+                            .frame(height: cellSize, alignment: .center)
                     }
                 }
+                .frame(width: dayLabelWidth)
+
+                // Segmented months grid
+                HStack(alignment: .top, spacing: 10) { // spacing between months
+                    ForEach(monthGroups) { group in
+                        VStack(alignment: .leading, spacing: 2) {
+                            // Month label
+                            Text(group.name)
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary.opacity(0.6))
+                                .frame(height: 12)
+                            
+                            // Week columns
+                            HStack(alignment: .top, spacing: gap) {
+                                ForEach(0..<group.weeks.count, id: \.self) { wIdx in
+                                    VStack(spacing: gap) {
+                                        ForEach(Array(group.weeks[wIdx].enumerated()), id: \.offset) { _, day in
+                                            RoundedRectangle(cornerRadius: 2)
+                                                .fill(color(for: day))
+                                                .frame(width: cellSize, height: cellSize)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(minLength: 0)
             }
+
+            // Legend
+            HStack(spacing: 4) {
+                Spacer()
+                Text("Less")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary.opacity(0.6))
+                ForEach(legendColors, id: \.self) { c in
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(c)
+                        .frame(width: cellSize, height: cellSize)
+                }
+                Text("More")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary.opacity(0.6))
+            }
+            .padding(.top, 2)
         }
         .accessibilityLabel("Activity calendar")
     }
 
+    private var dayLabelWidth: CGFloat { 28 }
+
+    private var legendColors: [Color] {
+        [Color.gray.opacity(0.2), accentColor(0.25), accentColor(0.5), accentColor(0.75), accentColor(1.0)]
+    }
+
+    private func accentColor(_ opacity: CGFloat) -> Color {
+        Color.accentColor.opacity(opacity)
+    }
+
     private func color(for day: Date?) -> Color {
-        guard let day else { return Color.clear }
-        let messages = usageByDay[UsageStats.dayKey(for: day)]?.messages ?? 0
+        guard let day else {
+            return Color.clear
+        }
+        let key = UsageStats.dayKey(for: day)
+        let messages = usageByDay[key]?.messages ?? 0
+        
         switch messages {
-        case 0: return Color.primary.opacity(0.05)
-        case 1...4: return Color.accentCoral.opacity(0.25)
-        case 5...14: return Color.accentCoral.opacity(0.5)
-        case 15...39: return Color.accentCoral.opacity(0.75)
-        default: return Color.accentCoral
+        case 0: return Color.gray.opacity(0.2)
+        case 1...4: return accentColor(0.25)
+        case 5...14: return accentColor(0.5)
+        case 15...39: return accentColor(0.75)
+        default: return accentColor(1.0)
         }
     }
 }

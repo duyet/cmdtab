@@ -26,20 +26,47 @@ public enum SystemPromptBuilder {
         preferredLanguage: String,
         personalityPrompt: String?,
         customInstructions: String,
-        contextSummary: String?
+        userName: String,
+        contextSummary: String?,
+        currentDate: Date = Date()
     ) -> String {
-        var s = base
-        s += " All responses must be in \(preferredLanguage)."
-        if let p = personalityPrompt, !p.isEmpty {
-            s += " " + p
+        var parts: [String] = []
+        
+        // Base system prompt
+        parts.append(base)
+        
+        // Language constraint
+        parts.append("All responses must be in \(preferredLanguage).")
+        
+        // Personality prompt
+        if let personality = personalityPrompt, !personality.isEmpty {
+            parts.append(personality)
         }
+        
+        // Datetime injection — rounded to the hour to optimize prompt caching (prefix stability)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMMM d, yyyy 'at' h:00 a zzz"
+        formatter.timeZone = TimeZone.current
+        let dateStr = formatter.string(from: currentDate)
+        parts.append("[Current Date & Time]\n\(dateStr)")
+        
+        // User information from settings
+        let name = userName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !name.isEmpty {
+            parts.append("[User Information]\nName: \(name)")
+        }
+        
+        // Custom instructions from settings
         let custom = customInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
         if !custom.isEmpty {
-            s += "\nUser instructions: \(custom)"
+            parts.append("[Custom Instructions]\n\(custom)")
         }
+        
+        // Earlier context
         if let summary = contextSummary, !summary.isEmpty {
-            s += "\n[Earlier conversation context] \(summary)"
+            parts.append("[Earlier Conversation Context]\n\(summary)")
         }
-        return s
+        
+        return parts.joined(separator: "\n\n")
     }
 }

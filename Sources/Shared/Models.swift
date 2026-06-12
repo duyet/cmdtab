@@ -28,7 +28,7 @@ public struct ChatMessage: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
-/// A volatile, in-memory conversation. Never persisted to disk (see AGENTS.md §1.1).
+/// A conversation model. Persisted to disk inside the app's application support directory.
 public struct Conversation: Codable, Identifiable, Equatable, Sendable {
     public var id: UUID
     public var title: String
@@ -40,9 +40,13 @@ public struct Conversation: Codable, Identifiable, Equatable, Sendable {
     /// nil when no compaction has occurred.
     public var compactedSummary: String?
 
+    /// The raw request JSON of the latest request sent in this conversation.
+    public var lastRawRequestDetails: String?
+
     public init(
         id: UUID = UUID(), title: String, messages: [ChatMessage] = [], timestamp: Date = Date(), presetId: UUID? = nil,
-        compactedSummary: String? = nil
+        compactedSummary: String? = nil,
+        lastRawRequestDetails: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -50,6 +54,7 @@ public struct Conversation: Codable, Identifiable, Equatable, Sendable {
         self.timestamp = timestamp
         self.presetId = presetId
         self.compactedSummary = compactedSummary
+        self.lastRawRequestDetails = lastRawRequestDetails
     }
 }
 

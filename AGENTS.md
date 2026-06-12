@@ -6,7 +6,7 @@ This file is for agentic coding systems modifying this codebase. See `@CLAUDE.md
 
 ## 1. Architecture
 
-**MVVM**: `MainViewModel` (`@MainActor`) owns all state. Never write conversations to disk — keep them strictly in RAM (`@Published var conversations`).
+**MVVM**: `MainViewModel` (`@MainActor`) owns all state. Conversations are persisted locally via SwiftData (SQLite database) or a fallback JSON file under Application Support, triggered on key lifecycle events (creation, deletion, rename, and stream completion).
 
 **Dual inference**:
 - Cloud: `APIClient.swift` streams SSE using OpenAI-compatible chat completion format.

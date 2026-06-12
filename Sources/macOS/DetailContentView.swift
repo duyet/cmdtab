@@ -19,6 +19,9 @@ struct DetailContentView: View {
                 // the main sidebar (which swapped to settings nav items).
                 SettingsView(viewModel: viewModel).settingsContentPane
                     .transition(.opacity)
+            } else if viewModel.sidebarMode == "actions", let selectedPresetId = viewModel.selectedPresetIdForDetail {
+                PresetDetailView(viewModel: viewModel, presetId: selectedPresetId)
+                    .transition(.opacity)
             } else {
                 mainContentPane
             }
@@ -64,25 +67,7 @@ struct DetailContentView: View {
         .background(Color.creamBackground)
         .tint(.primary)
         .textSelection(.enabled)
-        // Overlay toggle and search buttons at top-left when sidebar is hidden
-        .overlay(alignment: .topLeading) {
-            #if os(macOS)
-            if !viewModel.isSidebarVisible && !isHoverSidebarVisible {
-                HStack(spacing: 6) {
-                    Spacer().frame(width: 76)  // clear traffic lights
-                    PlainIconButton(systemName: "sidebar.left", size: 12, help: "Toggle Sidebar (⌘B)") {
-                        withAnimation { viewModel.isSidebarVisible.toggle() }
-                    }
-                    PlainIconButton(systemName: "magnifyingglass", size: 12, help: "Search Chats") {
-                        viewModel.toggleSidebarSearch()
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(.top, 4)
-                .ignoresSafeArea(.container, edges: .top)
-            }
-            #endif
-        }
+
         // Overlay info button at the top-right of the chat (in the title bar)
         .overlay(alignment: .topTrailing) {
             if !viewModel.isSettingsOpen && viewModel.selectedConversationId != nil {

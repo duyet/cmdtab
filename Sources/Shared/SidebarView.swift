@@ -49,21 +49,6 @@ struct SidebarView: View {
                 .frame(width: 1)
                 .ignoresSafeArea(.container, edges: .top)
         }
-        // Overlay toolbar icons onto the titlebar row — this sits above the
-        // safe area, right next to the traffic light buttons.
-        .overlay(alignment: .topLeading) {
-            HStack(spacing: 6) {
-                Spacer().frame(width: 76)  // clear traffic lights
-                PlainIconButton(systemName: "sidebar.left", size: 12, help: "Toggle Sidebar (⌘B)") {
-                    withAnimation { viewModel.isSidebarVisible.toggle() }
-                }
-                PlainIconButton(systemName: "magnifyingglass", size: 12, help: "Search Chats") {
-                    viewModel.toggleSidebarSearch()
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.top, 4) // move icons up a bit
-        }
         .ignoresSafeArea(.container, edges: .top)
         .onChange(of: viewModel.isSidebarSearchVisible) { _, visible in
             if visible { searchFocused = true } else { searchText = "" }
@@ -124,7 +109,7 @@ struct SidebarView: View {
         HStack(spacing: 2) {
             tabButton(mode: "chat", icon: "bubble.left", label: "Chat")
             tabButton(mode: "actions", icon: "bolt", label: "Preset")
-            tabButton(mode: "automations", icon: "gearshape", label: "Auto")
+            tabButton(mode: "automations", icon: "clock", label: "Auto")
         }
         .padding(4)
         .background(Color.primary.opacity(0.04))
@@ -547,13 +532,6 @@ private struct SidebarRow: View {
 private struct ActionsPane: View {
     @ObservedObject var viewModel: MainViewModel
 
-    private static let iconChoices = [
-        "sparkles", "bolt", "list.bullet", "globe", "lightbulb",
-        "textformat.abc", "checklist", "pencil.and.scribble",
-        "chevron.left.forwardslash.chevron.right", "doc.text",
-        "envelope", "quote.bubble", "tag", "wand.and.rays",
-    ]
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Shown when clipboard text is detected. Drag to reorder.")
@@ -567,11 +545,16 @@ private struct ActionsPane: View {
                 ForEach(viewModel.presets) { preset in
                     ActionRow(
                         preset: preset,
-                        iconChoices: Self.iconChoices,
-                        onRename: { viewModel.renamePreset(id: preset.id, to: $0) },
-                        onIcon: { viewModel.setPresetIcon(id: preset.id, sfSymbol: $0) },
-                        onDelete: { viewModel.deletePreset(id: preset.id) },
-                        onPromptEdit: { viewModel.setPresetPrompt(id: preset.id, prompt: $0) }
+                        isSelected: viewModel.selectedPresetIdForDetail == preset.id,
+                        onSelect: {
+                            viewModel.selectedPresetIdForDetail = preset.id
+                            #if os(iOS)
+                            withAnimation {
+                                viewModel.isSidebarVisible = false
+                            }
+                            #endif
+                        },
+                        onDelete: { viewModel.deletePreset(id: preset.id) }
                     )
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
@@ -591,104 +574,54 @@ private struct ActionsPane: View {
 
 private struct ActionRow: View {
     let preset: Preset
-    let iconChoices: [String]
-    let onRename: (String) -> Void
-    let onIcon: (String) -> Void
+    let isSelected: Bool
+    let onSelect: () -> Void
     let onDelete: () -> Void
-    let onPromptEdit: (String) -> Void
-    @State private var name: String = ""
-    @State private var prompt: String = ""
-    @State private var isExpanded: Bool = false
-    @FocusState private var nameFocused: Bool
-    @FocusState private var promptFocused: Bool
+    #if os(macOS)
+    @State private var isHovered = false
+    #endif
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Main row: icon + name + chevron
+        Button(action: onSelect) {
             HStack(spacing: 8) {
-                Menu {
-                    ForEach(iconChoices, id: \.self) { symbol in
-                        Button {
-                            onIcon(symbol)
-                        } label: {
-                            Label(symbol, systemImage: symbol)
-                        }
-                    }
-                } label: {
-                    Image(systemName: preset.sfSymbol)
-                        .font(.system(size: AppFont.pt(12)))
-                        .foregroundColor(.secondary)
-                        .frame(width: 22, height: 22)
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-
-                TextField("Action name", text: $name)
-                    .textFieldStyle(PlainTextFieldStyle())
-                    .font(.body)
-                    .focused($nameFocused)
-                    .onSubmit { onRename(name) }
-                    .onChange(of: nameFocused) { _, focused in
-                        if !focused { onRename(name) }
-                    }
-
+                Image(systemName: preset.sfSymbol)
+                    .font(.system(size: AppFont.pt(11)))
+                    .foregroundColor(.secondary)
+                    .frame(width: 14)
+                Text(preset.name)
+                    .font(.system(size: AppFont.pt(12)))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 Spacer(minLength: 0)
-
-                // Chevron to indicate expandability
                 Image(systemName: "chevron.right")
                     .font(.system(size: AppFont.pt(9), weight: .semibold))
                     .foregroundColor(.secondary.opacity(0.5))
-                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(rowBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
             .contentShape(Rectangle())
-            .onTapGesture {
-                withAnimation(.easeOut(duration: 0.15)) {
-                    isExpanded.toggle()
-                }
-            }
-
-            // Expanded: prompt editor
-            if isExpanded {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("PROMPT")
-                        .font(.system(size: AppFont.pt(9), weight: .semibold))
-                        .foregroundColor(.secondary.opacity(0.7))
-
-                    TextEditor(text: $prompt)
-                        .font(.system(size: AppFont.pt(11.5)))
-                        .frame(height: 80)
-                        .padding(6)
-                        .background(Color.primary.opacity(0.04))
-                        .clipShape(.rect(cornerRadius: 6))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.hairline.opacity(0.5), lineWidth: 1)
-                        )
-                        .focused($promptFocused)
-                        .onChange(of: promptFocused) { _, focused in
-                            if !focused { onPromptEdit(prompt) }
-                        }
-                        .onChange(of: isExpanded) { _, expanded in
-                            if expanded { promptFocused = true }
-                        }
-                }
-                .padding(.leading, 30)
-                .padding(.top, 6)
-                .padding(.bottom, 4)
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
         }
-        .padding(.vertical, 2)
-        .onAppear {
-            name = preset.name
-            prompt = preset.systemPrompt
-        }
+        .buttonStyle(PlainButtonStyle())
+        #if os(macOS)
+        .onHover { h in isHovered = h }
+        #endif
         .contextMenu {
             Button(role: .destructive, action: onDelete) {
                 Label("Delete", systemImage: "trash")
             }
         }
+    }
+
+    private var rowBackground: Color {
+        if isSelected { return Color.primary.opacity(0.06) }
+        #if os(macOS)
+        return isHovered ? Color.primary.opacity(0.04) : Color.clear
+        #else
+        return Color.clear
+        #endif
     }
 }
 

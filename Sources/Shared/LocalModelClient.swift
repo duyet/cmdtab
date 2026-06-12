@@ -81,24 +81,33 @@ public final class LocalModelClient: Sendable {
     /// - Parameters:
     ///   - instructions: System instructions guiding model behaviour (priority over the prompt).
     ///   - prompt: The user prompt to respond to.
+    ///   - enabledTools: Set of active on-device tools to attach to the session.
     /// - Returns: A stream yielding text deltas; finishes when generation completes.
     /// - Throws: `LocalModelError` if the model is unavailable.
     public func streamResponse(
         instructions: String,
-        prompt: String
+        prompt: String,
+        enabledTools: Set<String> = []
     ) throws -> AsyncThrowingStream<String, Error> {
         let availability = self.availability
         guard availability == .available else {
             throw LocalModelError(availability.unavailableReason ?? "On-device model is unavailable.")
         }
-
+ 
         #if DISABLE_NATIVE_LLM
         throw LocalModelError(LocalModelAvailability.compiledOut.unavailableReason!)
         #else
         guard #available(macOS 26.0, iOS 26.0, *) else {
             throw LocalModelError(LocalModelAvailability.deviceNotEligible.unavailableReason!)
         }
-        let session = LanguageModelSession(instructions: instructions)
+        var tools: [any Tool] = []
+        if enabledTools.contains("calculator") {
+            tools.append(CalculatorTool())
+        }
+        if enabledTools.contains("system_clock") {
+            tools.append(ClockTool())
+        }
+        let session = LanguageModelSession(tools: tools, instructions: instructions)
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
@@ -130,3 +139,49 @@ public final class LocalModelClient: Sendable {
         #endif
     }
 }
+
+#if !DISABLE_NATIVE_LLM
+
+// MARK: - Calculator Tool
+@available(macOS 26.0, iOS 26.0, *)
+struct CalculatorTool: Tool {
+    let name = "calculator"
+    let description = "Evaluate simple mathematical expressions (addition, subtraction, multiplication, division)."
+
+    @Generable
+    struct Arguments {
+        var expression: String
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        let allowed = CharacterSet(charactersIn: "0123456789+-*/.()")
+        let cleanExpr = arguments.expression.replacingOccurrences(of: " ", with: "")
+        guard !cleanExpr.isEmpty && cleanExpr.unicodeScalars.allSatisfy({ allowed.contains($0) }) else {
+            return "Error: invalid math expression characters."
+        }
+
+        let exp = NSExpression(format: cleanExpr)
+        if let result = exp.expressionValue(with: nil, context: nil) {
+            return "\(result)"
+        }
+        return "Failed to evaluate expression"
+    }
+}
+
+// MARK: - Clock Tool
+@available(macOS 26.0, iOS 26.0, *)
+struct ClockTool: Tool {
+    let name = "system_clock"
+    let description = "Get the current system date and time."
+
+    @Generable
+    struct Arguments {}
+
+    func call(arguments: Arguments) async throws -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .medium
+        return "Current system time is: \(formatter.string(from: Date()))"
+    }
+}
+#endif

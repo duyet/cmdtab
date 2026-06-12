@@ -163,9 +163,15 @@ public enum AnyRouterRequestFactory {
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
 
         // App attribution headers per the AnyRouter contract.
-        request.setValue("minhagent", forHTTPHeaderField: "X-AnyRouter-App")
-        request.setValue("https://github.com/duyet/MinhAgent.app", forHTTPHeaderField: "X-AnyRouter-Referer")
-        request.setValue("minhagent", forHTTPHeaderField: "X-AnyRouter-Title")
+        request.setValue("https://minhagent.dev", forHTTPHeaderField: "HTTP-Referer")
+        request.setValue("MinhAgent", forHTTPHeaderField: "X-AnyRouter-Title")
+        #if os(macOS)
+        request.setValue("macos-app", forHTTPHeaderField: "X-AnyRouter-Source")
+        #else
+        request.setValue("ios-app", forHTTPHeaderField: "X-AnyRouter-Source")
+        #endif
+        request.setValue("1.0.0", forHTTPHeaderField: "X-AnyRouter-Version")
+        request.setValue("general-chat,personal-agent", forHTTPHeaderField: "X-AnyRouter-Categories")
 
         if let apiKey = apiKey, !apiKey.isEmpty {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")

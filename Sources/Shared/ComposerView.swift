@@ -280,6 +280,9 @@ struct ComposerView: View {
         HStack(spacing: 10) {
             plusButton
             Spacer()
+            if viewModel.isLocalModelSelected {
+                toolsDropdown
+            }
             modelBadge
             sendButton
         }
@@ -322,11 +325,19 @@ struct ComposerView: View {
             Button(action: {
                 viewModel.isLocalModelSelected.toggle()
             }) {
-                Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
-                    .font(.system(size: AppFont.pt(11)))
-                    .foregroundColor(.secondary)
-                    .frame(width: 18, height: 18)
-                    .contentShape(Rectangle())
+                HStack(spacing: 4) {
+                    Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
+                        .font(.system(size: AppFont.pt(11)))
+                    if viewModel.isLocalModelSelected {
+                        Text("Foundation Models")
+                            .font(.system(size: AppFont.pt(10)))
+                    }
+                }
+                .foregroundColor(.secondary)
+                .padding(.horizontal, viewModel.isLocalModelSelected ? 8 : 0)
+                .padding(.vertical, viewModel.isLocalModelSelected ? 4 : 0)
+                .background(viewModel.isLocalModelSelected ? Color.primary.opacity(0.04) : Color.clear)
+                .cornerRadius(viewModel.isLocalModelSelected ? 6 : 0)
             }
             .buttonStyle(PlainButtonStyle())
             .accessibilityLabel(viewModel.isLocalModelSelected ? "Switch to Cloud model" : "Switch to Local model")
@@ -521,6 +532,61 @@ struct ComposerView: View {
         #endif
         
         inputMessageText = ""
+    }
+
+    private var toolsDropdown: some View {
+        Menu {
+            Section("Available Tools") {
+                Button(action: { toggleTool("calculator") }) {
+                    HStack {
+                        Image(systemName: viewModel.enabledLocalTools.contains("calculator") ? "checkmark" : "")
+                        Text("Calculator (Math)")
+                        Spacer()
+                        Image(systemName: "plus.forwardslash.minus")
+                    }
+                }
+                
+                Button(action: { toggleTool("system_clock") }) {
+                    HStack {
+                        Image(systemName: viewModel.enabledLocalTools.contains("system_clock") ? "checkmark" : "")
+                        Text("System Clock (Date/Time)")
+                        Spacer()
+                        Image(systemName: "clock")
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "wrench.and.screwdriver")
+                    .font(.system(size: AppFont.pt(10)))
+                    .foregroundColor(.secondary)
+                Text("Tools (\(viewModel.enabledLocalTools.count))")
+                    .font(.system(size: AppFont.pt(10)))
+                    .foregroundColor(.secondary)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: AppFont.pt(7)))
+                    .foregroundColor(.secondary.opacity(0.7))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.primary.opacity(0.04))
+            .cornerRadius(6)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .buttonStyle(PlainButtonStyle())
+        #if os(macOS)
+        .help("Enable or disable on-device tools")
+        #endif
+    }
+    
+    private func toggleTool(_ name: String) {
+        if viewModel.enabledLocalTools.contains(name) {
+            viewModel.enabledLocalTools.remove(name)
+        } else {
+            viewModel.enabledLocalTools.insert(name)
+        }
     }
 }
 

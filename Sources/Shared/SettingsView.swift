@@ -216,12 +216,16 @@ public struct SettingsView: View {
             #if os(iOS)
             // Apple Intelligence status — prominent on iOS
             settingsSection("APPLE INTELLIGENCE") {
-                AppleIntelligenceAuditView()
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(LocalModelClient.shared.availability.isAvailable
-                        ? Color.blue.opacity(0.06) : Color.primary.opacity(0.03))
-                    .cornerRadius(10)
+                VStack(alignment: .leading, spacing: 12) {
+                    AppleIntelligenceAuditView()
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(LocalModelClient.shared.availability.isAvailable
+                            ? Color.blue.opacity(0.06) : Color.primary.opacity(0.03))
+                        .cornerRadius(10)
+                    
+                    localModelDetailsView
+                }
             }
             #endif
 
@@ -456,11 +460,15 @@ public struct SettingsView: View {
             }
 
             settingsSection("ON-DEVICE MODEL") {
-                AppleIntelligenceAuditView()
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.primary.opacity(0.03))
-                    .cornerRadius(10)
+                VStack(alignment: .leading, spacing: 12) {
+                    AppleIntelligenceAuditView()
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.primary.opacity(0.03))
+                        .cornerRadius(10)
+                    
+                    localModelDetailsView
+                }
             }
         }
     }
@@ -474,6 +482,45 @@ public struct SettingsView: View {
                 .foregroundColor(.secondary)
             content()
         }
+    }
+
+    private var localModelDetailsView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("MODEL METADATA")
+                .font(.system(size: AppFont.pt(10), weight: .semibold))
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
+            
+            VStack(spacing: 0) {
+                metadataRow(label: "Framework", value: "FoundationModels SDK")
+                Divider()
+                metadataRow(label: "Context Limit", value: "4,096 tokens")
+                Divider()
+                metadataRow(label: "System Language", value: "\(AppleIntelligenceAudit.primaryLanguageDisplayName) (\(AppleIntelligenceAudit.primaryLanguageID))")
+                Divider()
+                metadataRow(label: "Language Match", value: AppleIntelligenceAudit.languageIsLikelySupported(AppleIntelligenceAudit.primaryLanguageID) ? "Supported" : "May be unsupported")
+            }
+            .background(Color.cardSurface)
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.hairline.opacity(0.5), lineWidth: 1)
+            )
+        }
+    }
+
+    private func metadataRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: AppFont.pt(11.5)))
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value)
+                .font(.system(size: AppFont.pt(11.5), weight: .medium))
+                .foregroundColor(.primary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 }
 

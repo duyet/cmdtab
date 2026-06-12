@@ -148,13 +148,17 @@ public struct MainView: View {
             }
             .frame(height: 44)
 
-            if hasMessages {
+            if viewModel.sidebarMode == "actions", let selectedPresetId = viewModel.selectedPresetIdForDetail {
+                PresetDetailView(viewModel: viewModel, presetId: selectedPresetId)
+            } else if hasMessages {
                 chatHistoryViewport
             } else {
                 emptyLandingView
             }
 
-            ComposerView(viewModel: viewModel)
+            if viewModel.sidebarMode != "actions" || viewModel.selectedPresetIdForDetail == nil {
+                ComposerView(viewModel: viewModel)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.creamBackground)

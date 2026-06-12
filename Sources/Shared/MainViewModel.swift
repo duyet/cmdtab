@@ -13,6 +13,7 @@ public final class MainViewModel: ObservableObject {
     @Published public var selectedConversationIds: Set<UUID> = []
     @Published public var lastSelectedConversationId: UUID? = nil
     @Published public var presets: [Preset] = []
+    @Published public var selectedPresetIdForDetail: UUID? = nil
     @Published public var isStreaming: Bool = false
     @Published public var statusMessage: String = ""
     @Published public var isSettingsOpen: Bool = false
@@ -78,6 +79,14 @@ public final class MainViewModel: ObservableObject {
     /// Quick Action the user has picked but not yet sent — shown as a small
     /// header line above the composer's text input.
     @Published public var selectedPresetIndex: Int? = nil
+ 
+    /// Set of enabled on-device tool names (e.g., "calculator", "system_clock")
+    @Published public var enabledLocalTools: Set<String> = ["calculator", "system_clock"] {
+        didSet {
+            let array = Array(enabledLocalTools)
+            UserDefaults.standard.set(array, forKey: "enabledLocalTools")
+        }
+    }
 
     /// Sidebar search field visibility — toggled from the window toolbar's
     /// search item (next to the sidebar toggle).
@@ -279,6 +288,11 @@ public final class MainViewModel: ObservableObject {
         } else {
             self.modelName = MainViewModel.defaultModelId
         }
+        if let array = UserDefaults.standard.stringArray(forKey: "enabledLocalTools") {
+            self.enabledLocalTools = Set(array)
+        } else {
+            self.enabledLocalTools = ["calculator", "system_clock"]
+        }
         // Keychain is read LAZILY (loadApiKeyIfNeeded), never at launch — a
         // launch-time read triggers a macOS permission prompt on every rebuild
         // because ad-hoc re-signing changes the app's code identity.
@@ -401,6 +415,7 @@ public final class MainViewModel: ObservableObject {
     }
 
     public func startNewConversation(title: String, presetId: UUID? = nil) {
+        selectedPresetIdForDetail = nil
         // Clean up any old empty conversations (not the one we're about to create).
         conversations.removeAll { conv in
             conv.messages.isEmpty && conv.id != selectedConversationId
@@ -436,6 +451,7 @@ public final class MainViewModel: ObservableObject {
     }
 
     public func selectConversation(id: UUID) {
+        selectedPresetIdForDetail = nil
         selectedConversationId = id
         selectedConversationIds = [id]
         lastSelectedConversationId = id
@@ -444,6 +460,7 @@ public final class MainViewModel: ObservableObject {
 
     /// Multi-select with shift (range) and cmd (toggle) support.
     public func selectConversation(id: UUID, shift: Bool, cmd: Bool) {
+        selectedPresetIdForDetail = nil
         if shift, let lastId = lastSelectedConversationId {
             // Range select from last selected to clicked
             let ids = conversations.map(\.id)
@@ -713,7 +730,7 @@ public final class MainViewModel: ObservableObject {
         if !isLocalModelSelected { loadApiKeyIfNeeded() }
         let adapter: InferenceAdapter =
             isLocalModelSelected
-            ? LocalModelAdapter()
+            ? LocalModelAdapter(enabledTools: enabledLocalTools)
             : AnyRouterAdapter(
                 endpointUrl: endpointUrl, apiKey: apiKey, model: modelName,
                 reasoningEffort: modelSupportsReasoning ? reasoningEffort : nil)

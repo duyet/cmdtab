@@ -60,6 +60,13 @@ public struct Conversation: Codable, Identifiable, Equatable, Sendable {
 
 /// A reusable system-prompt template applied to clipboard Quick Actions.
 public struct Preset: Codable, Identifiable, Sendable {
+    public static let iconChoices = [
+        "sparkles", "bolt", "list.bullet", "globe", "lightbulb",
+        "textformat.abc", "checklist", "pencil.and.scribble",
+        "chevron.left.forwardslash.chevron.right", "doc.text",
+        "envelope", "quote.bubble", "tag", "wand.and.rays",
+    ]
+
     public var id: UUID
     public var name: String  // max 14 chars for card display
     public var sfSymbol: String  // SF Symbols name for the Quick Action card icon

@@ -41,6 +41,21 @@ final class WindowController: NSWindowController {
         // next to the traffic lights (Claude Code style).
         window.toolbar = nil
 
+        // Add header buttons to titlebar container next to traffic lights
+        if let titlebarContainer = window.standardWindowButton(.closeButton)?.superview {
+            let buttonsView = WindowHeaderButtonsView(viewModel: viewModel)
+            let hostingView = NSHostingView(rootView: buttonsView)
+            hostingView.translatesAutoresizingMaskIntoConstraints = false
+            titlebarContainer.addSubview(hostingView)
+            
+            NSLayoutConstraint.activate([
+                hostingView.leadingAnchor.constraint(equalTo: titlebarContainer.leadingAnchor, constant: 76),
+                hostingView.centerYAnchor.constraint(equalTo: titlebarContainer.centerYAnchor),
+                hostingView.heightAnchor.constraint(equalToConstant: 24),
+                hostingView.widthAnchor.constraint(equalToConstant: 60)
+            ])
+        }
+
         // Wire key events through MainWindow
         window.onKeyPress = { [weak self] event in
             guard let self else { return false }
@@ -154,5 +169,22 @@ extension WindowController: NSWindowDelegate {
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         sender.orderOut(nil)
         return false
+    }
+}
+
+// MARK: - Window Header Buttons View
+/// A single, window-level set of buttons next to the traffic lights.
+struct WindowHeaderButtonsView: View {
+    @ObservedObject var viewModel: MainViewModel
+
+    var body: some View {
+        HStack(spacing: 6) {
+            PlainIconButton(systemName: "sidebar.left", size: 12, help: "Toggle Sidebar (⌘B)") {
+                withAnimation { viewModel.isSidebarVisible.toggle() }
+            }
+            PlainIconButton(systemName: "magnifyingglass", size: 12, help: "Search Chats") {
+                viewModel.toggleSidebarSearch()
+            }
+        }
     }
 }

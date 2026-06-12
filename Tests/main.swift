@@ -246,17 +246,23 @@ func testRequestHeadersAndAuth() throws {
     assert(
         req.value(forHTTPHeaderField: "Accept") == "text/event-stream",
         "Must accept an SSE stream")
-    // WHY: AnyRouter attributes traffic via X-AnyRouter-* headers; dropping them
+    // WHY: AnyRouter attributes traffic via HTTP-Referer and X-AnyRouter-* headers; dropping them
     // breaks app attribution on the gateway dashboard.
     assert(
-        req.value(forHTTPHeaderField: "X-AnyRouter-App") == "minhagent",
-        "App attribution header must be present")
-    assert(
-        req.value(forHTTPHeaderField: "X-AnyRouter-Referer") == "https://github.com/duyet/MinhAgent.app",
+        req.value(forHTTPHeaderField: "HTTP-Referer") == "https://minhagent.dev",
         "Referer attribution header must be present")
     assert(
-        req.value(forHTTPHeaderField: "X-AnyRouter-Title") == "minhagent",
+        req.value(forHTTPHeaderField: "X-AnyRouter-Title") == "MinhAgent",
         "Title attribution header must be present")
+    assert(
+        req.value(forHTTPHeaderField: "X-AnyRouter-Source") == "macos-app",
+        "Source attribution header must be present")
+    assert(
+        req.value(forHTTPHeaderField: "X-AnyRouter-Version") == "1.0.0",
+        "Version attribution header must be present")
+    assert(
+        req.value(forHTTPHeaderField: "X-AnyRouter-Categories") == "general-chat,personal-agent",
+        "Categories attribution header must be present")
     // WHY: a present key must become a Bearer token, or requests are unauthorized.
     assert(
         req.value(forHTTPHeaderField: "Authorization") == "Bearer sk-test-123",
@@ -322,6 +328,17 @@ func testLocalModelStreamThrowsWhenCompiledOut() {
     do {
         _ = try LocalModelClient.shared.streamResponse(instructions: "x", prompt: "y")
         assert(false, "Compiled-out streamResponse must throw")
+    } catch let error as LocalModelError {
+        assert(
+            error.message.contains("isn't included in this build"),
+            "Error must explain the model is excluded from this build")
+    } catch {
+        assert(false, "Must throw LocalModelError, got \(error)")
+    }
+    
+    do {
+        _ = try LocalModelClient.shared.streamResponse(instructions: "x", prompt: "y", enabledTools: ["calculator"])
+        assert(false, "Compiled-out streamResponse with tools must throw")
     } catch let error as LocalModelError {
         assert(
             error.message.contains("isn't included in this build"),
@@ -499,7 +516,32 @@ func testSystemPromptInjectsCustomInstruction() {
     assert(!bare.contains("[User Information]"), "blank user name must inject nothing")
 }
 
+func testInferenceAdapters() {
+    print("Testing InferenceAdapter protocols...")
+
+    // 1. AnyRouterAdapter
+    let adapterEmptyKey = AnyRouterAdapter(endpointUrl: "https://anyrouter.dev/api/v1", apiKey: "", model: "google/gemini-3.5-flash")
+    assert(adapterEmptyKey.id == "anyrouter", "AnyRouter ID must be anyrouter")
+    assert(adapterEmptyKey.displayName == "AnyRouter (Cloud)", "AnyRouter display name must match")
+    assert(adapterEmptyKey.isAvailable == false, "AnyRouter must be unavailable with empty key")
+    assert(adapterEmptyKey.unavailableReason?.contains("API key") == true, "AnyRouter unavailable reason must request API key")
+
+    let adapterWithKey = AnyRouterAdapter(endpointUrl: "https://anyrouter.dev/api/v1", apiKey: "sk-test-123", model: "google/gemini-3.5-flash")
+    assert(adapterWithKey.isAvailable == true, "AnyRouter must be available with valid key")
+    assert(adapterWithKey.unavailableReason == nil, "AnyRouter available reason must be nil")
+
+    // 2. LocalModelAdapter
+    let localAdapter = LocalModelAdapter()
+    assert(localAdapter.id == "local", "LocalModel ID must be local")
+    assert(localAdapter.displayName == "Local (Apple Intelligence)", "LocalModel display name must match")
+    assert(localAdapter.isAvailable == false, "Local adapter must not be available when compiled out")
+    assert(localAdapter.unavailableReason?.contains("Cloud API") == true, "Local adapter unavailable reason must explain compiledOut")
+
+    print("✓ InferenceAdapter protocols passed")
+}
+
 func runAllTests() {
+    testInferenceAdapters()
     testMarkdownBlockParsing()
     testMarkdownUnterminatedFenceIsCode()
     testMarkdownHashWithoutSpaceIsNotHeading()

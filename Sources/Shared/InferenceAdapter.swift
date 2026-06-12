@@ -96,8 +96,12 @@ public struct AnyRouterAdapter: InferenceAdapter {
 public struct LocalModelAdapter: InferenceAdapter {
     public let id = "local"
     public let displayName = "Local (Apple Intelligence)"
+    
+    private let enabledTools: Set<String>
 
-    public init() {}
+    public init(enabledTools: Set<String> = []) {
+        self.enabledTools = enabledTools
+    }
 
     public var isAvailable: Bool { LocalModelClient.shared.availability.isAvailable }
 
@@ -124,7 +128,8 @@ public struct LocalModelAdapter: InferenceAdapter {
         let prompt = history.last(where: { $0.role == "user" })?.content ?? ""
         return try LocalModelClient.shared.streamResponse(
             instructions: enrichedInstructions,
-            prompt: prompt
+            prompt: prompt,
+            enabledTools: enabledTools
         )
     }
 }

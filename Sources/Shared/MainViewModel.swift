@@ -975,6 +975,25 @@ public final class MainViewModel: ObservableObject {
         PasteboardMonitor.shared.copyToClipboard(outputText)
     }
 
+    /// Retry: remove the last error assistant message and resend the preceding user message.
+    public func retryLastMessage() {
+        guard let activeId = selectedConversationId,
+              let idx = conversations.firstIndex(where: { $0.id == activeId }),
+              let lastMsg = conversations[idx].messages.last,
+              lastMsg.role == "assistant" && lastMsg.isError
+        else { return }
+
+        // Remove the error message.
+        conversations[idx].messages.removeLast()
+
+        // Find the preceding user message to resend.
+        guard let lastUser = conversations[idx].messages.last(where: { $0.role == "user" }) else { return }
+
+        // Remove that user message too so sendMessage re-appends it cleanly.
+        conversations[idx].messages.removeLast()
+        sendMessage(content: lastUser.content)
+    }
+
     public func clearConversation() {
         currentTask?.cancel()
         currentTask = nil

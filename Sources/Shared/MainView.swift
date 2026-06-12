@@ -419,14 +419,8 @@ struct MessageRow: View {
                     }
                 }
 
-                // Meta row: timestamp + metrics + copy
+                // Meta row: copy + timestamp + metrics
                 HStack(spacing: 8) {
-                    Text(message.timestamp, style: .time)
-                        .font(.system(size: AppFont.pt(10)))
-                        .foregroundColor(.secondary.opacity(0.7))
-                    if !isUser, let metrics = message.inferenceMetrics {
-                        MetricsChips(metrics: metrics)
-                    }
                     Button(action: copyMessage) {
                         Image(systemName: copied ? "checkmark" : "square.on.square")
                             .font(.system(size: AppFont.pt(10)))
@@ -437,6 +431,26 @@ struct MessageRow: View {
                     #if os(macOS)
                     .help("Copy")
                     #endif
+                    Text(message.timestamp, style: .time)
+                        .font(.system(size: AppFont.pt(10)))
+                        .foregroundColor(.secondary.opacity(0.7))
+                    if !isUser, let metrics = message.inferenceMetrics {
+                        MetricsChips(metrics: metrics)
+                    }
+                    if !isUser, message.isError {
+                        Button {
+                            viewModel.retryLastMessage()
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: AppFont.pt(10)))
+                                .foregroundColor(.secondary.opacity(0.7))
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .accessibilityLabel("Retry")
+                        #if os(macOS)
+                        .help("Retry")
+                        #endif
+                    }
                 }
                 #if os(macOS)
                 .opacity(isHovered || copied ? 1 : 0)

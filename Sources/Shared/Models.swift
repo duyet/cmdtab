@@ -9,6 +9,7 @@ public struct InferenceMetrics: Codable, Equatable, Sendable {
     public var outputTokens: Int?
     public var inputTokens: Int?
     public var reasoningTokens: Int?
+    public var costUsd: Double?       // estimated cost in USD
 
     public init(
         model: String? = nil,
@@ -16,7 +17,8 @@ public struct InferenceMetrics: Codable, Equatable, Sendable {
         totalMs: Int? = nil,
         outputTokens: Int? = nil,
         inputTokens: Int? = nil,
-        reasoningTokens: Int? = nil
+        reasoningTokens: Int? = nil,
+        costUsd: Double? = nil
     ) {
         self.model = model
         self.ttftMs = ttftMs
@@ -24,6 +26,7 @@ public struct InferenceMetrics: Codable, Equatable, Sendable {
         self.outputTokens = outputTokens
         self.inputTokens = inputTokens
         self.reasoningTokens = reasoningTokens
+        self.costUsd = costUsd
     }
 
     /// Tokens per second, derived from outputTokens and totalMs.

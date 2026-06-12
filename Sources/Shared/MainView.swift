@@ -587,12 +587,19 @@ struct MetricsChips: View {
                 Text(String(format: "%.1f t/s", tps))
                     .metricChipStyle()
             }
-            if let out = metrics.outputTokens {
+            if let out = metrics.outputTokens, let inp = metrics.inputTokens {
+                Text("\(inp)→\(out)")
+                    .metricChipStyle()
+            } else if let out = metrics.outputTokens {
                 Text("~\(out) tok")
                     .metricChipStyle()
             }
             if let reason = metrics.reasoningTokens, reason > 0 {
                 Text("+\(reason) reason")
+                    .metricChipStyle()
+            }
+            if let cost = metrics.costUsd {
+                Text(formatCost(cost))
                     .metricChipStyle()
             }
         }
@@ -604,6 +611,15 @@ struct MetricsChips: View {
             return String(id[id.index(after: slash)...])
         }
         return id
+    }
+
+    /// Format cost: "$0.0042" or "$1.23"
+    private func formatCost(_ cost: Double) -> String {
+        if cost < 0.01 {
+            return String(format: "$%.4f", cost)
+        } else {
+            return String(format: "$%.2f", cost)
+        }
     }
 }
 

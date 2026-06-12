@@ -871,6 +871,14 @@ public final class MainViewModel: ObservableObject {
                     metrics.inputTokens = usage.promptTokens
                     metrics.outputTokens = usage.completionTokens
                     metrics.reasoningTokens = usage.reasoningTokens
+                    // Estimate cost from model pricing + token counts.
+                    if let modelId = metrics.model,
+                       let entry = ModelCatalog.entry(for: modelId) {
+                        metrics.costUsd = entry.estimateCost(
+                            inputTokens: usage.promptTokens,
+                            outputTokens: usage.completionTokens
+                        )
+                    }
                 } else if let convIdx = self?.conversations.firstIndex(where: { $0.id == conversationId }),
                     let content = self?.conversations[convIdx]
                         .messages.first(where: { $0.id == assistantMsgId })?.content {

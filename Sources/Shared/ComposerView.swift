@@ -333,11 +333,8 @@ struct ComposerView: View {
             }
         } label: {
             Image(systemName: "plus")
-                .font(.system(size: AppFont.pt(10), weight: .medium))
+                .font(.system(size: AppFont.pt(11)))
                 .foregroundColor(.secondary)
-                .frame(width: 17, height: 17)
-                .background(Color.primary.opacity(0.05))
-                .clipShape(Circle())
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
@@ -347,11 +344,8 @@ struct ComposerView: View {
         #else
         PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
             Image(systemName: "plus")
-                .font(.system(size: AppFont.pt(10), weight: .medium))
+                .font(.system(size: AppFont.pt(11)))
                 .foregroundColor(.secondary)
-                .frame(width: 17, height: 17)
-                .background(Color.primary.opacity(0.05))
-                .clipShape(Circle())
         }
         .buttonStyle(PlainButtonStyle())
         .accessibilityLabel("Upload photo")
@@ -461,9 +455,9 @@ struct ComposerView: View {
     private var sendButton: some View {
         Button(action: send) {
             Image(systemName: "arrow.up")
-                .font(.system(size: AppFont.pt(10), weight: .bold))
+                .font(.system(size: AppFont.pt(9), weight: .bold))
                 .foregroundColor(canSend ? .white : .secondary.opacity(0.4))
-                .frame(width: 24, height: 24)
+                .frame(width: 20, height: 20)
                 .background(canSend ? Color.accentCoral : Color.primary.opacity(0.07))
                 .clipShape(Circle())
         }
@@ -622,11 +616,8 @@ struct ComposerView: View {
             }
         } label: {
             Image(systemName: "wrench.and.screwdriver")
-                .font(.system(size: AppFont.pt(10), weight: .medium))
+                .font(.system(size: AppFont.pt(11)))
                 .foregroundColor(.secondary)
-                .frame(width: 17, height: 17)
-                .background(Color.primary.opacity(0.05))
-                .clipShape(Circle())
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)

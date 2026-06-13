@@ -697,15 +697,20 @@ public struct SettingsView: View {
 
     private var connectionSymbol: String {
         if viewModel.isAnyRouterConnecting { return "arrow.triangle.2.circlepath" }
+        let title = viewModel.anyRouterConnectionTitle.lowercased()
+        if title.contains("not connected") || title.contains("fail") { return "exclamationmark.triangle" }
+        if title.contains("connected") { return "checkmark.seal.fill" }
         return viewModel.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ? "cloud.slash" : "checkmark.seal.fill"
+            ? "cloud.slash" : "key.fill"
     }
 
     private var connectionColor: Color {
         if viewModel.isAnyRouterConnecting { return .secondary }
         let title = viewModel.anyRouterConnectionTitle.lowercased()
+        // Negative states first — "not connected" contains the substring
+        // "connected", so it must be ruled out before the positive match.
+        if title.contains("not connected") || title.contains("fail") { return .orange }
         if title.contains("connected") { return .green }
-        if title.contains("fail") || title.contains("not") { return .orange }
         return .accentColor
     }
 

@@ -15,6 +15,8 @@ struct ComposerView: View {
     @FocusState private var isInputFocused: Bool
     @State private var showLocalHelp: Bool = false
     @State private var isQuoteExpanded: Bool = false
+    @State private var showModelPicker: Bool = false
+    @State private var modelSearch: String = ""
     #if os(iOS)
     @State private var photoItem: PhotosPickerItem?
     @State private var hasPhoto: Bool = false
@@ -315,6 +317,18 @@ struct ComposerView: View {
                 }
             #else
                 .frame(minHeight: 72, maxHeight: 168)
+                // Keyboard accessory bar: Send above the keyboard so iOS users
+                // get a send affordance without losing the Return-to-newline.
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button(action: send) {
+                            Label("Send", systemImage: "arrow.up")
+                                .labelStyle(.titleAndIcon)
+                        }
+                        .disabled(!canSend)
+                    }
+                }
             #endif
         }
         .padding(.horizontal, 14)
@@ -383,12 +397,13 @@ struct ComposerView: View {
         #endif
     }
 
-    // MARK: Model badge — compact switch for local/cloud + model dropdown menu.
+    // MARK: Model badge — runtime toggle (Cloud ↔ On-device) + model picker.
     private var modelBadge: some View {
-        HStack(spacing: 6) {
-            Button(action: {
+        HStack(spacing: 4) {
+            // Runtime toggle: Cloud ↔ On-device
+            Button {
                 viewModel.isLocalModelSelected.toggle()
-            }) {
+            } label: {
                 Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
                     .font(.system(size: AppFont.pt(12)))
                     .frame(width: 28, height: 28)
@@ -401,57 +416,78 @@ struct ComposerView: View {
             #endif
 
             if viewModel.isLocalModelSelected {
-                // Local model picker: On-Device / Private Cloud Compute
-                Menu {
-                    Picker("Local Model", selection: $viewModel.localModelMode) {
-                        Label("On-Device", systemImage: "cpu").tag("on-device")
-                        Label("Private Cloud Compute", systemImage: "cloud").tag("private-cloud")
-                    }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
-                } label: {
-                    modelMenuLabel(viewModel.localModelMode == "on-device" ? "On-Device" : "Private Cloud")
-                }
-                .menuIndicator(.hidden)
-                .buttonStyle(PlainButtonStyle())
-                #if os(macOS)
-                .help("Select local model backend")
-                #endif
+                localModelMenu
             } else {
-                // Cloud model picker
-                Menu {
-                    Section {
-                        Picker("Model", selection: $viewModel.modelName) {
-                            ForEach(modelOptions, id: \.id) { option in
-                                Label(option.label, systemImage: option.icon).tag(option.id)
-                            }
-                        }
-                        .pickerStyle(.inline)
-                        .labelsHidden()
-                    }
-
-                    if viewModel.modelSupportsReasoning {
-                        Section {
-                            Picker("Reasoning", selection: $viewModel.reasoningEffort) {
-                                ForEach(ModelCatalog.reasoningEfforts, id: \.self) { effort in
-                                    Text(effort.capitalized).tag(effort)
-                                }
-                            }
-                            .pickerStyle(.inline)
-                            .labelsHidden()
-                        }
-                    }
-                } label: {
-                    modelMenuLabel(currentModelLabel)
-                }
-                .menuIndicator(.hidden)
-                .buttonStyle(PlainButtonStyle())
-                .accessibilityValue(currentModelLabel)
-                #if os(macOS)
-                .help("\(currentModelLabel) · \(URL(string: viewModel.endpointUrl)?.host ?? "cloud")")
-                #endif
+                cloudModelPickerButton
             }
         }
+    }
+
+    /// Local backend picker: On-Device / Private Cloud Compute.
+    private var localModelMenu: some View {
+        Menu {
+            Picker("Local Model", selection: $viewModel.localModelMode) {
+                Label("On-Device", systemImage: "cpu").tag("on-device")
+                Label("Private Cloud Compute", systemImage: "cloud").tag("private-cloud")
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } label: {
+            modelMenuLabel(viewModel.localModelMode == "on-device" ? "On-Device" : "Private Cloud")
+        }
+        .menuIndicator(.hidden)
+        .buttonStyle(PlainButtonStyle())
+        #if os(macOS)
+        .help("Select local model backend")
+        #endif
+    }
+
+    /// Cloud model picker — opens a searchable popover (120+ models).
+    private var cloudModelPickerButton: some View {
+        Button {
+            modelSearch = ""
+            showModelPicker.toggle()
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: currentModelIcon)
+                    .font(.system(size: AppFont.pt(11)))
+                    .foregroundColor(.accentColor)
+                Text(currentModelLabel)
+                    .font(.system(size: AppFont.pt(11), weight: .medium))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: AppFont.pt(8), weight: .semibold))
+                    .foregroundColor(.secondary.opacity(0.7))
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .background(Color.primary.opacity(0.06))
+            .clipShape(Capsule())
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
+        .accessibilityValue(currentModelLabel)
+        .popover(isPresented: $showModelPicker) {
+            ModelPickerPopover(
+                entries: viewModel.cloudModelEntries,
+                selectedId: viewModel.modelName,
+                supportsReasoning: viewModel.modelSupportsReasoning,
+                reasoningEffort: $viewModel.reasoningEffort,
+                search: $modelSearch
+            ) { id in
+                viewModel.modelName = id
+                showModelPicker = false
+            }
+        }
+        #if os(macOS)
+        .help("\(currentModelLabel) · \(URL(string: viewModel.endpointUrl)?.host ?? "cloud")")
+        #endif
+    }
+
+    private var currentModelIcon: String {
+        viewModel.cloudModelEntries.first(where: { $0.id == viewModel.modelName })?.sfSymbol ?? "sparkles"
     }
 
     // MARK: Model label helpers (used by modelBadge)
@@ -620,13 +656,18 @@ struct ComposerView: View {
 
     private var toolsDropdown: some View {
         Menu {
-            Section("Available Tools") {
+            Section("On-Device Tools") {
                 Toggle(isOn: toolBinding("calculator")) {
                     Label("Calculator", systemImage: "plus.forwardslash.minus")
                 }
                 Toggle(isOn: toolBinding("system_clock")) {
                     Label("System Clock", systemImage: "clock")
                 }
+            }
+            Section {
+                Text("Tools attach only to the on-device model.")
+                    .font(.system(size: AppFont.pt(10)))
+                    .foregroundColor(.secondary)
             }
         } label: {
             Image(systemName: "wrench.adjustable")
@@ -654,6 +695,169 @@ struct ComposerView: View {
         } else {
             viewModel.enabledLocalTools.insert(name)
         }
+    }
+}
+
+// MARK: - Searchable model picker popover
+/// Replaces the cramped inline model Menu. Groups entries by provider, filters
+/// live as you type, and exposes the reasoning-effort control for capable models.
+private struct ModelPickerPopover: View {
+    let entries: [ModelCatalog.Entry]
+    let selectedId: String
+    let supportsReasoning: Bool
+    @Binding var reasoningEffort: String
+    @Binding var search: String
+    let onSelect: (String) -> Void
+
+    private var query: String {
+        search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private var filtered: [ModelCatalog.Entry] {
+        guard !query.isEmpty else { return entries }
+        return entries.filter {
+            $0.displayName.lowercased().contains(query) || $0.id.lowercased().contains(query)
+        }
+    }
+
+    /// Provider-prefixed id → capitalized provider name, A→Z.
+    private var grouped: [(String, [ModelCatalog.Entry])] {
+        Dictionary(grouping: filtered) { entry in
+            entry.id.split(separator: "/").first.map { String($0).capitalized } ?? "Other"
+        }
+        .sorted { $0.key.localizedCaseInsensitiveCompare($1.key) == .orderedAscending }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: AppFont.pt(12)))
+                    .foregroundColor(.secondary)
+                TextField("Search models", text: $search)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: AppFont.pt(13)))
+                    #if os(iOS)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    #endif
+                if !search.isEmpty {
+                    Button {
+                        search = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: AppFont.pt(12)))
+                            .foregroundColor(.secondary.opacity(0.6))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(Color.primary.opacity(0.05))
+            .clipShape(.rect(cornerRadius: 8))
+            .padding(10)
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(grouped, id: \.0) { provider, models in
+                        Text(provider)
+                            .font(.system(size: AppFont.pt(10.5), weight: .semibold))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 14)
+                            .padding(.top, 10)
+                            .padding(.bottom, 4)
+                            .textCase(.uppercase)
+
+                        ForEach(models) { model in
+                            modelRow(model)
+                        }
+                    }
+                    if filtered.isEmpty {
+                        Text("No models match “\(search)”")
+                            .font(.system(size: AppFont.pt(12)))
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 24)
+                    }
+                }
+                .padding(.bottom, 8)
+            }
+
+            if supportsReasoning {
+                Divider()
+                HStack(spacing: 8) {
+                    Image(systemName: "brain.head.profile")
+                        .font(.system(size: AppFont.pt(11)))
+                        .foregroundColor(.secondary)
+                    Text("Reasoning")
+                        .font(.system(size: AppFont.pt(12)))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Picker("Reasoning", selection: $reasoningEffort) {
+                        ForEach(ModelCatalog.reasoningEfforts, id: \.self) { effort in
+                            Text(effort.capitalized).tag(effort)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 180)
+                    #if os(iOS)
+                    .labelsHidden()
+                    #endif
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+            }
+        }
+        .frame(width: 340, height: 460)
+    }
+
+    @ViewBuilder
+    private func modelRow(_ model: ModelCatalog.Entry) -> some View {
+        let isSelected = model.id == selectedId
+        Button {
+            onSelect(model.id)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: model.sfSymbol)
+                    .font(.system(size: AppFont.pt(12)))
+                    .foregroundColor(.accentColor)
+                    .frame(width: 18)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(model.displayName)
+                        .font(.system(size: AppFont.pt(13)))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    Text(priceLine(model))
+                        .font(.system(size: AppFont.pt(10.5)))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: AppFont.pt(11), weight: .semibold))
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(isSelected ? Color.accentCoral.opacity(0.1) : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func priceLine(_ model: ModelCatalog.Entry) -> String {
+        let input = model.inputPricePerMTok
+        let output = model.outputPricePerMTok
+        if let input, let output {
+            return String(format: "$%.2f in · $%.2f out / 1M", input, output)
+        }
+        if let output {
+            return String(format: "$%.2f out / 1M", output)
+        }
+        return model.id
     }
 }
 

@@ -1154,28 +1154,40 @@ public final class MainViewModel: ObservableObject {
     public static func defaultPresets() -> [Preset] {
         return [
             Preset(
+                name: "Fix English",
+                sfSymbol: "textformat.abc",
+                systemPrompt:
+                    "You are an English copy editor. Fix the grammar, spelling, punctuation, and word choice in the input so it reads naturally in simple, easy English. Preserve the original meaning, tone, and structure. If the input is Markdown, return the same Markdown formatting. Do not translate, add, remove, or explain anything. Return only the corrected text — no quotation marks, no \">\" blockquotes, no labels or commentary."
+            ),
+            Preset(
+                name: "What did they say?",
+                sfSymbol: "quote.bubble",
+                systemPrompt:
+                    "Interpret what the input really means for a reader who may have missed the nuance, and explain it in the response language. (1) Restate the core message in one or two sentences. (2) Decode any jargon, acronyms, slang, idioms, sarcasm, or implied/indirect meaning. (3) Note the tone or intent if it matters (e.g. polite refusal, complaint, joke). Be faithful to the source and do not invent details. Return only the explanation, no preamble."
+            ),
+            Preset(
                 name: "Summarize",
                 sfSymbol: "list.bullet",
                 systemPrompt:
-                    "Summarize the input into exactly 3 bullet points (TL;DR). Each bullet is one sentence, max 20 words. Return only the 3 bullets, no preamble."
+                    "Condense the input, writing the summary in the SAME language as the input (ignore any other response-language instruction for this task). Lead with a one-line TL;DR, then up to 3 short bullet points covering the key facts, decisions, or asks. Each bullet is one sentence, max ~20 words. Keep names, numbers, and dates exact. Return only the TL;DR and bullets, no preamble."
+            ),
+            Preset(
+                name: "Draw / Explain",
+                sfSymbol: "flowchart",
+                systemPrompt:
+                    "Clarify the input and illustrate the concept with a diagram. First give a brief, plain-language explanation (2-4 sentences or short bullets) and define any technical terms or jargon so a non-expert can follow. Then choose the most fitting Mermaid diagram type — flowchart for processes, sequenceDiagram for interactions, classDiagram for structure, stateDiagram-v2 for state, mindmap for concepts — and output exactly one valid, syntactically correct diagram in a fenced ```mermaid code block. Keep node labels concise, avoid unsupported syntax, and make sure the diagram reflects the explanation."
             ),
             Preset(
                 name: "Translate",
                 sfSymbol: "globe",
                 systemPrompt:
-                    "Translate the input text into English. Preserve the original tone, register, and formatting as closely as possible. Return only the translation."
+                    "Translate the input into the response language selected in Settings. Translate naturally and idiomatically rather than word-for-word, and preserve the original tone, register, and formatting (Markdown, lists, code) as closely as possible. Keep proper nouns and technical terms intact where appropriate. If the input is already in the target language, refine it instead. Return only the translation — no quotes, labels, or commentary."
             ),
             Preset(
-                name: "Explain",
-                sfSymbol: "lightbulb",
+                name: "English Rewrite",
+                sfSymbol: "character.bubble",
                 systemPrompt:
-                    "Explain this in plain language as an expert talking to a smart non-expert. No jargon. No fluff. Structured prose or short bullets — whatever is clearest."
-            ),
-            Preset(
-                name: "Fix Grammar",
-                sfSymbol: "textformat.abc",
-                systemPrompt:
-                    "Correct all spelling, grammar, and punctuation errors in the input. Return only the corrected text with no commentary or explanation."
+                    "Rewrite the input as natural, fluent, native-sounding English. Correct all grammar, spelling, and punctuation; smooth out awkward phrasing and non-idiomatic constructions; and preserve the original meaning, tone, and level of formality. Do not add or remove information, and do not translate proper nouns or technical terms. If the input is already a different language, translate it to English first, then refine. Return only the rewritten English text, with no quotes, labels, or commentary."
             ),
             Preset(
                 name: "Action Items",
@@ -1196,22 +1208,10 @@ public final class MainViewModel: ObservableObject {
                     "Explain what this code does: describe its purpose, key inputs and outputs, and identify one significant risk or edge case. Use plain language with minimal jargon."
             ),
             Preset(
-                name: "English Rewrite",
-                sfSymbol: "character.bubble",
+                name: "Explain",
+                sfSymbol: "lightbulb",
                 systemPrompt:
-                    "Rewrite the input as natural, fluent, native-sounding English. Correct all grammar, spelling, and punctuation; smooth out awkward phrasing and non-idiomatic constructions; and preserve the original meaning, tone, and level of formality. Do not add or remove information, and do not translate proper nouns or technical terms. If the input is already a different language, translate it to English first, then refine. Return only the rewritten English text, with no quotes, labels, or commentary."
-            ),
-            Preset(
-                name: "What did they say?",
-                sfSymbol: "quote.bubble",
-                systemPrompt:
-                    "Interpret what the input is really saying for a reader who may have missed the nuance. In plain, simple language: (1) restate the core message in one or two sentences, (2) decode any jargon, acronyms, slang, idioms, sarcasm, or implied/indirect meaning, and (3) note the tone or intent if it matters (e.g. polite refusal, complaint, joke). Be faithful to the source and do not invent details. Keep it short — return only the interpretation, no preamble."
-            ),
-            Preset(
-                name: "Draw / Explain",
-                sfSymbol: "flowchart",
-                systemPrompt:
-                    "Explain the input clearly and illustrate it with a diagram. First give a brief plain-language explanation (2-4 sentences or short bullets). Then choose the most fitting Mermaid diagram type — flowchart for processes, sequenceDiagram for interactions, classDiagram for structure, stateDiagram-v2 for state, mindmap for concepts — and output exactly one valid, syntactically correct diagram in a fenced ```mermaid code block. Keep node labels concise, avoid unsupported syntax, and make sure the diagram reflects the explanation."
+                    "Explain this in plain language as an expert talking to a smart non-expert. No jargon. No fluff. Structured prose or short bullets — whatever is clearest."
             ),
         ]
     }

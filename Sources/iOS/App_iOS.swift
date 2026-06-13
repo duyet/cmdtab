@@ -39,10 +39,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         configurationForConnecting connectingSceneSession: UISceneSession,
         options: UIScene.ConnectionOptions
     ) -> UISceneConfiguration {
-        UISceneConfiguration(
+        let configuration = UISceneConfiguration(
             name: "Default Configuration",
             sessionRole: connectingSceneSession.role
         )
+        configuration.delegateClass = SceneDelegate.self
+        return configuration
     }
 }
 

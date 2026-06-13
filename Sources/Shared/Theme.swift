@@ -104,12 +104,6 @@ enum DeviceLayout {
         max(300, screenBounds.width - 56)
     }
 
-    /// Whether the device has a home indicator (no physical home button).
-    static var hasHomeIndicator: Bool {
-        let bottom = screenBounds.height - (activeWindowScene?.windows.first?.safeAreaInsets.bottom ?? 0)
-        return bottom > 0
-    }
-
     // MARK: - Private helpers
 
     private static var activeWindowScene: UIWindowScene? {

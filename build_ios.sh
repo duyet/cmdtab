@@ -14,6 +14,7 @@ fi
 echo "Compiling iOS source files..."
 xcrun -sdk iphonesimulator swiftc \
   -target arm64-apple-ios26.0-simulator \
+  -module-name MinhAgent_iOS \
   -parse-as-library -O \
   -o MinhAgent_iOS \
   Sources/Shared/*.swift Sources/iOS/*.swift

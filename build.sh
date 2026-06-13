@@ -12,7 +12,7 @@ if [ -f "MinhAgent" ]; then
 fi
 
 echo "Compiling Swift source files..."
-xcrun -sdk macosx swiftc -target arm64-apple-macosx14.0 -parse-as-library -O -o MinhAgent Sources/Shared/*.swift Sources/macOS/*.swift
+xcrun -sdk macosx swiftc -target arm64-apple-macosx14.0 -module-name MinhAgent -parse-as-library -O -o MinhAgent Sources/Shared/*.swift Sources/macOS/*.swift
 
 echo "Creating app bundle structure..."
 mkdir -p MinhAgent.app/Contents/MacOS

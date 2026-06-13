@@ -5,7 +5,7 @@
 	<key>CFBundleExecutable</key>
 	<string>MinhAgent_iOS</string>
 	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<string>app.minhagent</string>
 			<key>CFBundleIconName</key>
 		<string>AppIcon</string>
 <key>CFBundleName</key>

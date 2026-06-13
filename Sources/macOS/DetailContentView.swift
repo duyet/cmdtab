@@ -5,7 +5,6 @@ import SwiftUI
 struct DetailContentView: View {
     @ObservedObject var viewModel: MainViewModel
 
-    @State private var showRequestInfoDialog = false
     @State private var dashboardTab: DashboardTab = .overview
 
     private enum DashboardTab: String, CaseIterable, Identifiable {
@@ -47,19 +46,10 @@ struct DetailContentView: View {
         .tint(.primary)
         .textSelection(.enabled)
 
-        // Overlay info button at the top-right of the chat (in the title bar)
-        .overlay(alignment: .topTrailing) {
-            if !viewModel.isSettingsOpen && viewModel.selectedConversationId != nil {
-                PlainIconButton(systemName: "info.circle", size: 13, help: "Show Raw Request / System Prompt") {
-                    showRequestInfoDialog = true
-                }
-                .padding(.trailing, 16)
-                .padding(.top, 4)
-            }
-        }
-        // Sheet modal for Raw Request details
-        .sheet(isPresented: $showRequestInfoDialog) {
-            RawRequestSheet(viewModel: viewModel, isPresented: $showRequestInfoDialog)
+        // Raw-request inspector — now triggered from the top-right header
+        // menu (WindowHeaderButtonsView) instead of an in-viewport overlay.
+        .sheet(isPresented: $viewModel.isRawRequestInfoVisible) {
+            RawRequestSheet(viewModel: viewModel, isPresented: $viewModel.isRawRequestInfoVisible)
         }
     }
 

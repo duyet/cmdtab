@@ -117,6 +117,10 @@ public final class MainViewModel: ObservableObject {
     /// Floating command-palette search overlay (Spotlight / ⌘K style).
     @Published public var isSearchPaletteVisible: Bool = false
 
+    /// Raw-request inspector sheet — toggled from the top-right header menu
+    /// (the old overlay info button moved out of the chat viewport).
+    @Published public var isRawRequestInfoVisible: Bool = false
+
     /// Per-day usage counters (sessions / messages / token estimates) for the
     /// welcome activity calendar. Counts only — content never persists.
     @Published public var usageByDay: [String: DayUsage] = UsageStats.load()

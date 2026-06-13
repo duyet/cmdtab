@@ -136,28 +136,29 @@ struct SidebarView: View {
     private func tabButton(mode: String, icon: String, label: String) -> some View {
         let isSelected = viewModel.sidebarMode == mode
         return Button {
-            withAnimation(.easeOut(duration: 0.1)) {
+            withAnimation(.easeOut(duration: 0.12)) {
                 viewModel.sidebarMode = mode
             }
             if mode != "chat" { viewModel.isSidebarSearchVisible = false }
         } label: {
+            // Label is always shown so the layout is stable and never truncates.
+            // minimumScaleFactor shrinks the text instead of clipping at narrow
+            // sidebar widths (the original cause of "tab too small" truncation).
             HStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.system(size: AppFont.pt(11)))
-                if isSelected {
-                    Text(label)
-                        .font(.system(size: AppFont.pt(12)))
-                        .lineLimit(1)
-                        .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.9)), removal: .opacity))
-                }
+                Text(label)
+                    .font(.system(size: AppFont.pt(12), weight: isSelected ? .semibold : .regular))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             .foregroundColor(isSelected ? .primary : .secondary.opacity(0.7))
-            .frame(maxWidth: .infinity, minHeight: 26)
-            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 30)
+            .padding(.horizontal, 6)
             .padding(.vertical, 4)
             .background(isSelected ? Color.appBackground : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-            .iOSGlassControlSurface(cornerRadius: 6)
+            .clipShape(RoundedRectangle(cornerRadius: 7))
+            .iOSGlassControlSurface(cornerRadius: 7)
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
@@ -622,6 +623,7 @@ private struct ActionRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
+        .help(preset.name)
         #if os(macOS)
         .onHover { h in isHovered = h }
         #endif
@@ -701,6 +703,7 @@ private struct ConversationRow: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
+                .help(title)
                 #if os(macOS)
                 .overlay(alignment: .trailing) {
                     if isHovered || isSelected {

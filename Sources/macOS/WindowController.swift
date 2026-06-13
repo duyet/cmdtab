@@ -55,12 +55,12 @@ final class WindowController: NSWindowController {
             let hostingView = NSHostingView(rootView: buttonsView)
             hostingView.translatesAutoresizingMaskIntoConstraints = false
             titlebarContainer.addSubview(hostingView)
-            
+
             NSLayoutConstraint.activate([
                 hostingView.leadingAnchor.constraint(equalTo: titlebarContainer.leadingAnchor, constant: 76),
                 hostingView.centerYAnchor.constraint(equalTo: titlebarContainer.centerYAnchor),
                 hostingView.heightAnchor.constraint(equalToConstant: 24),
-                hostingView.widthAnchor.constraint(equalToConstant: 48)
+                hostingView.widthAnchor.constraint(equalToConstant: 92)
             ])
         }
 
@@ -238,15 +238,27 @@ struct WindowHeaderButtonsView: View {
             headerButton(systemName: "magnifyingglass", help: "Search Conversations (⌘K)") {
                 viewModel.showSearchPalette()
             }
+            headerButton(
+                systemName: "info.circle",
+                help: "Show Raw Request / System Prompt",
+                disabled: viewModel.selectedConversationId == nil
+            ) {
+                viewModel.isRawRequestInfoVisible = true
+            }
         }
-        .frame(width: 48, height: 24, alignment: .leading)
+        .frame(width: 92, height: 24, alignment: .leading)
     }
 
-    private func headerButton(systemName: String, help: String, action: @escaping () -> Void) -> some View {
+    private func headerButton(
+        systemName: String,
+        help: String,
+        disabled: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
         Image(systemName: systemName)
             .font(.system(size: AppFont.pt(12), weight: .medium))
-            .foregroundColor(.secondary)
-            .frame(width: 22, height: 22)
+            .foregroundColor(disabled ? .secondary.opacity(0.3) : .secondary)
+            .frame(width: 28, height: 22)
             .contentShape(Rectangle())
             .onTapGesture(perform: action)
         .plainFocusEffectDisabled()

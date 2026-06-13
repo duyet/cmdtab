@@ -6,6 +6,23 @@ struct DetailContentView: View {
     @ObservedObject var viewModel: MainViewModel
 
     @State private var showRequestInfoDialog = false
+    @State private var dashboardTab: DashboardTab = .overview
+
+    private enum DashboardTab: String, CaseIterable, Identifiable {
+        case overview
+        case calendar
+        case actions
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .overview: return "Overview"
+            case .calendar: return "Calendar"
+            case .actions: return "Actions"
+            }
+        }
+    }
 
     var body: some View {
         // Settings presents as a window-modal sheet — slides over the chat
@@ -23,11 +40,6 @@ struct DetailContentView: View {
                 mainContentPane
             }
 
-            // Command-palette search overlay
-            if viewModel.isSearchPaletteVisible {
-                SearchPaletteView(viewModel: viewModel)
-                    .transition(.opacity)
-            }
         }
         .animation(.easeInOut(duration: 0.18), value: viewModel.isSettingsOpen)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -54,15 +66,22 @@ struct DetailContentView: View {
     // MARK: - Main Content Pane
     private var mainContentPane: some View {
         VStack(spacing: 0) {
-            if hasMessages {
-                chatHistoryViewport
-            } else {
-                emptyLandingView
+            Group {
+                if hasMessages {
+                    chatHistoryViewport
+                } else {
+                    emptyLandingView
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
 
             ComposerView(viewModel: viewModel)
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(10)
 
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var hasMessages: Bool {
@@ -123,43 +142,44 @@ struct DetailContentView: View {
     }
 
     private var emptyLandingView: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Inline logo + greeting, left-aligned at the top
-            // ("What's up next, Duyet?" layout in Claude desktop).
-            HStack(spacing: 12) {
-                Image(systemName: "command")
-                    .font(.system(size: 22, weight: .semibold, design: .rounded))
-                    .foregroundColor(Color.accentCoral)
-                Text(welcomeHeadline)
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(.primary)
-            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                // Inline logo + greeting, left-aligned at the top
+                // ("What's up next, Duyet?" layout in Claude desktop).
+                HStack(spacing: 12) {
+                    Image(systemName: "command")
+                        .font(.system(size: 22, weight: .semibold, design: .rounded))
+                        .foregroundColor(Color.accentCoral)
+                    Text(welcomeHeadline)
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
 
-            Text("Copy something to get quick actions, or start with one of these.")
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
-                .padding(.top, 8)
+                Text("Copy something to get quick actions, or start with one of these.")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+                    .padding(.top, 8)
 
-            // Session summary — quiet stats card (Claude desktop style).
-            summaryCard
-                .padding(.top, 28)
+                // Session summary — quiet stats card (Claude desktop style).
+                summaryCard
+                    .padding(.top, 28)
 
-            // Suggestion pills are the user's Quick Action presets.
-            HStack(spacing: 8) {
-                ForEach(Array(viewModel.presets.prefix(4).enumerated()), id: \.offset) { index, preset in
-                    StarterCard(icon: preset.sfSymbol, title: preset.name) {
-                        viewModel.pickPreset(index: index)
+                // Suggestion pills are the user's Quick Action presets.
+                HStack(spacing: 8) {
+                    ForEach(Array(viewModel.presets.prefix(4).enumerated()), id: \.element.id) { index, preset in
+                        StarterCard(icon: preset.sfSymbol, title: preset.name) {
+                            viewModel.pickPreset(index: index)
+                        }
                     }
                 }
+                .padding(.top, 16)
             }
-            .padding(.top, 16)
-
-            Spacer()
+            .padding(.horizontal, 28)
+            .padding(.top, 36)
+            .padding(.bottom, 24)
+            .frame(maxWidth: 760, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        .padding(.horizontal, 28)
-        .padding(.top, 36)
-        .frame(maxWidth: 760, alignment: .leading)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     // MARK: - Summary card — lifetime usage stats + activity calendar
@@ -188,17 +208,50 @@ struct DetailContentView: View {
     private var summaryCard: some View {
         let totals = usageTotals
         return VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 0) {
-                summaryStat(value: compactNumber(totals.sessions), label: "Sessions")
-                summaryDivider
-                summaryStat(value: compactNumber(totals.messages), label: "Messages")
-                summaryDivider
-                summaryStat(value: compactNumber(totals.tokens), label: "Total tokens")
-                summaryDivider
-                summaryStat(value: "\(totals.activeDays)", label: "Active days")
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Workspace")
+                        .font(.system(size: AppFont.pt(13), weight: .semibold))
+                    Text("Usage, activity, and saved quick actions")
+                        .font(.system(size: AppFont.pt(11)))
+                        .foregroundColor(.secondary)
+                }
+                Spacer(minLength: 12)
+                Picker("", selection: $dashboardTab) {
+                    ForEach(DashboardTab.allCases) { tab in
+                        Text(tab.title).tag(tab)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 244)
             }
 
-            ActivityCalendarView(usageByDay: viewModel.usageByDay)
+            Group {
+                switch dashboardTab {
+                case .overview:
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack(spacing: 0) {
+                            summaryStat(value: compactNumber(totals.sessions), label: "Sessions")
+                            summaryDivider
+                            summaryStat(value: compactNumber(totals.messages), label: "Messages")
+                            summaryDivider
+                            summaryStat(value: compactNumber(totals.tokens), label: "Total tokens")
+                            summaryDivider
+                            summaryStat(value: "\(totals.activeDays)", label: "Active days")
+                        }
+                        ActivityCalendarView(usageByDay: viewModel.usageByDay, prominence: .compact)
+                    }
+                    .transition(.opacity)
+                case .calendar:
+                    ActivityCalendarView(usageByDay: viewModel.usageByDay, prominence: .expanded)
+                        .transition(.opacity)
+                case .actions:
+                    quickActionsDashboard
+                        .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.18), value: dashboardTab)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -229,6 +282,17 @@ struct DetailContentView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)
     }
+
+    private var quickActionsDashboard: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), spacing: 8)], alignment: .leading, spacing: 8) {
+            ForEach(Array(viewModel.presets.prefix(8).enumerated()), id: \.element.id) { index, preset in
+                StarterCard(icon: preset.sfSymbol, title: preset.name) {
+                    viewModel.pickPreset(index: index)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 }
 
 // MARK: - Activity Calendar
@@ -237,15 +301,25 @@ struct DetailContentView: View {
 /// that day's message count.
 private struct ActivityCalendarView: View {
     let usageByDay: [String: DayUsage]
+    var prominence: Prominence = .compact
 
-    private static let weeksShown = 17
-    private let cellSize: CGFloat = 11
-    private let gap: CGFloat = 2
+    enum Prominence {
+        case compact
+        case expanded
+    }
+
+    private struct CalendarLayout {
+        let weeksShown: Int
+        let cellSize: CGFloat
+        let gap: CGFloat
+        let monthSpacing: CGFloat
+        let showDayLabels: Bool
+    }
 
     private let dayLabels = ["Mon", "", "Wed", "", "Fri", "", ""]
 
     /// Day-grid as week columns, oldest → newest. Future months are `nil`.
-    private var weeks: [[Date?]] {
+    private func weeks(shown weeksShown: Int) -> [[Date?]] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
         
@@ -261,7 +335,7 @@ private struct ActivityCalendarView: View {
         let mondayOffset = weekday == 1 ? 6 : weekday - 2  // Sun→6, Mon→0, Tue→1, …
         
         var columns: [[Date?]] = []
-        for w in (0..<Self.weeksShown).reversed() {
+        for w in (0..<weeksShown).reversed() {
             var column: [Date?] = []
             for d in 0..<7 {
                 let offset = -(w * 7) - mondayOffset + d
@@ -286,7 +360,7 @@ private struct ActivityCalendarView: View {
         let weeks: [[Date?]]
     }
 
-    private var monthGroups: [MonthGroup] {
+    private func monthGroups(for weeks: [[Date?]]) -> [MonthGroup] {
         let fmt = DateFormatter()
         fmt.dateFormat = "MMM"
         
@@ -317,27 +391,59 @@ private struct ActivityCalendarView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        ViewThatFits(in: .horizontal) {
+            calendarGrid(layout: wideLayout)
+            calendarGrid(layout: mediumLayout)
+            calendarGrid(layout: compactLayout)
+            ScrollView(.horizontal, showsIndicators: false) {
+                calendarGrid(layout: compactLayout)
+            }
+        }
+        .accessibilityLabel("Activity calendar")
+    }
+
+    private var wideLayout: CalendarLayout {
+        switch prominence {
+        case .compact:
+            return CalendarLayout(weeksShown: 17, cellSize: 11, gap: 2, monthSpacing: 10, showDayLabels: true)
+        case .expanded:
+            return CalendarLayout(weeksShown: 26, cellSize: 11, gap: 2, monthSpacing: 10, showDayLabels: true)
+        }
+    }
+
+    private var mediumLayout: CalendarLayout {
+        CalendarLayout(weeksShown: prominence == .compact ? 14 : 20, cellSize: 10, gap: 2, monthSpacing: 8, showDayLabels: true)
+    }
+
+    private var compactLayout: CalendarLayout {
+        CalendarLayout(weeksShown: prominence == .compact ? 10 : 14, cellSize: 9, gap: 2, monthSpacing: 6, showDayLabels: false)
+    }
+
+    private func calendarGrid(layout: CalendarLayout) -> some View {
+        let columns = weeks(shown: layout.weeksShown)
+        let groups = monthGroups(for: columns)
+        return VStack(alignment: .leading, spacing: 4) {
             // Main grid: day labels + segmented months
             HStack(alignment: .top, spacing: 8) {
                 // Day-of-week labels
-                VStack(alignment: .trailing, spacing: gap) {
-                    // Spacer to match the height of the month labels (12) and their spacing (2)
-                    Spacer()
-                        .frame(height: 12 + 2)
-                    
-                    ForEach(0..<7, id: \.self) { row in
-                        Text(dayLabels[row])
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary.opacity(0.6))
-                            .frame(height: cellSize, alignment: .center)
+                if layout.showDayLabels {
+                    VStack(alignment: .trailing, spacing: layout.gap) {
+                        Spacer()
+                            .frame(height: 14)
+
+                        ForEach(0..<7, id: \.self) { row in
+                            Text(dayLabels[row])
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary.opacity(0.6))
+                                .frame(height: layout.cellSize, alignment: .center)
+                        }
                     }
+                    .frame(width: dayLabelWidth)
                 }
-                .frame(width: dayLabelWidth)
 
                 // Segmented months grid
-                HStack(alignment: .top, spacing: 10) { // spacing between months
-                    ForEach(monthGroups) { group in
+                HStack(alignment: .top, spacing: layout.monthSpacing) {
+                    ForEach(groups) { group in
                         VStack(alignment: .leading, spacing: 2) {
                             // Month label
                             Text(group.name)
@@ -346,13 +452,14 @@ private struct ActivityCalendarView: View {
                                 .frame(height: 12)
                             
                             // Week columns
-                            HStack(alignment: .top, spacing: gap) {
+                            HStack(alignment: .top, spacing: layout.gap) {
                                 ForEach(0..<group.weeks.count, id: \.self) { wIdx in
-                                    VStack(spacing: gap) {
+                                    VStack(spacing: layout.gap) {
                                         ForEach(Array(group.weeks[wIdx].enumerated()), id: \.offset) { _, day in
                                             RoundedRectangle(cornerRadius: 2)
                                                 .fill(color(for: day))
-                                                .frame(width: cellSize, height: cellSize)
+                                                .frame(width: layout.cellSize, height: layout.cellSize)
+                                                .accessibilityLabel(accessibilityLabel(for: day))
                                         }
                                     }
                                 }
@@ -373,7 +480,7 @@ private struct ActivityCalendarView: View {
                 ForEach(legendColors, id: \.self) { c in
                     RoundedRectangle(cornerRadius: 1)
                         .fill(c)
-                        .frame(width: cellSize, height: cellSize)
+                        .frame(width: layout.cellSize, height: layout.cellSize)
                 }
                 Text("More")
                     .font(.system(size: 9))
@@ -381,7 +488,6 @@ private struct ActivityCalendarView: View {
             }
             .padding(.top, 2)
         }
-        .accessibilityLabel("Activity calendar")
     }
 
     private var dayLabelWidth: CGFloat { 28 }
@@ -409,6 +515,22 @@ private struct ActivityCalendarView: View {
         default: return accentColor(1.0)
         }
     }
+
+    private func accessibilityLabel(for day: Date?) -> String {
+        guard let day else { return "" }
+        let key = UsageStats.dayKey(for: day)
+        let messages = usageByDay[key]?.messages ?? 0
+        let formattedDate = Self.accessibilityDateFormatter.string(from: day)
+        let unit = messages == 1 ? "message" : "messages"
+        return "\(formattedDate), \(messages) \(unit)"
+    }
+
+    private static let accessibilityDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
 }
 
 // MARK: - Raw Request Sheet

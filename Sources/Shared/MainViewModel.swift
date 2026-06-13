@@ -16,7 +16,13 @@ public final class MainViewModel: ObservableObject {
     @Published public var selectedPresetIdForDetail: UUID? = nil
     @Published public var isStreaming: Bool = false
     @Published public var statusMessage: String = ""
-    @Published public var isSettingsOpen: Bool = false
+    @Published public var isSettingsOpen: Bool = false {
+        didSet {
+            if isSettingsOpen {
+                isSearchPaletteVisible = false
+            }
+        }
+    }
 
     /// Active Settings tab — settable from anywhere (e.g. "Add API key" CTA).
     @Published public var settingsTab: String = "general" {
@@ -397,7 +403,9 @@ public final class MainViewModel: ObservableObject {
 
     public func toggleSettings() {
         isSettingsOpen.toggle()
-        if isSettingsOpen { loadApiKeyIfNeeded() }
+        if isSettingsOpen {
+            loadApiKeyIfNeeded()
+        }
     }
 
     /// Open Settings on a specific tab (e.g. the "Add API key" CTA).
@@ -458,11 +466,17 @@ public final class MainViewModel: ObservableObject {
     }
 
     public func showSearchPalette() {
-        isSearchPaletteVisible = true
+        guard !isSettingsOpen else { return }
+        withAnimation(.easeInOut(duration: 0.16)) {
+            isSidebarSearchVisible = false
+            isSearchPaletteVisible = true
+        }
     }
 
     public func hideSearchPalette() {
-        isSearchPaletteVisible = false
+        withAnimation(.easeInOut(duration: 0.16)) {
+            isSearchPaletteVisible = false
+        }
     }
 
     /// Mutate today's usage bucket and persist the counters.

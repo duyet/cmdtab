@@ -24,12 +24,23 @@ public struct MainView: View {
     /// 0 = closed, 1 = fully open. Drives scrim opacity + content peek.
     private var drawerProgress: CGFloat { (drawerOffset + drawerWidth) / drawerWidth }
     private var isDrawerInPlay: Bool { viewModel.isSidebarVisible || sidebarDrag != nil }
+    private var overlayAnimationKey: OverlayAnimationKey {
+        OverlayAnimationKey(
+            settingsOpen: viewModel.isSettingsOpen,
+            searchVisible: viewModel.isSearchPaletteVisible
+        )
+    }
+
+    private struct OverlayAnimationKey: Equatable {
+        let settingsOpen: Bool
+        let searchVisible: Bool
+    }
 
     public var body: some View {
         ZStack(alignment: .leading) {
             // Content "card" that shrinks + slides as the drawer comes over it.
             mainContentPane
-                .scaleEffect(1 - 0.05 * drawerProgress, anchor: .trailing)
+                .scaleEffect(1 - 0.03 * drawerProgress, anchor: .trailing)
                 .offset(x: drawerProgress * 12)
                 .clipShape(RoundedRectangle(cornerRadius: 28 * drawerProgress, style: .continuous))
                 .disabled(isDrawerInPlay)
@@ -37,7 +48,7 @@ public struct MainView: View {
             // Left-edge grab strip — owns the open drag while the drawer is closed.
             if !isDrawerInPlay && !viewModel.isSettingsOpen {
                 Color.clear
-                    .frame(width: 24)
+                    .frame(width: 32)
                     .frame(maxHeight: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                     .gesture(drawerDragGesture)
@@ -46,6 +57,7 @@ public struct MainView: View {
             if isDrawerInPlay {
                 Color.black.opacity(0.28 * drawerProgress)
                     .ignoresSafeArea()
+                    .accessibilityLabel("Close sidebar")
                     .contentShape(Rectangle())
                     .onTapGesture { setSidebar(false) }
                     .gesture(drawerDragGesture)
@@ -56,9 +68,9 @@ public struct MainView: View {
                     .background(Color.windowBackground)
                     .clipShape(
                         .rect(bottomTrailingRadius: 28, topTrailingRadius: 28, style: .continuous))
-                    .shadow(color: .black.opacity(0.18 * drawerProgress), radius: 24, x: 8, y: 0)
+                    .shadow(color: .black.opacity(0.12 * drawerProgress), radius: 16, x: 4, y: 0)
                     .offset(x: drawerOffset)
-                    .ignoresSafeArea(edges: .vertical)
+                    .ignoresSafeArea(edges: .top)
                     .gesture(drawerDragGesture)
             }
 
@@ -70,11 +82,19 @@ public struct MainView: View {
                     .transition(.move(edge: .bottom))
                     .zIndex(2)
             }
+
+            if viewModel.isSearchPaletteVisible {
+                SearchPaletteView(viewModel: viewModel)
+                    .transition(.opacity)
+                    .zIndex(3)
+            }
         }
-        .animation(.easeInOut(duration: 0.3), value: viewModel.isSettingsOpen)
+        .animation(
+            .spring(response: 0.35, dampingFraction: 0.85),
+            value: overlayAnimationKey
+        )
         .platformFrame()
         .background(Color.creamBackground)
-        .tint(.primary)
         .textSelection(.enabled)
         .onChange(of: viewModel.isSidebarVisible) { _, visible in
             if visible { dismissKeyboard() }
@@ -161,26 +181,25 @@ public struct MainView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .safeAreaPadding(.top)
         .background(Color.creamBackground)
     }
 
-    private var hasMessages: Bool {
-        if let activeId = viewModel.selectedConversationId,
-            let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
-        {
-            return !activeConv.messages.isEmpty
+    private var activeConversation: Conversation? {
+        if let activeId = viewModel.selectedConversationId {
+            return viewModel.conversations.first(where: { $0.id == activeId })
         }
-        return false
+        return nil
     }
+
+    private var hasMessages: Bool { !(activeConversation?.messages.isEmpty ?? true) }
 
     // MARK: - Chat History Viewport
     private var chatHistoryViewport: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    if let activeId = viewModel.selectedConversationId,
-                        let activeConv = viewModel.conversations.first(where: { $0.id == activeId })
-                    {
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    if let activeConv = activeConversation {
                         ForEach(activeConv.messages) { message in
                             MessageRow(message: message, viewModel: viewModel)
                                 .id(message.id)
@@ -189,7 +208,7 @@ public struct MainView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
-                .padding(.bottom, 16)
+                .padding(.bottom, 24)
                 // Centered reading column — comfortable line length on iPad widths
                 .frame(maxWidth: 720)
                 .frame(maxWidth: .infinity)
@@ -247,7 +266,7 @@ public struct MainView: View {
                 .padding(.top, 24)
 
                 Text("QUICK ACTIONS")
-                    .font(.system(size: AppFont.pt(12), weight: .semibold))
+                    .font(.system(size: AppFont.pt(11), weight: .bold, design: .rounded))
                     .foregroundColor(.secondary)
                     .padding(.top, 32)
                     .padding(.bottom, 12)
@@ -266,7 +285,7 @@ public struct MainView: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 24)
+            .padding(.bottom, 32)
         }
         .scrollDismissesKeyboard(.interactively)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -296,13 +315,14 @@ struct PresetPill: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 14)
-            .padding(.vertical, 11)
+            .padding(.vertical, 13)
             .background(Color.cardSurface)
             .clipShape(Capsule())
             .overlay(Capsule().strokeBorder(Color.hairline))
             .contentShape(Capsule())
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityHint("Starts a chat with this quick action")
     }
 }
 #endif
@@ -402,7 +422,7 @@ struct MessageRow: View {
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 9)
-                    .background(Color.primary.opacity(0.06))
+                    .background(Color.primary.opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 } else if message.content.isEmpty && viewModel.isStreaming {
                     TypingIndicator(fontScale: viewModel.fontScale)
@@ -419,6 +439,10 @@ struct MessageRow: View {
                             StreamingCursor()
                         }
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color.primary.opacity(0.02))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
 
                 // Meta row: copy + timestamp + metrics + retry
@@ -426,7 +450,7 @@ struct MessageRow: View {
                     Button(action: copyMessage) {
                         Image(systemName: copied ? "checkmark" : "square.on.square")
                             .font(.system(size: AppFont.pt(10)))
-                            .frame(width: 16, height: 16)
+                            .frame(width: 28, height: 28)
                             .foregroundColor(copied ? Color.accentCoral : .secondary.opacity(0.7))
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -446,7 +470,7 @@ struct MessageRow: View {
                         } label: {
                             Image(systemName: "arrow.clockwise")
                                 .font(.system(size: AppFont.pt(10)))
-                                .frame(width: 16, height: 16)
+                                .frame(width: 28, height: 28)
                                 .foregroundColor(.secondary.opacity(0.7))
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -483,17 +507,17 @@ struct MessageRow: View {
                 .font(.system(size: AppFont.pt(12)))
                 .foregroundColor(.red.opacity(0.85))
             Text(message.content)
-                .font(.system(size: AppFont.pt(13)))
+                .font(.system(size: AppFont.pt(14)))
                 .foregroundColor(.primary.opacity(0.85))
                 .textSelection(.enabled)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(Color.red.opacity(0.07))
+        .background(Color.red.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color.red.opacity(0.18))
+                .strokeBorder(Color.red.opacity(0.25))
         )
     }
 
@@ -528,6 +552,11 @@ struct MessageRow: View {
         UIPasteboard.general.string = message.content
         #endif
         withAnimation { copied = true }
+        #if os(iOS)
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        generator.impactOccurred()
+        #endif
         Task {
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             await MainActor.run {
@@ -558,6 +587,8 @@ struct TypingIndicator: View {
                     )
             }
         }
+        .accessibilityLabel("Assistant is typing")
+        .accessibilityAddTraits(.isStaticText)
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .onAppear { isActive = true }
@@ -575,11 +606,17 @@ struct StreamingCursor: View {
             .fill(Color.accentCoral.opacity(isVisible ? 0.8 : 0))
             .frame(width: 2, height: 14)
             .offset(y: 1)
+            .accessibilityHidden(true)
             .animation(
                 Animation.easeInOut(duration: 0.5).repeatForever(autoreverses: true),
                 value: isVisible
             )
-            .onAppear { isVisible = false }
+            .onAppear {
+                isVisible = true
+                DispatchQueue.main.async {
+                    isVisible = false
+                }
+            }
     }
 }
 
@@ -594,7 +631,7 @@ struct MetricsChips: View {
         HStack(spacing: 6) {
             if let model = metrics.model {
                 Text(shortModelName(model))
-                    .font(.system(size: AppFont.pt(9), weight: .medium))
+                    .font(.system(size: AppFont.pt(10), weight: .medium))
                     .foregroundColor(.secondary.opacity(0.6))
             }
             if let ttft = metrics.ttftMs {
@@ -643,7 +680,7 @@ struct MetricsChips: View {
 
 private extension View {
     func metricChipStyle() -> some View {
-        font(.system(size: AppFont.pt(9), design: .monospaced))
+        font(.system(size: AppFont.pt(10), design: .monospaced))
             .foregroundColor(.secondary.opacity(0.55))
     }
 }

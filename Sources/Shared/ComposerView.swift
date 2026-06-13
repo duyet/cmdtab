@@ -77,7 +77,7 @@ struct ComposerView: View {
             .plainCardSurface(cornerRadius: 12)
         }
         .padding(.horizontal, 16)
-        .padding(.bottom, 12)
+        .padding(.bottom, 16)
         .onAppear { isInputFocused = true }
         .onFocusTick(of: viewModel.composerFocusTick) {
             if !viewModel.composerPrefill.isEmpty {
@@ -305,6 +305,7 @@ struct ComposerView: View {
                 return .handled
             }
             #else
+            .submitLabel(.send)
             .onSubmit(send)
             #endif
             .padding(.horizontal, 14)
@@ -331,16 +332,17 @@ struct ComposerView: View {
     private var plusButton: some View {
         #if os(macOS)
         Menu {
-            Button {
-                selectFileOrImage(imagesOnly: false)
-            } label: {
+            Button {} label: {
                 Label("Attach File…", systemImage: "doc")
             }
-            Button {
-                selectFileOrImage(imagesOnly: true)
-            } label: {
+            .disabled(true)
+            Button {} label: {
                 Label("Attach Photo…", systemImage: "photo")
             }
+            .disabled(true)
+            Text("Attachments coming soon")
+                .font(.caption)
+                .foregroundColor(.secondary)
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: AppFont.pt(12)))
@@ -349,17 +351,26 @@ struct ComposerView: View {
         }
         .menuIndicator(.hidden)
         .buttonStyle(PlainButtonStyle())
-        .accessibilityLabel("Attach file or photo")
-        .help("Attach file or photo")
+        .accessibilityLabel("Attachments coming soon")
+        .help("Attachments coming soon")
         #else
-        PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
-            Image(systemName: "plus")
+        Menu {
+            Button {} label: {
+                Label("Attach Photo…", systemImage: "photo")
+            }
+            .disabled(true)
+            Text("Attachments coming soon")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        } label: {
+            Image(systemName: "plus.circle")
                 .font(.system(size: AppFont.pt(12)))
                 .frame(width: composerIconFrame, height: composerIconFrame)
                 .foregroundColor(.secondary)
         }
+        .menuIndicator(.hidden)
         .buttonStyle(PlainButtonStyle())
-        .accessibilityLabel("Upload photo")
+        .accessibilityLabel("Attachments coming soon")
         #endif
     }
 
@@ -426,6 +437,7 @@ struct ComposerView: View {
                 }
                 .menuIndicator(.hidden)
                 .buttonStyle(PlainButtonStyle())
+                .accessibilityValue(currentModelLabel)
                 #if os(macOS)
                 .help("\(currentModelLabel) · \(URL(string: viewModel.endpointUrl)?.host ?? "cloud")")
                 #endif
@@ -437,10 +449,6 @@ struct ComposerView: View {
     private var currentModelLabel: String {
         modelOptions.first(where: { $0.id == viewModel.modelName })?.label
             ?? (viewModel.modelName.isEmpty ? "Model" : viewModel.modelName)
-    }
-
-    private var currentModelIcon: String {
-        modelOptions.first(where: { $0.id == viewModel.modelName })?.icon ?? "cloud"
     }
 
     private func modelMenuLabel(_ title: String) -> some View {
@@ -465,8 +473,8 @@ struct ComposerView: View {
             Image(systemName: "arrow.up")
                 .font(.system(size: AppFont.pt(13), weight: .bold))
                 .foregroundColor(canSend ? .white : .secondary.opacity(0.4))
-                .frame(width: 30, height: 30)
-                .background(canSend ? Color.accentCoral : Color.primary.opacity(0.07))
+                .frame(width: 36, height: 36)
+                .background(canSend ? Color.accentCoral : Color.primary.opacity(0.1))
                 .clipShape(Circle())
         }
         .buttonStyle(PlainButtonStyle())
@@ -566,11 +574,6 @@ struct ComposerView: View {
     private var canSend: Bool {
         guard !viewModel.isStreaming else { return false }
         if viewModel.selectedPresetIndex != nil && hasClipboard { return true }
-        #if os(macOS)
-        if attachedFileName != nil { return true }
-        #else
-        if hasPhoto { return true }
-        #endif
         return !inputMessageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
@@ -590,9 +593,6 @@ struct ComposerView: View {
         
         #if os(macOS)
         var textToSend = inputMessageText
-        if let fileName = attachedFileName {
-            textToSend += "\n\n[Attached \(attachedFileType == "image" ? "image" : "file"): \(fileName)]"
-        }
         viewModel.sendMessage(content: textToSend)
         // Clear attachment
         attachedFileName = nil
@@ -600,9 +600,6 @@ struct ComposerView: View {
         attachedFileType = nil
         #else
         var textToSend = inputMessageText
-        if hasPhoto {
-            textToSend += "\n\n[Attached photo]"
-        }
         viewModel.sendMessage(content: textToSend)
         // Clear attachment
         photoItem = nil

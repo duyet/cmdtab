@@ -13,6 +13,7 @@ struct PresetDetailView: View {
     @State private var sfSymbol: String = "sparkles"
     
     @FocusState private var isPromptFocused: Bool
+    @FocusState private var isNameFocused: Bool
     
     var body: some View {
         if let preset = preset {
@@ -45,14 +46,16 @@ struct PresetDetailView: View {
                         
                         VStack(alignment: .leading, spacing: 4) {
                             TextField("Preset Name", text: $name)
-                                .font(.title2)
-                                .fontWeight(.semibold)
+                                .font(.system(size: AppFont.pt(20), weight: .semibold))
                                 .textFieldStyle(.plain)
+                                .focused($isNameFocused)
                                 .onSubmit {
-                                    viewModel.renamePreset(id: preset.id, to: name)
+                                    savePendingName(for: preset)
                                 }
-                                .onChange(of: name) { _, newValue in
-                                    viewModel.renamePreset(id: preset.id, to: newValue)
+                                .onChange(of: isNameFocused) { _, focused in
+                                    if !focused {
+                                        savePendingName(for: preset)
+                                    }
                                 }
                             
                             Text("Click icon to change, or edit name above")
@@ -64,7 +67,9 @@ struct PresetDetailView: View {
                         
                         // Run action / start chat button
                         Button(action: {
-                            viewModel.startNewConversation(title: preset.name, presetId: preset.id)
+                            let chatTitle = savePendingName(for: preset)
+                            savePendingPrompt(for: preset)
+                            viewModel.startNewConversation(title: chatTitle, presetId: preset.id)
                             viewModel.sidebarMode = "chat"
                             viewModel.selectedPresetIdForDetail = nil
                         }) {
@@ -75,12 +80,14 @@ struct PresetDetailView: View {
                             .fontWeight(.semibold)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
+                            .frame(minHeight: 44)
                             .background(Color.accentCoral)
                             .foregroundColor(.white)
                             .cornerRadius(8)
                         }
                         .buttonStyle(.plain)
-                        
+                        .accessibilityHint("Starts a new conversation with this preset's instructions")
+
                         // Delete button
                         Button(action: {
                             viewModel.deletePreset(id: preset.id)
@@ -89,7 +96,7 @@ struct PresetDetailView: View {
                             Image(systemName: "trash")
                                 .foregroundColor(.red)
                                 .padding(8)
-                                .background(Color.red.opacity(0.1))
+                                .background(Color.red.opacity(0.15))
                                 .cornerRadius(8)
                         }
                         .buttonStyle(.plain)
@@ -110,7 +117,7 @@ struct PresetDetailView: View {
                             .foregroundColor(.secondary)
                         
                         TextEditor(text: $systemPrompt)
-                            .font(.system(size: AppFont.pt(12), design: .monospaced))
+                            .font(.system(size: AppFont.pt(13), design: .monospaced))
                             .padding(12)
                             .background(Color.cardSurface)
                             .cornerRadius(8)
@@ -120,8 +127,10 @@ struct PresetDetailView: View {
                             )
                             .frame(minHeight: 180)
                             .focused($isPromptFocused)
-                            .onChange(of: systemPrompt) { _, newValue in
-                                viewModel.setPresetPrompt(id: preset.id, prompt: newValue)
+                            .onChange(of: isPromptFocused) { _, focused in
+                                if !focused {
+                                    savePendingPrompt(for: preset)
+                                }
                             }
                     }
                     
@@ -150,18 +159,25 @@ struct PresetDetailView: View {
                     
                     Spacer()
                 }
-                .padding(28)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 28)
             }
             .onAppear {
-                name = preset.name
-                systemPrompt = preset.systemPrompt
-                sfSymbol = preset.sfSymbol
+                loadPreset(preset)
             }
-            .onChange(of: presetId) { _, newId in
+            .onChange(of: presetId) { oldId, newId in
+                if let oldPreset = viewModel.presets.first(where: { $0.id == oldId }) {
+                    savePendingName(for: oldPreset)
+                    savePendingPrompt(for: oldPreset)
+                }
                 if let p = viewModel.presets.first(where: { $0.id == newId }) {
-                    name = p.name
-                    systemPrompt = p.systemPrompt
-                    sfSymbol = p.sfSymbol
+                    loadPreset(p)
+                }
+            }
+            .onDisappear {
+                if viewModel.presets.contains(where: { $0.id == preset.id }) {
+                    savePendingName(for: preset)
+                    savePendingPrompt(for: preset)
                 }
             }
         } else {
@@ -173,5 +189,32 @@ struct PresetDetailView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    private func loadPreset(_ preset: Preset) {
+        name = preset.name
+        systemPrompt = preset.systemPrompt
+        sfSymbol = preset.sfSymbol
+    }
+
+    private func savePendingPrompt(for preset: Preset) {
+        guard systemPrompt != preset.systemPrompt else { return }
+        viewModel.setPresetPrompt(id: preset.id, prompt: systemPrompt)
+    }
+
+    @discardableResult
+    private func savePendingName(for preset: Preset) -> String {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            name = preset.name
+            return preset.name
+        }
+        guard trimmedName != preset.name else {
+            name = preset.name
+            return preset.name
+        }
+        viewModel.renamePreset(id: preset.id, to: trimmedName)
+        name = trimmedName
+        return trimmedName
     }
 }

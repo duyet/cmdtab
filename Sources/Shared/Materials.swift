@@ -15,6 +15,21 @@ struct PlainCardSurface: ViewModifier {
     var cornerRadius: CGFloat
 
     func body(content: Content) -> some View {
+        #if os(iOS)
+        if #available(iOS 26.0, *) {
+            content
+                .background(Color.cardSurface.opacity(0.18))
+                .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+                .clipShape(.rect(cornerRadius: cornerRadius))
+        } else {
+            fallback(content)
+        }
+        #else
+        fallback(content)
+        #endif
+    }
+
+    private func fallback(_ content: Content) -> some View {
         content
             .background(Color.cardSurface)
             .overlay(
@@ -22,7 +37,7 @@ struct PlainCardSurface: ViewModifier {
                     .stroke(Color.hairline, lineWidth: 1)
             )
             .clipShape(.rect(cornerRadius: cornerRadius))
-            .shadow(color: Color.black.opacity(0.03), radius: 2, y: 1)
+            .shadow(color: Color.black.opacity(0.01), radius: 1, y: 1)
     }
 }
 
@@ -33,5 +48,31 @@ extension View {
 
     func plainCardSurface(cornerRadius: CGFloat) -> some View {
         modifier(PlainCardSurface(cornerRadius: cornerRadius))
+    }
+
+    @ViewBuilder
+    func iOSGlassIconSurface() -> some View {
+        #if os(iOS)
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.interactive(), in: .circle)
+        } else {
+            self.background(Color.primary.opacity(0.06), in: Circle())
+        }
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
+    func iOSGlassControlSurface(cornerRadius: CGFloat) -> some View {
+        #if os(iOS)
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
+        } else {
+            self.background(Color.primary.opacity(0.06), in: .rect(cornerRadius: cornerRadius))
+        }
+        #else
+        self
+        #endif
     }
 }

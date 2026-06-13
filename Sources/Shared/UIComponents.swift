@@ -49,12 +49,21 @@ struct PlainIconButton: View {
     var disabled: Bool = false
     let action: () -> Void
 
+    private var hitSize: CGFloat {
+        #if os(macOS)
+        return 24
+        #else
+        return 44
+        #endif
+    }
+
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: AppFont.pt(size), weight: .medium))
                 .foregroundColor(disabled ? .secondary.opacity(0.35) : .secondary)
-                .frame(width: 22, height: 22)
+                .frame(width: hitSize, height: hitSize)
+                .iOSGlassIconSurface()
                 .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)

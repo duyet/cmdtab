@@ -90,13 +90,18 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             vm.isSidebarVisible = true
             try? await Task.sleep(for: .milliseconds(700))
             snap("03-sidebar-restored")
+            vm.showSearchPalette()
+            try? await Task.sleep(for: .milliseconds(500))
+            snap("04-search-palette")
+            vm.hideSearchPalette()
+            try? await Task.sleep(for: .milliseconds(300))
             vm.isSettingsOpen = true
             vm.settingsTab = "general"
             try? await Task.sleep(for: .milliseconds(700))
-            snap("04-settings-general")
+            snap("05-settings-general")
             vm.settingsTab = "cloudmodel"
             try? await Task.sleep(for: .milliseconds(500))
-            snap("05-settings-cloudmodel")
+            snap("06-settings-cloudmodel")
             vm.isSettingsOpen = false
             try? await Task.sleep(for: .milliseconds(300))
             NSApp.terminate(nil)
@@ -167,9 +172,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let sidebarItem = viewMenu.addItem(
             withTitle: "Toggle Sidebar", action: #selector(toggleSidebarVisibility), keyEquivalent: "b")
         sidebarItem.keyEquivalentModifierMask = .command
-        let clearItem = viewMenu.addItem(
-            withTitle: "Clear Conversation", action: #selector(clearConversation), keyEquivalent: "k")
-        clearItem.keyEquivalentModifierMask = .command
+        let searchItem = viewMenu.addItem(
+            withTitle: "Search Conversations", action: #selector(showSearchPalette), keyEquivalent: "k")
+        searchItem.keyEquivalentModifierMask = .command
 
         // Window menu
         let windowMenuItem = NSMenuItem()
@@ -207,6 +212,12 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func clearConversation() {
         if viewModel?.isSettingsOpen != true && viewModel?.selectedConversationId != nil {
             viewModel?.clearConversation()
+        }
+    }
+
+    @objc private func showSearchPalette() {
+        if viewModel?.isSettingsOpen != true {
+            viewModel?.showSearchPalette()
         }
     }
 
@@ -278,6 +289,17 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showWindow() {
         guard let window = windowController?.window else { return }
+        let fallbackSize = NSSize(width: 780, height: 460)
+        if !hasPositionedOnce {
+            windowController?.resetToDefaultFrame()
+        }
+        let contentSize = window.contentRect(forFrameRect: window.frame).size
+        window.setContentSize(
+            NSSize(
+                width: max(contentSize.width, fallbackSize.width),
+                height: max(contentSize.height, fallbackSize.height)
+            )
+        )
         NSApp.setActivationPolicy(.regular)
         NSApp.unhide(nil)
         if window.isMiniaturized {
@@ -309,7 +331,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 let windowSize = window.frame.size
                 let x = screenRect.origin.x + (screenRect.size.width - windowSize.width) / 2
                 let y = screenRect.origin.y + (screenRect.size.height - windowSize.height) * 0.65
-                window.setFrameOrigin(NSPoint(x: x, y: y))
+                window.setFrame(NSRect(origin: NSPoint(x: x, y: y), size: windowSize), display: true)
             }
             hasPositionedOnce = true
         }
@@ -318,6 +340,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         window.makeMain()
         window.makeKeyAndOrderFront(nil)
         window.orderFrontRegardless()
+        windowController?.ensureUsableFrame()
         activateApplication()
     }
 

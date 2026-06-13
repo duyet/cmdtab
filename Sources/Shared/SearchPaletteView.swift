@@ -6,6 +6,7 @@ import SwiftUI
 struct SearchPaletteView: View {
     @ObservedObject var viewModel: MainViewModel
     @State private var searchText = ""
+    @State private var selectedConversationId: UUID?
     @FocusState private var searchFocused: Bool
 
     var body: some View {
@@ -64,13 +65,33 @@ struct SearchPaletteView: View {
                     .frame(maxHeight: 320)
                 }
             }
-            .frame(width: 480)
+            .frame(maxWidth: 640)
+            .padding(.horizontal, 24)
+            #if os(macOS)
             .background(Color(nsColor: .controlBackgroundColor))
+            #else
+            .background(Color(UIColor.secondarySystemBackground))
+            #endif
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .shadow(color: .black.opacity(0.2), radius: 24, y: 8)
         }
-        .onAppear { searchFocused = true }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            searchFocused = true
+            selectFirstIfNeeded()
+        }
+        .onChange(of: searchText) { _, _ in selectFirstResultId() }
+        #if os(macOS)
         .onExitCommand { viewModel.hideSearchPalette() }
+        .onKeyPress(.downArrow) {
+            moveSelection(by: 1)
+            return .handled
+        }
+        .onKeyPress(.upArrow) {
+            moveSelection(by: -1)
+            return .handled
+        }
+        #endif
     }
 
     // MARK: - Row
@@ -78,6 +99,7 @@ struct SearchPaletteView: View {
     @ViewBuilder
     private func paletteRow(_ conv: Conversation) -> some View {
         let isSelected = conv.id == viewModel.selectedConversationId
+        let isKeyboardSelected = conv.id == selectedConversationId
         Button {
             viewModel.selectedConversationId = conv.id
             viewModel.hideSearchPalette()
@@ -101,9 +123,12 @@ struct SearchPaletteView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
+            .background(isKeyboardSelected ? Color.primary.opacity(0.07) : Color.clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityHint(isKeyboardSelected ? "Keyboard selected" : "")
+        .accessibilityAddTraits(isKeyboardSelected ? .isSelected : [])
     }
 
     // MARK: - Filtering
@@ -118,6 +143,10 @@ struct SearchPaletteView: View {
             }
             return matches.isEmpty ? nil : (group, matches)
         }
+    }
+
+    private var flatResults: [Conversation] {
+        filteredGroups.flatMap { $0.1 }
     }
 
     /// Reuses the same time-bucketing as SidebarView.
@@ -153,8 +182,31 @@ struct SearchPaletteView: View {
     // MARK: - Actions
 
     private func selectFirstResult() {
-        guard let first = filteredGroups.first?.1.first else { return }
-        viewModel.selectedConversationId = first.id
+        guard let selected = flatResults.first(where: { $0.id == selectedConversationId }) ?? flatResults.first else {
+            return
+        }
+        viewModel.selectedConversationId = selected.id
         viewModel.hideSearchPalette()
+    }
+
+    private func selectFirstIfNeeded() {
+        if selectedConversationId == nil {
+            selectFirstResultId()
+        }
+    }
+
+    private func selectFirstResultId() {
+        selectedConversationId = flatResults.first?.id
+    }
+
+    private func moveSelection(by delta: Int) {
+        let results = flatResults
+        guard !results.isEmpty else {
+            selectedConversationId = nil
+            return
+        }
+        let currentIndex = results.firstIndex { $0.id == selectedConversationId } ?? 0
+        let nextIndex = min(max(currentIndex + delta, 0), results.count - 1)
+        selectedConversationId = results[nextIndex].id
     }
 }

@@ -14,7 +14,7 @@ public struct SettingsView: View {
         }
     }
 
-    let languages = ["English", "Spanish", "French", "German", "Chinese", "Japanese", "Korean", "Vietnamese"]
+    private static let languages = ["English", "Spanish", "French", "German", "Chinese", "Japanese", "Korean", "Vietnamese"]
 
     public init(viewModel: MainViewModel) {
         self.viewModel = viewModel
@@ -72,6 +72,7 @@ public struct SettingsView: View {
                 .frame(width: 30, height: 30)
                 .background(Color.primary.opacity(0.06))
                 .clipShape(Circle())
+                .iOSGlassIconSurface()
         }
         .buttonStyle(PlainButtonStyle())
         .accessibilityLabel("About MinhAgent")
@@ -102,14 +103,14 @@ public struct SettingsView: View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
                 Text(selectedTitle)
-                    .font(.system(size: AppFont.pt(22), weight: .semibold))
+                    .font(.system(size: AppFont.pt(17), weight: .semibold))
                     .foregroundColor(.primary)
                 Spacer()
                 closeButton
             }
             .padding(.horizontal, 28)
-            .padding(.top, 48)
-            .padding(.bottom, 18)
+            .padding(.top, 32)
+            .padding(.bottom, 12)
 
             Rectangle()
                 .fill(Color.hairline)
@@ -143,11 +144,12 @@ public struct SettingsView: View {
             viewModel.toggleSettings()
         }) {
             Image(systemName: "xmark")
-                .font(.system(size: AppFont.pt(14), weight: .medium))
+                .font(.system(size: AppFont.pt(12), weight: .medium))
                 .foregroundColor(.secondary)
-                .frame(width: 30, height: 30)
+                .frame(width: 28, height: 28)
                 .background(Color.primary.opacity(0.06))
                 .clipShape(Circle())
+                .iOSGlassIconSurface()
         }
         .buttonStyle(PlainButtonStyle())
         .accessibilityLabel("Close settings")
@@ -214,7 +216,7 @@ public struct SettingsView: View {
 
             Section("Language") {
                 Picker("Response Language", selection: $viewModel.preferredLanguage) {
-                    ForEach(languages, id: \.self) { lang in
+                    ForEach(Self.languages, id: \.self) { lang in
                         Text(lang).tag(lang)
                     }
                 }
@@ -246,12 +248,13 @@ public struct SettingsView: View {
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .labelsHidden()
+                .accessibilityLabel("Font size")
                 .frame(maxWidth: 240, alignment: .leading)
             }
 
             settingsSection("RESPONSE LANGUAGE") {
                 Picker("", selection: $viewModel.preferredLanguage) {
-                    ForEach(languages, id: \.self) { lang in
+                    ForEach(Self.languages, id: \.self) { lang in
                         Text(lang).tag(lang)
                     }
                 }
@@ -923,6 +926,7 @@ private struct SettingsDetailScreen<Content: View>: View {
                         .frame(width: 30, height: 30)
                         .background(Color.primary.opacity(0.06))
                         .clipShape(Circle())
+                        .iOSGlassIconSurface()
                 }
                 .buttonStyle(PlainButtonStyle())
                 .accessibilityLabel("Save and go back")

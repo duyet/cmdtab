@@ -101,18 +101,35 @@ struct SidebarView: View {
     }
 
     // MARK: Primary navigation — segmented pill tabs
+    @ViewBuilder
     private var primaryNavigation: some View {
+        #if os(iOS)
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: 8) {
+                primaryNavigationTabs
+            }
+        } else {
+            primaryNavigationTabs
+        }
+        #else
+        primaryNavigationTabs
+        #endif
+    }
+
+    private var primaryNavigationTabs: some View {
         HStack(spacing: 2) {
             tabButton(mode: "chat", icon: "bubble.left", label: "Chat")
             tabButton(mode: "actions", icon: "bolt", label: "Preset")
+            #if os(macOS)
             tabButton(mode: "automations", icon: "clock", label: "Auto")
+            #endif
         }
         .padding(4)
-        .background(Color.primary.opacity(0.04))
+        .background(Color.primary.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .padding(.horizontal, 10)
         .padding(.top, 8) // move tabs down a bit
-        .padding(.bottom, 8)
+        .padding(.bottom, 6)
         .animation(.easeOut(duration: 0.1), value: viewModel.sidebarMode)
     }
 
@@ -126,19 +143,21 @@ struct SidebarView: View {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: icon)
-                    .font(.system(size: AppFont.pt(10)))
+                    .font(.system(size: AppFont.pt(11)))
                 if isSelected {
                     Text(label)
-                        .font(.system(size: AppFont.pt(11)))
+                        .font(.system(size: AppFont.pt(12)))
                         .lineLimit(1)
-                        .transition(.opacity)
+                        .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.9)), removal: .opacity))
                 }
             }
             .foregroundColor(isSelected ? .primary : .secondary.opacity(0.7))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, minHeight: 26)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
             .background(isSelected ? Color.appBackground : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 6))
+            .iOSGlassControlSurface(cornerRadius: 6)
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
@@ -212,7 +231,10 @@ struct SidebarView: View {
 
             #if os(iOS)
             SidebarRow(icon: "magnifyingglass", label: "Search", compact: true) {
-                viewModel.isSidebarSearchVisible.toggle()
+                viewModel.showSearchPalette()
+                withAnimation {
+                    viewModel.isSidebarVisible = false
+                }
             }
             .padding(.horizontal, 10)
             #endif
@@ -259,7 +281,7 @@ struct SidebarView: View {
                     Image(systemName: "bubble.left.and.bubble.right")
                         .font(.system(size: AppFont.pt(22)))
                         .foregroundColor(.secondary.opacity(0.35))
-                    Text("Your chats live here.\nThey stay in memory and never touch disk.")
+                    Text("Your chats live here.\nThey stay local on this device.")
                         .font(.caption)
                         .foregroundColor(.secondary.opacity(0.65))
                         .multilineTextAlignment(.center)
@@ -457,6 +479,7 @@ private struct HelpGuide: View {
         }
         .padding(18)
         .frame(width: 300)
+        .frame(maxHeight: 400)
     }
 }
 
@@ -670,12 +693,22 @@ private struct ConversationRow: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 6)
+                    #if os(macOS)
+                    .padding(.trailing, 22)
+                    #endif
                     .background(rowBackground)
                     .clipShape(.rect(cornerRadius: 8))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
                 #if os(macOS)
+                .overlay(alignment: .trailing) {
+                    if isHovered || isSelected {
+                        rowMenu
+                            .padding(.trailing, 4)
+                            .transition(.opacity)
+                    }
+                }
                 .onHover { h in isHovered = h }
                 .onTapGesture {
                     // handled by Button
@@ -692,16 +725,40 @@ private struct ConversationRow: View {
                 )
                 #endif
                 .contextMenu {
-                    Button(action: beginEditing) {
-                        Label("Rename", systemImage: "pencil")
-                    }
-                    Button(role: .destructive, action: onDelete) {
-                        Label("Delete", systemImage: "trash")
-                    }
+                    menuItems
                 }
             }
         }
     }
+
+    @ViewBuilder
+    private var menuItems: some View {
+        Button(action: beginEditing) {
+            Label("Rename", systemImage: "pencil")
+        }
+        .accessibilityHint("Rename this conversation")
+        Button(role: .destructive, action: onDelete) {
+            Label("Delete", systemImage: "trash")
+        }
+        .accessibilityHint("Delete this conversation")
+    }
+
+    #if os(macOS)
+    private var rowMenu: some View {
+        Menu {
+            menuItems
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: AppFont.pt(11), weight: .semibold))
+                .foregroundColor(.secondary.opacity(0.75))
+                .frame(width: 20, height: 20)
+                .contentShape(Rectangle())
+        }
+        .menuIndicator(.hidden)
+        .buttonStyle(PlainButtonStyle())
+        .accessibilityLabel("Conversation options")
+    }
+    #endif
 
     private var renameField: some View {
         let field = TextField("Conversation name", text: $draft)

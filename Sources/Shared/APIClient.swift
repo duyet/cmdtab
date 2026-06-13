@@ -148,7 +148,10 @@ public enum AnyRouterRequestFactory {
     public static func requestBody(
         model: String,
         messages: [[String: String]],
-        reasoningEffort: String? = nil
+        reasoningEffort: String? = nil,
+        temperature: Double? = nil,
+        topP: Double? = nil,
+        maxTokens: Int? = nil
     ) -> [String: Any] {
         var body: [String: Any] = [
             "model": model,
@@ -160,6 +163,16 @@ public enum AnyRouterRequestFactory {
         if let reasoningEffort, !reasoningEffort.isEmpty {
             body["reasoning_effort"] = reasoningEffort
         }
+        // Sampling controls — omitted when nil so providers keep their defaults.
+        if let temperature {
+            body["temperature"] = temperature
+        }
+        if let topP {
+            body["top_p"] = topP
+        }
+        if let maxTokens, maxTokens > 0 {
+            body["max_tokens"] = maxTokens
+        }
         return body
     }
 
@@ -169,7 +182,10 @@ public enum AnyRouterRequestFactory {
         apiKey: String?,
         model: String,
         messages: [[String: String]],
-        reasoningEffort: String? = nil
+        reasoningEffort: String? = nil,
+        temperature: Double? = nil,
+        topP: Double? = nil,
+        maxTokens: Int? = nil
     ) throws -> URLRequest {
         guard let url = URL(string: normalizedURLString(from: endpointUrl)) else {
             throw APIError.invalidURL
@@ -199,7 +215,8 @@ public enum AnyRouterRequestFactory {
         guard
             let httpBody = try? JSONSerialization.data(
                 withJSONObject: requestBody(
-                    model: model, messages: messages, reasoningEffort: reasoningEffort),
+                    model: model, messages: messages, reasoningEffort: reasoningEffort,
+                    temperature: temperature, topP: topP, maxTokens: maxTokens),
                 options: []
             )
         else {
@@ -386,7 +403,10 @@ public final class APIClient: Sendable {
         apiKey: String?,
         model: String,
         messages: [[String: String]],
-        reasoningEffort: String? = nil
+        reasoningEffort: String? = nil,
+        temperature: Double? = nil,
+        topP: Double? = nil,
+        maxTokens: Int? = nil
     ) async throws -> AsyncThrowingStream<StreamChunk, Error> {
 
         let request = try AnyRouterRequestFactory.makeRequest(
@@ -394,7 +414,10 @@ public final class APIClient: Sendable {
             apiKey: apiKey,
             model: model,
             messages: messages,
-            reasoningEffort: reasoningEffort
+            reasoningEffort: reasoningEffort,
+            temperature: temperature,
+            topP: topP,
+            maxTokens: maxTokens
         )
 
         let (bytes, response) = try await URLSession.shared.bytes(for: request)

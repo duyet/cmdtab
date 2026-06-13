@@ -701,7 +701,8 @@ struct ComposerView: View {
 // MARK: - Searchable model picker popover
 /// Replaces the cramped inline model Menu. Groups entries by provider, filters
 /// live as you type, and exposes the reasoning-effort control for capable models.
-private struct ModelPickerPopover: View {
+/// Internal so both the composer and Settings reuse the same picker.
+struct ModelPickerPopover: View {
     let entries: [ModelCatalog.Entry]
     let selectedId: String
     let supportsReasoning: Bool

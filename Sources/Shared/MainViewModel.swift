@@ -210,6 +210,21 @@ public final class MainViewModel: ObservableObject {
         didSet { UserDefaults.standard.set(reasoningEffort, forKey: "reasoningEffort") }
     }
 
+    /// Sampling temperature (0–2). nil → omitted from the request (provider default).
+    @Published public var temperature: Double = 1.0 {
+        didSet { UserDefaults.standard.set(temperature, forKey: "temperature") }
+    }
+
+    /// Nucleus sampling probability (0–1). nil → omitted (provider default).
+    @Published public var topP: Double = 1.0 {
+        didSet { UserDefaults.standard.set(topP, forKey: "topP") }
+    }
+
+    /// Hard cap on generated tokens, or 0 to let the provider decide.
+    @Published public var maxTokens: Int = 0 {
+        didSet { UserDefaults.standard.set(maxTokens, forKey: "maxTokens") }
+    }
+
     /// True when the active cloud model accepts a `reasoning_effort` parameter.
     public var modelSupportsReasoning: Bool {
         ModelCatalog.supportsReasoning(modelName, in: availableCloudModelEntries)
@@ -325,6 +340,16 @@ public final class MainViewModel: ObservableObject {
             ModelCatalog.reasoningEfforts.contains(storedEffort)
         {
             self.reasoningEffort = storedEffort
+        }
+        // Generation params (use object(forKey:) so absent ≠ 0/0.0).
+        if UserDefaults.standard.object(forKey: "temperature") != nil {
+            self.temperature = UserDefaults.standard.double(forKey: "temperature")
+        }
+        if UserDefaults.standard.object(forKey: "topP") != nil {
+            self.topP = UserDefaults.standard.double(forKey: "topP")
+        }
+        if UserDefaults.standard.object(forKey: "maxTokens") != nil {
+            self.maxTokens = UserDefaults.standard.integer(forKey: "maxTokens")
         }
 
         let storedModel = UserDefaults.standard.string(forKey: "modelName")
@@ -862,7 +887,10 @@ public final class MainViewModel: ObservableObject {
             ? LocalModelAdapter(enabledTools: enabledLocalTools)
             : AnyRouterAdapter(
                 endpointUrl: endpointUrl, apiKey: apiKey, model: modelName,
-                reasoningEffort: modelSupportsReasoning ? reasoningEffort : nil)
+                reasoningEffort: modelSupportsReasoning ? reasoningEffort : nil,
+                temperature: temperature,
+                topP: topP,
+                maxTokens: maxTokens > 0 ? maxTokens : nil)
         let historyMessages = Array(conversations[activeIndex].messages.dropLast())  // all except placeholder
         
         // Generate and store raw request details for this conversation
@@ -910,8 +938,13 @@ public final class MainViewModel: ObservableObject {
             )
             var params: [String: Any] = [
                 "stream": true,
-                "stream_options": ["include_usage": true]
+                "stream_options": ["include_usage": true],
+                "temperature": temperature,
+                "top_p": topP
             ]
+            if maxTokens > 0 {
+                params["max_tokens"] = maxTokens
+            }
             if modelSupportsReasoning {
                 params["reasoning_effort"] = reasoningEffort
             }

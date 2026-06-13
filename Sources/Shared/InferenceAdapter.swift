@@ -68,14 +68,21 @@ public struct AnyRouterAdapter: InferenceAdapter {
     private let model: String
     /// `reasoning_effort` to send, or nil when the model doesn't support it.
     private let reasoningEffort: String?
+    private let temperature: Double?
+    private let topP: Double?
+    private let maxTokens: Int?
 
     public init(
-        endpointUrl: String, apiKey: String, model: String, reasoningEffort: String? = nil
+        endpointUrl: String, apiKey: String, model: String, reasoningEffort: String? = nil,
+        temperature: Double? = nil, topP: Double? = nil, maxTokens: Int? = nil
     ) {
         self.endpointUrl = endpointUrl
         self.apiKey = apiKey
         self.model = model
         self.reasoningEffort = reasoningEffort
+        self.temperature = temperature
+        self.topP = topP
+        self.maxTokens = maxTokens
     }
 
     public var isAvailable: Bool { !apiKey.isEmpty }
@@ -114,7 +121,10 @@ public struct AnyRouterAdapter: InferenceAdapter {
             apiKey: apiKey.isEmpty ? nil : apiKey,
             model: model,
             messages: formatted,
-            reasoningEffort: reasoningEffort
+            reasoningEffort: reasoningEffort,
+            temperature: temperature,
+            topP: topP,
+            maxTokens: maxTokens
         )
     }
 }

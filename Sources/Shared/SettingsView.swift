@@ -16,6 +16,9 @@ public struct SettingsView: View {
 
     private static let languages = ["English", "Spanish", "French", "German", "Chinese", "Japanese", "Korean", "Vietnamese"]
 
+    @State private var showSettingsModelPicker: Bool = false
+    @State private var settingsModelSearch: String = ""
+
     public init(viewModel: MainViewModel) {
         self.viewModel = viewModel
     }
@@ -489,84 +492,42 @@ public struct SettingsView: View {
         #endif
     }
 
-    // MARK: - Cloud Model Tab (provider, endpoint, key, model)
+    // MARK: - Cloud Model Tab (AnyRouter connection, provider, model, generation)
     private var cloudModelTabContent: some View {
         #if os(macOS)
         Form {
-            Section("Active Runtime") {
-                modelRuntimeSummaryView
-                    .listRowInsets(EdgeInsets())
+            Section {
+                anyRouterConnectionBlock
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+            } header: {
+                Text("AnyRouter")
+            } footer: {
+                Text("Sign in to AnyRouter, paste a key, and verify. The key is stored only in Keychain.")
+                    .font(.system(size: AppFont.pt(11)))
             }
 
             Section("API Provider") {
-                Picker("Provider", selection: $viewModel.apiProvider) {
-                    Text("anyrouter.dev").tag("anyrouter")
-                    Text("Local Ollama").tag("ollama")
-                    Text("OpenRouter").tag("openrouter")
-                    Text("Google Gemini").tag("gemini")
-                    Text("OpenAI").tag("openai")
-                    Text("Custom").tag("custom")
-                }
-                .onProviderChange(of: viewModel.apiProvider) { newValue in
-                    switch newValue {
-                    case "anyrouter":
-                        viewModel.endpointUrl = "https://anyrouter.dev/api/v1"
-                        viewModel.modelName = MainViewModel.defaultModelId
-                    case "ollama":
-                        viewModel.endpointUrl = "http://localhost:11434/v1"
-                        viewModel.modelName = "llama3"
-                    case "openrouter":
-                        viewModel.endpointUrl = "https://openrouter.ai/api/v1"
-                        viewModel.modelName = "google/gemini-flash-1.5"
-                    case "openai":
-                        viewModel.endpointUrl = "https://api.openai.com/v1"
-                        viewModel.modelName = "gpt-4o"
-                    case "gemini":
-                        viewModel.endpointUrl = "https://generativelanguage.googleapis.com/v1beta/openai"
-                        viewModel.modelName = "gemini-1.5-flash"
-                    default:
-                        break
-                    }
-                }
-
+                providerPicker
                 TextField("Endpoint URL", text: $viewModel.endpointUrl)
                     .font(.system(size: AppFont.pt(13)))
-            }
-
-            Section(
-                header: Text("API Key"),
-                footer: Text("Stored securely in Keychain — service: minhagent.app, account: token.")
-                    .font(.system(size: AppFont.pt(11)))
-            ) {
-                HStack(spacing: 8) {
-                    Image(systemName: viewModel.apiKey.isEmpty ? "key.slash" : "key.fill")
-                        .font(.system(size: AppFont.pt(12), weight: .semibold))
-                        .foregroundColor(viewModel.apiKey.isEmpty ? .secondary : .green)
-                        .frame(width: 16, height: 16)
-                    Text(viewModel.apiKey.isEmpty ? "No cloud key loaded" : "Cloud key loaded")
-                        .font(.system(size: AppFont.pt(12.5)))
-                        .foregroundColor(viewModel.apiKey.isEmpty ? .secondary : .primary)
-                    Spacer(minLength: 0)
-                }
-
-                SecureField("Enter API Token…", text: $viewModel.apiKey)
+                keychainStatusRow
+                SecureField("Paste API Token…", text: $viewModel.apiKey)
                     .font(.system(size: AppFont.pt(13)))
             }
 
             Section("Cloud Model") {
-                Picker("Model", selection: $viewModel.modelName) {
-                    ForEach(ModelCatalog.entries) { entry in
-                        Text(entry.displayName).tag(entry.id)
-                    }
-                    if !ModelCatalog.entries.contains(where: { $0.id == viewModel.modelName })
-                        && !viewModel.modelName.isEmpty
-                    {
-                        Text(viewModel.modelName).tag(viewModel.modelName)
-                    }
-                }
-
+                cloudModelChooser
                 cloudModelDetailsView
                     .listRowInsets(EdgeInsets())
+            }
+
+            Section {
+                generationControls
+            } header: {
+                Text("Generation")
+            } footer: {
+                Text("Temperature, Top P, and Max Tokens are sent to every cloud request. Defaults match the provider.")
+                    .font(.system(size: AppFont.pt(11)))
             }
 
             Section("On-Device Model") {
@@ -584,46 +545,13 @@ public struct SettingsView: View {
         .scrollContentBackground(.hidden)
         #else
         VStack(alignment: .leading, spacing: 20) {
-            settingsSection("ACTIVE RUNTIME") {
-                modelRuntimeSummaryView
+            settingsSection("AnyRouter") {
+                anyRouterConnectionBlock
             }
 
             settingsSection("API PROVIDER") {
-                Picker("", selection: $viewModel.apiProvider) {
-                    Text("anyrouter.dev").tag("anyrouter")
-                    Text("Local Ollama").tag("ollama")
-                    Text("OpenRouter").tag("openrouter")
-                    Text("Google Gemini").tag("gemini")
-                    Text("OpenAI").tag("openai")
-                    Text("Custom").tag("custom")
-                }
-                .pickerStyle(MenuPickerStyle())
-                .labelsHidden()
-                .frame(maxWidth: 220, alignment: .leading)
-                .onProviderChange(of: viewModel.apiProvider) { newValue in
-                    switch newValue {
-                    case "anyrouter":
-                        viewModel.endpointUrl = "https://anyrouter.dev/api/v1"
-                        viewModel.modelName = MainViewModel.defaultModelId
-                    case "ollama":
-                        viewModel.endpointUrl = "http://localhost:11434/v1"
-                        viewModel.modelName = "llama3"
-                    case "openrouter":
-                        viewModel.endpointUrl = "https://openrouter.ai/api/v1"
-                        viewModel.modelName = "google/gemini-flash-1.5"
-                    case "openai":
-                        viewModel.endpointUrl = "https://api.openai.com/v1"
-                        viewModel.modelName = "gpt-4o"
-                    case "gemini":
-                        viewModel.endpointUrl = "https://generativelanguage.googleapis.com/v1beta/openai"
-                        viewModel.modelName = "gemini-1.5-flash"
-                    default:
-                        break
-                    }
-                }
-            }
-
-            settingsSection("ENDPOINT URL") {
+                providerPicker
+                    .frame(maxWidth: 220, alignment: .leading)
                 TextField("https://...", text: $viewModel.endpointUrl)
                     .font(.system(size: AppFont.pt(13)))
                     .textFieldStyle(PlainTextFieldStyle())
@@ -634,13 +562,9 @@ public struct SettingsView: View {
                         RoundedRectangle(cornerRadius: 6)
                             .stroke(Color.primary.opacity(0.12), lineWidth: 1)
                     )
-            }
-
-            settingsSection("API KEY / TOKEN (Keychain Protected)") {
                 keychainStatusView
-                    .padding(.bottom, 2)
-
-                SecureField("Enter API Token...", text: $viewModel.apiKey)
+                    .padding(.top, 2)
+                SecureField("Paste API Token...", text: $viewModel.apiKey)
                     .font(.system(size: AppFont.pt(13)))
                     .textFieldStyle(PlainTextFieldStyle())
                     .padding(8)
@@ -653,22 +577,13 @@ public struct SettingsView: View {
             }
 
             settingsSection("CLOUD MODEL") {
-                Picker("", selection: $viewModel.modelName) {
-                    ForEach(ModelCatalog.entries) { entry in
-                        Text(entry.displayName).tag(entry.id)
-                    }
-                    if !ModelCatalog.entries.contains(where: { $0.id == viewModel.modelName })
-                        && !viewModel.modelName.isEmpty
-                    {
-                        Text(viewModel.modelName).tag(viewModel.modelName)
-                    }
-                }
-                .pickerStyle(MenuPickerStyle())
-                .labelsHidden()
-                .frame(maxWidth: 220, alignment: .leading)
-
+                cloudModelChooser
                 cloudModelDetailsView
                     .padding(.top, 6)
+            }
+
+            settingsSection("GENERATION") {
+                generationControls
             }
 
             settingsSection("ON-DEVICE MODEL") {
@@ -690,6 +605,255 @@ public struct SettingsView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 20)
         #endif
+    }
+
+    // MARK: AnyRouter connection block — login/consent + verify + dashboard.
+    private var anyRouterConnectionBlock: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: connectionSymbol)
+                    .font(.system(size: AppFont.pt(16), weight: .semibold))
+                    .foregroundColor(connectionColor)
+                    .frame(width: 22, height: 22)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(viewModel.anyRouterConnectionTitle)
+                        .font(.system(size: AppFont.pt(13), weight: .semibold))
+                        .foregroundColor(.primary)
+                    Text(viewModel.anyRouterConnectionDetail)
+                        .font(.system(size: AppFont.pt(11)))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                if viewModel.isAnyRouterConnecting {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    viewModel.connectAnyRouter()
+                } label: {
+                    Label("Connect", systemImage: "link")
+                        .font(.system(size: AppFont.pt(12), weight: .medium))
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+
+                Button {
+                    viewModel.verifyAnyRouterConnection()
+                } label: {
+                    Label("Verify", systemImage: "checkmark.seal")
+                        .font(.system(size: AppFont.pt(12)))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(viewModel.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                Button {
+                    viewModel.openAnyRouterKeysDashboard()
+                } label: {
+                    Label("Get a key", systemImage: "arrow.up.right.square")
+                        .font(.system(size: AppFont.pt(12)))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+
+            SecureField("Paste sk-ar-v1-… key", text: $viewModel.apiKey)
+                .font(.system(size: AppFont.pt(13)))
+                .textFieldStyle(PlainTextFieldStyle())
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                #endif
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(Color.primary.opacity(0.05))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.hairline.opacity(0.6), lineWidth: 1)
+                )
+        }
+    }
+
+    private var connectionSymbol: String {
+        if viewModel.isAnyRouterConnecting { return "arrow.triangle.2.circlepath" }
+        return viewModel.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "cloud.slash" : "checkmark.seal.fill"
+    }
+
+    private var connectionColor: Color {
+        if viewModel.isAnyRouterConnecting { return .secondary }
+        let title = viewModel.anyRouterConnectionTitle.lowercased()
+        if title.contains("connected") { return .green }
+        if title.contains("fail") || title.contains("not") { return .orange }
+        return .accentColor
+    }
+
+    // MARK: API provider picker (shared).
+    private var providerPicker: some View {
+        Picker("Provider", selection: $viewModel.apiProvider) {
+            Text("AnyRouter").tag("anyrouter")
+            Text("Local Ollama").tag("ollama")
+            Text("OpenRouter").tag("openrouter")
+            Text("Google Gemini").tag("gemini")
+            Text("OpenAI").tag("openai")
+            Text("Custom").tag("custom")
+        }
+        #if os(iOS)
+        .pickerStyle(MenuPickerStyle())
+        .labelsHidden()
+        #endif
+        .onProviderChange(of: viewModel.apiProvider) { newValue in
+            switch newValue {
+            case "anyrouter":
+                viewModel.endpointUrl = "https://anyrouter.dev/api/v1"
+                viewModel.modelName = MainViewModel.defaultModelId
+            case "ollama":
+                viewModel.endpointUrl = "http://localhost:11434/v1"
+                viewModel.modelName = "llama3"
+            case "openrouter":
+                viewModel.endpointUrl = "https://openrouter.ai/api/v1"
+                viewModel.modelName = "google/gemini-flash-1.5"
+            case "openai":
+                viewModel.endpointUrl = "https://api.openai.com/v1"
+                viewModel.modelName = "gpt-4o"
+            case "gemini":
+                viewModel.endpointUrl = "https://generativelanguage.googleapis.com/v1beta/openai"
+                viewModel.modelName = "gemini-1.5-flash"
+            default:
+                break
+            }
+        }
+    }
+
+    private var keychainStatusRow: some View {
+        HStack(spacing: 8) {
+            Image(systemName: viewModel.apiKey.isEmpty ? "key.slash" : "key.fill")
+                .font(.system(size: AppFont.pt(12), weight: .semibold))
+                .foregroundColor(viewModel.apiKey.isEmpty ? .secondary : .green)
+                .frame(width: 16, height: 16)
+            Text(viewModel.apiKey.isEmpty ? "No cloud key loaded" : "Cloud key loaded")
+                .font(.system(size: AppFont.pt(12.5)))
+                .foregroundColor(viewModel.apiKey.isEmpty ? .secondary : .primary)
+            Spacer(minLength: 0)
+        }
+    }
+
+    // MARK: Dynamic cloud model chooser — opens the searchable popover.
+    private var cloudModelChooser: some View {
+        HStack(spacing: 8) {
+            Image(systemName: currentCloudModelIcon)
+                .font(.system(size: AppFont.pt(12)))
+                .foregroundColor(.accentColor)
+                .frame(width: 18)
+            Text(currentCloudModelDisplayName)
+                .font(.system(size: AppFont.pt(13)))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 0)
+            Button {
+                settingsModelSearch = ""
+                showSettingsModelPicker.toggle()
+            } label: {
+                Label("Change", systemImage: "chevron.up.chevron.down")
+                    .font(.system(size: AppFont.pt(12), weight: .medium))
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .popover(isPresented: $showSettingsModelPicker) {
+                ModelPickerPopover(
+                    entries: viewModel.cloudModelEntries,
+                    selectedId: viewModel.modelName,
+                    supportsReasoning: viewModel.modelSupportsReasoning,
+                    reasoningEffort: $viewModel.reasoningEffort,
+                    search: $settingsModelSearch
+                ) { id in
+                    viewModel.modelName = id
+                    showSettingsModelPicker = false
+                }
+            }
+        }
+    }
+
+    // MARK: Generation controls — temperature / top-p / max-tokens / reasoning.
+    private var generationControls: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Temperature")
+                        .font(.system(size: AppFont.pt(12.5)))
+                    Spacer()
+                    Text(String(format: "%.2f", viewModel.temperature))
+                        .font(.system(size: AppFont.pt(12), design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
+                Slider(value: $viewModel.temperature, in: 0...2, step: 0.05) {
+                    Text("Temperature")
+                } minimumValueLabel: {
+                    Text("0").font(.system(size: AppFont.pt(9))).foregroundColor(.secondary)
+                } maximumValueLabel: {
+                    Text("2").font(.system(size: AppFont.pt(9))).foregroundColor(.secondary)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Top P")
+                        .font(.system(size: AppFont.pt(12.5)))
+                    Spacer()
+                    Text(String(format: "%.2f", viewModel.topP))
+                        .font(.system(size: AppFont.pt(12), design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
+                Slider(value: $viewModel.topP, in: 0...1, step: 0.05) {
+                    Text("Top P")
+                } minimumValueLabel: {
+                    Text("0").font(.system(size: AppFont.pt(9))).foregroundColor(.secondary)
+                } maximumValueLabel: {
+                    Text("1").font(.system(size: AppFont.pt(9))).foregroundColor(.secondary)
+                }
+            }
+
+            HStack {
+                Text("Max Tokens")
+                    .font(.system(size: AppFont.pt(12.5)))
+                Spacer()
+                Stepper(value: $viewModel.maxTokens, in: 0...32000, step: 256) {
+                    Text(viewModel.maxTokens == 0 ? "Auto" : "\(viewModel.maxTokens)")
+                        .font(.system(size: AppFont.pt(12), design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            if viewModel.modelSupportsReasoning {
+                Divider().padding(.vertical, 2)
+                HStack {
+                    Text("Reasoning")
+                        .font(.system(size: AppFont.pt(12.5)))
+                    Spacer()
+                    Picker("Reasoning", selection: $viewModel.reasoningEffort) {
+                        ForEach(ModelCatalog.reasoningEfforts, id: \.self) { effort in
+                            Text(effort.capitalized).tag(effort)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 200)
+                    #if os(iOS)
+                    .labelsHidden()
+                    #endif
+                }
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private var currentCloudModelIcon: String {
+        viewModel.cloudModelEntries.first(where: { $0.id == viewModel.modelName })?.sfSymbol ?? "sparkles"
     }
 
     // MARK: - Section helper
@@ -726,36 +890,6 @@ public struct SettingsView: View {
                     .stroke(Color.hairline.opacity(0.5), lineWidth: 1)
             )
         }
-    }
-
-    private var modelRuntimeSummaryView: some View {
-        VStack(spacing: 0) {
-            metadataRow(
-                label: "Active Mode",
-                value: viewModel.isLocalModelSelected ? "Local" : "Cloud"
-            )
-            Divider()
-            metadataRow(
-                label: "Cloud Provider",
-                value: providerDisplayName
-            )
-            Divider()
-            metadataRow(
-                label: "Endpoint Host",
-                value: endpointHost
-            )
-            Divider()
-            metadataRow(
-                label: "Selected Model",
-                value: viewModel.isLocalModelSelected ? localModelDisplayName : currentCloudModelDisplayName
-            )
-        }
-        .background(Color.cardSurface)
-        .cornerRadius(8)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.hairline.opacity(0.5), lineWidth: 1)
-        )
     }
 
     private var keychainStatusView: some View {
@@ -852,27 +986,9 @@ public struct SettingsView: View {
         )
     }
 
-    private var providerDisplayName: String {
-        switch viewModel.apiProvider {
-        case "anyrouter": return "AnyRouter"
-        case "ollama": return "Local Ollama"
-        case "openrouter": return "OpenRouter"
-        case "gemini": return "Google Gemini"
-        case "openai": return "OpenAI"
-        default: return "Custom"
-        }
-    }
-
-    private var endpointHost: String {
-        URL(string: viewModel.endpointUrl)?.host ?? viewModel.endpointUrl
-    }
-
     private var currentCloudModelDisplayName: String {
-        ModelCatalog.entry(for: viewModel.modelName)?.displayName ?? viewModel.modelName
-    }
-
-    private var localModelDisplayName: String {
-        viewModel.localModelMode == "on-device" ? "Apple Foundation Models" : "Private Cloud Compute"
+        viewModel.cloudModelEntries.first(where: { $0.id == viewModel.modelName })?.displayName
+            ?? viewModel.modelName
     }
 
     private func metadataRow(label: String, value: String) -> some View {

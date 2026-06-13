@@ -210,12 +210,175 @@ public enum AnyRouterRequestFactory {
     }
 }
 
+// MARK: - AnyRouter Account + Model Catalog
+
+public struct AnyRouterKeySummary: Equatable, Sendable {
+    public let name: String
+    public let prefix: String
+    public let rateLimit: Int?
+    public let usage: Int?
+    public let isFreeTier: Bool
+
+    public var displayText: String {
+        let plan = isFreeTier ? "Free tier" : "Workspace"
+        if let rateLimit {
+            return "\(name) · \(plan) · \(rateLimit) rpm"
+        }
+        return "\(name) · \(plan)"
+    }
+}
+
+public enum AnyRouterCatalogParser {
+    public static func parseKeySummary(data: Data) throws -> AnyRouterKeySummary {
+        let decoded = try JSONDecoder().decode(KeyResponse.self, from: data)
+        return AnyRouterKeySummary(
+            name: decoded.key.name,
+            prefix: decoded.key.prefix,
+            rateLimit: decoded.key.rateLimit,
+            usage: decoded.key.usage,
+            isFreeTier: decoded.key.isFreeTier
+        )
+    }
+
+    public static func parseModels(data: Data) throws -> [ModelCatalog.Entry] {
+        let decoded = try JSONDecoder().decode(ModelsResponse.self, from: data)
+        return decoded.data
+            .filter { $0.category == nil || $0.category == "text" }
+            .map { model in
+                ModelCatalog.Entry(
+                    id: model.id,
+                    displayName: model.displayName,
+                    sfSymbol: model.symbolName,
+                    supportsReasoning: model.capabilities.contains { capability in
+                        capability.lowercased().contains("reasoning")
+                    },
+                    inputPricePerMTok: model.pricing?.inputPer1M ?? model.pricing?.prompt.flatMap(Double.init),
+                    outputPricePerMTok: model.pricing?.outputPer1M ?? model.pricing?.completion.flatMap(Double.init)
+                )
+            }
+    }
+
+    private struct KeyResponse: Decodable {
+        let key: Key
+
+        struct Key: Decodable {
+            let prefix: String
+            let name: String
+            let rateLimit: Int?
+            let usage: Int?
+            let isFreeTier: Bool
+
+            enum CodingKeys: String, CodingKey {
+                case prefix
+                case name
+                case rateLimit = "rate_limit"
+                case usage
+                case isFreeTier = "is_free_tier"
+            }
+        }
+    }
+
+    private struct ModelsResponse: Decodable {
+        let data: [RemoteModel]
+    }
+
+    private struct RemoteModel: Decodable {
+        let id: String
+        let provider: String?
+        let category: String?
+        let capabilities: [String]
+        let pricing: Pricing?
+
+        var displayName: String {
+            let leaf = id.split(separator: "/").last.map(String.init) ?? id
+            let words = leaf
+                .replacingOccurrences(of: "-", with: " ")
+                .replacingOccurrences(of: "_", with: " ")
+            let title = words
+                .split(separator: " ")
+                .map { part in
+                    part.count <= 3 ? part.uppercased() : part.prefix(1).uppercased() + part.dropFirst()
+                }
+                .joined(separator: " ")
+            if let provider, !provider.isEmpty {
+                return "\(title) · \(provider)"
+            }
+            return title
+        }
+
+        var symbolName: String {
+            if capabilities.contains(where: { $0.localizedCaseInsensitiveContains("vision") }) {
+                return "eye"
+            }
+            if id.localizedCaseInsensitiveContains("gpt") || id.localizedCaseInsensitiveContains("claude") {
+                return "brain"
+            }
+            if id.localizedCaseInsensitiveContains("flash") || id.localizedCaseInsensitiveContains("mini") {
+                return "bolt"
+            }
+            return "sparkles"
+        }
+    }
+
+    private struct Pricing: Decodable {
+        let prompt: String?
+        let completion: String?
+        let inputPer1M: Double?
+        let outputPer1M: Double?
+
+        enum CodingKeys: String, CodingKey {
+            case prompt
+            case completion
+            case inputPer1M = "input_per_1m"
+            case outputPer1M = "output_per_1m"
+        }
+    }
+}
+
 /// Stateless cloud client; holds no mutable state, so it is safe to share across
 /// tasks. `Sendable` lets the singleton satisfy Swift 6 strict-concurrency checks.
 public final class APIClient: Sendable {
     public static let shared = APIClient()
 
     private init() {}
+
+    public func inspectAnyRouterKey(endpointUrl: String, apiKey: String) async throws -> AnyRouterKeySummary {
+        let base = endpointUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+        let urlString = base.hasSuffix("/") ? base + "auth/key" : base + "/auth/key"
+        guard let url = URL(string: urlString) else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse(statusCode: 0, body: "Non-HTTP response received")
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw APIError.invalidResponse(statusCode: httpResponse.statusCode, body: body)
+        }
+        return try AnyRouterCatalogParser.parseKeySummary(data: data)
+    }
+
+    public func fetchAnyRouterModels(endpointUrl: String, apiKey: String) async throws -> [ModelCatalog.Entry] {
+        let base = endpointUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+        let urlString = base.hasSuffix("/") ? base + "models?category=text" : base + "/models?category=text"
+        guard let url = URL(string: urlString) else { throw APIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 20
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse(statusCode: 0, body: "Non-HTTP response received")
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw APIError.invalidResponse(statusCode: httpResponse.statusCode, body: body)
+        }
+        return try AnyRouterCatalogParser.parseModels(data: data)
+    }
 
     /// Streams chat completions using Server-Sent Events (SSE) with full conversation history.
     public func fetchStream(

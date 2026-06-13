@@ -1,6 +1,11 @@
 import Combine
 import SwiftUI
 import os
+#if os(macOS)
+import AppKit
+#elseif canImport(UIKit)
+import UIKit
+#endif
 #if canImport(SwiftData)
 import SwiftData
 #endif
@@ -31,6 +36,10 @@ public final class MainViewModel: ObservableObject {
 
     /// Keychain is only touched after this flips true (lazy, prompt-free launch).
     public private(set) var hasLoadedApiKey: Bool = false
+    @Published public var anyRouterConnectionTitle: String = "AnyRouter not connected"
+    @Published public var anyRouterConnectionDetail: String = "Connect a Keychain-stored API key to verify access and load live models."
+    @Published public var isAnyRouterConnecting: Bool = false
+    @Published public var availableCloudModelEntries: [ModelCatalog.Entry] = ModelCatalog.entries
 
     // Collapsible Sidebar Visibility — always starts visible; the user
     // hides it per-session via the sidebar icon / ⌘B.
@@ -198,9 +207,22 @@ public final class MainViewModel: ObservableObject {
     }
 
     /// True when the active cloud model accepts a `reasoning_effort` parameter.
-    public var modelSupportsReasoning: Bool { ModelCatalog.supportsReasoning(modelName) }
+    public var modelSupportsReasoning: Bool {
+        ModelCatalog.supportsReasoning(modelName, in: availableCloudModelEntries)
+    }
+
+    public var cloudModelEntries: [ModelCatalog.Entry] {
+        ModelCatalog.mergedEntries(remote: availableCloudModelEntries, selectedModelId: modelName)
+    }
     @Published public var apiKey: String = "" {
         didSet {
+            if apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                anyRouterConnectionTitle = "AnyRouter not connected"
+                anyRouterConnectionDetail = "Connect a Keychain-stored API key to verify access and load live models."
+            } else if anyRouterConnectionTitle == "AnyRouter not connected" {
+                anyRouterConnectionTitle = "AnyRouter key saved"
+                anyRouterConnectionDetail = "Verify the key to load upstream models and confirm the connection."
+            }
             // Env-sourced keys are session-only; never persist them (AGENTS.md §3).
             if isApplyingEnvApiKey { return }
             // Debounce Keychain writes — avoid delete+add on every keystroke
@@ -295,8 +317,6 @@ public final class MainViewModel: ObservableObject {
         self.isLocalModelSelected = UserDefaults.standard.bool(forKey: "isLocalModelSelected")
         self.apiProvider = UserDefaults.standard.string(forKey: "apiProvider") ?? "anyrouter"
         self.endpointUrl = UserDefaults.standard.string(forKey: "endpointUrl") ?? "https://anyrouter.dev/api/v1"
-        // Drop obsolete persisted model ids (e.g. older OpenRouter free-tier slugs)
-        // that are no longer in the known-model list, falling back to the current default.
         if let storedEffort = UserDefaults.standard.string(forKey: "reasoningEffort"),
             ModelCatalog.reasoningEfforts.contains(storedEffort)
         {
@@ -304,7 +324,7 @@ public final class MainViewModel: ObservableObject {
         }
 
         let storedModel = UserDefaults.standard.string(forKey: "modelName")
-        if let storedModel, MainViewModel.knownModelIds.contains(storedModel) {
+        if let storedModel, !storedModel.isEmpty {
             self.modelName = storedModel
         } else {
             self.modelName = MainViewModel.defaultModelId
@@ -435,6 +455,73 @@ public final class MainViewModel: ObservableObject {
                 isApplyingEnvConfig = false
             }
         }
+        if !apiKey.isEmpty {
+            anyRouterConnectionTitle = "AnyRouter key saved"
+            anyRouterConnectionDetail = "Verify the key to load upstream models and confirm the connection."
+        }
+    }
+
+    public func connectAnyRouter() {
+        apiProvider = "anyrouter"
+        endpointUrl = "https://anyrouter.dev/api/v1"
+        loadApiKeyIfNeeded()
+        guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            anyRouterConnectionTitle = "Add an AnyRouter API key"
+            anyRouterConnectionDetail = "Create a key in AnyRouter, then paste it here. It is saved only in Keychain."
+            openAnyRouterKeysDashboard()
+            return
+        }
+        verifyAnyRouterConnection()
+    }
+
+    public func verifyAnyRouterConnection() {
+        loadApiKeyIfNeeded()
+        let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else {
+            anyRouterConnectionTitle = "AnyRouter not connected"
+            anyRouterConnectionDetail = "Paste an API key or open the AnyRouter dashboard to create one."
+            return
+        }
+        isAnyRouterConnecting = true
+        anyRouterConnectionTitle = "Checking AnyRouter..."
+        anyRouterConnectionDetail = "Verifying the Keychain credential and loading the live model catalog."
+        Task { [weak self] in
+            do {
+                guard let self else { return }
+                let summary = try await APIClient.shared.inspectAnyRouterKey(
+                    endpointUrl: self.endpointUrl,
+                    apiKey: key
+                )
+                let models = try await APIClient.shared.fetchAnyRouterModels(
+                    endpointUrl: self.endpointUrl,
+                    apiKey: key
+                )
+                await MainActor.run {
+                    self.availableCloudModelEntries = models.isEmpty ? ModelCatalog.entries : models
+                    self.anyRouterConnectionTitle = "AnyRouter connected"
+                    self.anyRouterConnectionDetail = "\(summary.displayText) · \(self.availableCloudModelEntries.count) models loaded"
+                    self.isAnyRouterConnecting = false
+                    self.isLocalModelSelected = false
+                    self.updateStatusMessage()
+                }
+            } catch {
+                await MainActor.run {
+                    self?.availableCloudModelEntries = ModelCatalog.entries
+                    self?.anyRouterConnectionTitle = "AnyRouter check failed"
+                    self?.anyRouterConnectionDetail = (error as? APIError)?.userMessage ?? error.localizedDescription
+                    self?.isAnyRouterConnecting = false
+                }
+            }
+        }
+    }
+
+    public func openAnyRouterKeysDashboard() {
+        guard let url = URL(string: "https://anyrouter.dev/dashboard/keys") else { return }
+        #if os(macOS)
+        NSWorkspace.shared.open(url)
+        #elseif canImport(UIKit)
+        UIApplication.shared.open(url)
+        #endif
     }
 
     public func startNewConversation(title: String, presetId: UUID? = nil) {

@@ -27,7 +27,7 @@ struct ComposerView: View {
     private let composerIconFrame: CGFloat = 24
 
     private var modelOptions: [(id: String, label: String, icon: String)] {
-        ModelCatalog.entries.map { (id: $0.id, label: $0.displayName, icon: $0.sfSymbol) }
+        viewModel.cloudModelEntries.map { (id: $0.id, label: $0.displayName, icon: $0.sfSymbol) }
     }
 
     private var hasClipboard: Bool {
@@ -50,12 +50,11 @@ struct ComposerView: View {
                 .plainCardSurface(cornerRadius: 12)
             }
 
-            // 2. Input card: text field on top, controls docked inside at the
-            //    bottom ("+", model badge, send).
+            // 2. Input card: editor on top, controls docked inside at the bottom.
             VStack(spacing: 0) {
                 attachmentRow
 
-                textField
+                editorField
 
                 // Local-model availability notice (Apple Foundation Models)
                 if viewModel.isLocalModelSelected && !viewModel.isLocalModelSupported {
@@ -74,7 +73,7 @@ struct ComposerView: View {
 
                 controlsRow
             }
-            .plainCardSurface(cornerRadius: 12)
+            .plainCardSurface(cornerRadius: 10)
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
@@ -286,31 +285,41 @@ struct ComposerView: View {
         #endif
     }
 
-    // MARK: Text field — multiline, reserves two lines of height so the
-    // composer reads as a roomy input box (Claude desktop style).
-    private var textField: some View {
-        TextField("How can I help you today?", text: $inputMessageText, axis: .vertical)
-            .font(.system(size: AppFont.pt(13.5)))
-            .lineLimit(2...6)
-            .textFieldStyle(PlainTextFieldStyle())
-            .foregroundColor(.primary)
-            .focused($isInputFocused)
-            #if os(macOS)
-            .onKeyPress(.return) {
-                // Plain Enter sends; Shift+Enter inserts newline (default behavior).
-                if NSEvent.modifierFlags.contains(.shift) {
-                    return .ignored
-                }
-                send()
-                return .handled
+    // MARK: Editor — native multiline text editing.
+    private var editorField: some View {
+        ZStack(alignment: .topLeading) {
+            if inputMessageText.isEmpty {
+                Text("Message MinhAgent")
+                    .font(.system(size: AppFont.pt(14)))
+                    .foregroundColor(.secondary.opacity(0.72))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 8)
+                    .allowsHitTesting(false)
             }
+
+            TextEditor(text: $inputMessageText)
+                .font(.system(size: AppFont.pt(14)))
+                .foregroundColor(.primary)
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+                .focused($isInputFocused)
+                .frame(minHeight: 54, maxHeight: 148)
+            #if os(macOS)
+                .onKeyPress(.return) {
+                    // Plain Return sends; Shift+Return remains the system newline.
+                    if NSEvent.modifierFlags.contains(.shift) {
+                        return .ignored
+                    }
+                    send()
+                    return .handled
+                }
             #else
-            .submitLabel(.send)
-            .onSubmit(send)
+                .frame(minHeight: 72, maxHeight: 168)
             #endif
-            .padding(.horizontal, 14)
-            .padding(.top, 12)
-            .padding(.bottom, 6)
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
     }
 
     // MARK: Controls row — "+" quick actions, model badge, send. Docked
@@ -318,14 +327,14 @@ struct ComposerView: View {
     private var controlsRow: some View {
         HStack(spacing: 10) {
             plusButton
-            Spacer()
             toolsDropdown
+            Spacer()
             modelBadge
             sendButton
         }
-        .padding(.horizontal, 10)
-        .padding(.bottom, 8)
-        .padding(.top, 2)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
+        .padding(.top, 4)
     }
 
     // MARK: Plus button — dropdown to attach file or photo.
@@ -344,9 +353,9 @@ struct ComposerView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
         } label: {
-            Image(systemName: "plus")
+            Image(systemName: "plus.circle")
                 .font(.system(size: AppFont.pt(12)))
-                .frame(width: composerIconFrame, height: composerIconFrame)
+                .frame(width: 28, height: 28)
                 .foregroundColor(.secondary)
         }
         .menuIndicator(.hidden)
@@ -382,7 +391,7 @@ struct ComposerView: View {
             }) {
                 Image(systemName: viewModel.isLocalModelSelected ? "cpu" : "cloud")
                     .font(.system(size: AppFont.pt(12)))
-                    .frame(width: composerIconFrame, height: composerIconFrame)
+                    .frame(width: 28, height: 28)
                     .foregroundColor(.secondary)
             }
             .buttonStyle(PlainButtonStyle())
@@ -463,7 +472,7 @@ struct ComposerView: View {
                 .foregroundColor(.secondary.opacity(0.65))
                 .frame(width: 9, height: 9)
         }
-        .frame(minWidth: 76, maxWidth: 148, minHeight: composerIconFrame, alignment: .trailing)
+        .frame(minWidth: 86, maxWidth: 190, minHeight: 28, alignment: .trailing)
         .contentShape(Rectangle())
     }
 
@@ -473,7 +482,7 @@ struct ComposerView: View {
             Image(systemName: "arrow.up")
                 .font(.system(size: AppFont.pt(13), weight: .bold))
                 .foregroundColor(canSend ? .white : .secondary.opacity(0.4))
-                .frame(width: 36, height: 36)
+                .frame(width: 32, height: 32)
                 .background(canSend ? Color.accentCoral : Color.primary.opacity(0.1))
                 .clipShape(Circle())
         }
@@ -622,7 +631,7 @@ struct ComposerView: View {
         } label: {
             Image(systemName: "wrench.adjustable")
                 .font(.system(size: AppFont.pt(12)))
-                .frame(width: composerIconFrame, height: composerIconFrame)
+                .frame(width: 28, height: 28)
                 .foregroundColor(.secondary)
         }
         .menuIndicator(.hidden)

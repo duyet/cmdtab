@@ -3,7 +3,7 @@ import Foundation
 /// Single source of truth for the AnyRouter cloud model list.
 /// Both `ComposerView` (picker) and `SettingsView` (model section) reference this.
 public enum ModelCatalog {
-    public struct Entry: Identifiable, Sendable {
+    public struct Entry: Identifiable, Equatable, Sendable {
         public let id: String  // API model identifier
         public let displayName: String
         public let sfSymbol: String  // menu row icon
@@ -48,6 +48,30 @@ public enum ModelCatalog {
     /// Look up a model entry by its API id.
     public static func entry(for id: String) -> Entry? {
         entries.first(where: { $0.id == id })
+    }
+
+    public static func mergedEntries(remote: [Entry], selectedModelId: String) -> [Entry] {
+        var seen = Set<String>()
+        let ordered = (remote.isEmpty ? entries : remote) + entries
+        var merged: [Entry] = []
+        for entry in ordered where seen.insert(entry.id).inserted {
+            merged.append(entry)
+        }
+        if !selectedModelId.isEmpty, !seen.contains(selectedModelId) {
+            merged.append(Entry(id: selectedModelId, displayName: selectedModelId, sfSymbol: "slider.horizontal.3"))
+        }
+        return merged
+    }
+
+    public static func entry(
+        for id: String,
+        in remoteEntries: [Entry]
+    ) -> Entry? {
+        mergedEntries(remote: remoteEntries, selectedModelId: id).first { $0.id == id }
+    }
+
+    public static func supportsReasoning(_ id: String, in remoteEntries: [Entry]) -> Bool {
+        entry(for: id, in: remoteEntries)?.supportsReasoning ?? false
     }
 
     /// Ordered model entries shown in pickers. Keep in sync with

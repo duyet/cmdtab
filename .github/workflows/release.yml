@@ -64,8 +64,8 @@ jobs:
           ref: ${{ github.event.release.tag_name || inputs.tag || github.ref }}
           fetch-depth: 0
 
+      # Build must fail the job — never publish a release whose app build failed.
       - name: Build macOS app
-        continue-on-error: true
         run: ./build.sh
 
       - name: Package artifacts

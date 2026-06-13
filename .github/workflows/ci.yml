@@ -42,15 +42,15 @@ jobs:
 
     - name: Verify App Bundle Structure
       run: |
-        if [ ! -d "CmdTab.app" ]; then
-          echo "Error: CmdTab.app folder was not created!"
+        if [ ! -d "MinhAgent.app" ]; then
+          echo "Error: MinhAgent.app folder was not created!"
           exit 1
         fi
-        if [ ! -f "CmdTab.app/Contents/MacOS/CmdTab" ]; then
+        if [ ! -f "MinhAgent.app/Contents/MacOS/MinhAgent" ]; then
           echo "Error: Executable binary is missing in the app bundle!"
           exit 1
         fi
-        if [ ! -f "CmdTab.app/Contents/Info.plist" ]; then
+        if [ ! -f "MinhAgent.app/Contents/Info.plist" ]; then
           echo "Error: Info.plist is missing in the app bundle!"
           exit 1
         fi
@@ -58,19 +58,7 @@ jobs:
 
     - name: Check Code Signature
       run: |
-        codesign -d -v CmdTab.app
+        codesign -d -v MinhAgent.app
 
-    - name: Package App Bundle for Release
-      if: startsWith(github.ref, 'refs/tags/v')
-      run: |
-        ditto -c -k --keepParent CmdTab.app CmdTab.zip
-
-    - name: Create GitHub Release and Upload Asset
-      if: startsWith(github.ref, 'refs/tags/v')
-      uses: softprops/action-gh-release@v2
-      with:
-        files: CmdTab.zip
-        draft: true
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # Releases (tagging + packaging + GitHub Release + assets) are owned by the
+    # release-please + release.yml pipeline. This workflow only builds and tests.

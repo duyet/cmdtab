@@ -75,4 +75,32 @@ extension View {
         self
         #endif
     }
+
+    /// Liquid Glass button styling on iOS 26+, falling back to standard
+    /// bordered styles elsewhere (and on macOS). `prominent` maps to
+    /// `.glassProminent` / `.borderedProminent`.
+    @ViewBuilder
+    func liquidGlassButton(prominent: Bool = false) -> some View {
+        #if os(iOS)
+        if #available(iOS 26.0, *) {
+            if prominent {
+                self.buttonStyle(.glassProminent)
+            } else {
+                self.buttonStyle(.glass)
+            }
+        } else {
+            if prominent {
+                self.buttonStyle(.borderedProminent)
+            } else {
+                self.buttonStyle(.bordered)
+            }
+        }
+        #else
+        if prominent {
+            self.buttonStyle(.borderedProminent)
+        } else {
+            self.buttonStyle(.bordered)
+        }
+        #endif
+    }
 }

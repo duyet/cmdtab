@@ -631,35 +631,7 @@ public struct SettingsView: View {
                 }
             }
 
-            HStack(spacing: 8) {
-                Button {
-                    viewModel.connectAnyRouter()
-                } label: {
-                    Label("Connect", systemImage: "link")
-                        .font(.system(size: AppFont.pt(12), weight: .medium))
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-
-                Button {
-                    viewModel.verifyAnyRouterConnection()
-                } label: {
-                    Label("Verify", systemImage: "checkmark.seal")
-                        .font(.system(size: AppFont.pt(12)))
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(viewModel.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-
-                Button {
-                    viewModel.openAnyRouterKeysDashboard()
-                } label: {
-                    Label("Get a key", systemImage: "arrow.up.right.square")
-                        .font(.system(size: AppFont.pt(12)))
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-            }
+            connectionButtonGroup
 
             SecureField("Paste sk-ar-v1-… key", text: $viewModel.apiKey)
                 .font(.system(size: AppFont.pt(13)))
@@ -677,6 +649,50 @@ public struct SettingsView: View {
                         .stroke(Color.hairline.opacity(0.6), lineWidth: 1)
                 )
         }
+    }
+
+    /// Connect / Verify / Get-a-key — Liquid Glass buttons grouped so their
+    /// highlights merge on iOS 26.
+    @ViewBuilder
+    private var connectionButtonGroup: some View {
+        let group = HStack(spacing: 8) {
+            Button {
+                viewModel.connectAnyRouter()
+            } label: {
+                Label("Connect", systemImage: "link")
+                    .font(.system(size: AppFont.pt(12), weight: .medium))
+            }
+            .liquidGlassButton(prominent: true)
+            .controlSize(.small)
+
+            Button {
+                viewModel.verifyAnyRouterConnection()
+            } label: {
+                Label("Verify", systemImage: "checkmark.seal")
+                    .font(.system(size: AppFont.pt(12)))
+            }
+            .liquidGlassButton()
+            .controlSize(.small)
+            .disabled(viewModel.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            Button {
+                viewModel.openAnyRouterKeysDashboard()
+            } label: {
+                Label("Get a key", systemImage: "arrow.up.right.square")
+                    .font(.system(size: AppFont.pt(12)))
+            }
+            .liquidGlassButton()
+            .controlSize(.small)
+        }
+        #if os(iOS)
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: 8) { group }
+        } else {
+            group
+        }
+        #else
+        group
+        #endif
     }
 
     private var connectionSymbol: String {
@@ -857,13 +873,22 @@ public struct SettingsView: View {
     }
 
     // MARK: - Section helper
+    /// On iOS the section content floats on a Liquid Glass card (iOS 26+),
+    /// falling back to a solid surface on older systems. macOS uses Form, so
+    /// this helper is effectively iOS-only in practice.
     @ViewBuilder
     private func settingsSection<Content: View>(_ heading: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(heading)
                 .font(.system(size: AppFont.pt(11), weight: .semibold))
                 .foregroundColor(.secondary)
+                .padding(.horizontal, 4)
             content()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                #if os(iOS)
+                .padding(14)
+                .plainCardSurface(cornerRadius: 16)
+                #endif
         }
     }
 
